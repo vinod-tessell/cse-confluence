@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSE — Customer Portfolio</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:#F4F5F7}
+.nav{background:#0B1F45;padding:0 1.5rem;height:42px;display:flex;align-items:center;justify-content:space-between}
+.nav-links{display:flex;gap:1.5rem}
+.nl{font-size:12px;font-weight:500;color:rgba(255,255,255,0.45);padding-bottom:2px;border-bottom:2px solid transparent;cursor:pointer;text-decoration:none}
+.nl:hover{color:rgba(255,255,255,0.85)}
+.nl.active{color:#fff;border-color:#00C2E0}
+.status-badge{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:#7DDBA3;background:rgba(125,219,163,0.12);padding:3px 9px;border-radius:20px;border:0.5px solid rgba(125,219,163,0.25)}
+.sdot{width:6px;height:6px;border-radius:50%;background:#7DDBA3}
+
+.hero{background:#0B1F45;padding:1.25rem 1.5rem 1.5rem;border-bottom:1px solid #122752}
+.hero-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem}
+.hero-title{font-size:20px;font-weight:700;color:#fff}
+.hero-sub{font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px}
+.refresh-info{font-size:10px;color:rgba(255,255,255,0.3)}
+
+/* portfolio metrics */
+.port-metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.pm{background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:0.8rem 1rem}
+.pm-label{font-size:10px;color:rgba(255,255,255,0.4);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.pm-val{font-size:22px;font-weight:700;color:#fff;line-height:1}
+.pm-sub{font-size:10px;margin-top:3px}
+
+.body{padding:1.25rem 1.5rem}
+
+/* filter bar */
+.filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:1.1rem;flex-wrap:wrap}
+.filter-btn{font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:0.5px solid #DFE1E6;background:#fff;color:#5E6C84;cursor:pointer;transition:all .15s}
+.filter-btn:hover{background:#F4F5F7}
+.filter-btn.active{background:#0B1F45;color:#fff;border-color:#0B1F45}
+.search-input{flex:1;max-width:240px;padding:5px 12px;border-radius:20px;border:0.5px solid #DFE1E6;font-size:12px;outline:none;background:#fff;color:#172B4D}
+.search-input::placeholder{color:#A0AEC0}
+.search-input:focus{border-color:#1A6FDB}
+
+/* customer cards grid */
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:700px){.cards-grid{grid-template-columns:1fr}}
+
+.cust-card{background:#fff;border-radius:10px;border:0.5px solid #DFE1E6;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.cust-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+.card-header{padding:1rem 1.1rem 0.8rem;border-bottom:0.5px solid #F4F5F7;display:flex;align-items:center;gap:10px}
+.card-logo{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}
+.card-name{font-size:13px;font-weight:700;color:#172B4D;margin-bottom:1px}
+.card-meta{font-size:10px;color:#5E6C84}
+.health-pill{margin-left:auto;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px;flex-shrink:0}
+.hp-dot{width:6px;height:6px;border-radius:50%}
+.card-body{padding:0.8rem 1.1rem}
+.card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:0.8rem}
+.cs{text-align:center}
+.cs-val{font-size:18px;font-weight:700;line-height:1}
+.cs-label{font-size:10px;color:#5E6C84;margin-top:2px}
+.card-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:0.8rem}
+.tag{font-size:10px;padding:2px 7px;border-radius:4px;background:#F4F5F7;color:#5E6C84;font-weight:500}
+.card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:0.7rem;border-top:0.5px solid #F4F5F7}
+.phase-label{font-size:10px;font-weight:600;color:#5E6C84}
+.drill-btn{font-size:11px;font-weight:600;color:#1A6FDB;display:flex;align-items:center;gap:3px}
+
+/* placeholder card */
+.placeholder-card{background:#FAFBFC;border:0.5px dashed #DFE1E6;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:180px;color:#A0AEC0;font-size:12px;gap:6px}
+.placeholder-icon{font-size:24px;opacity:.4}
+
+/* health colours */
+.healthy   {background:#EAF3DE;color:#27500A} .healthy .hp-dot{background:#38A169}
+.stable    {background:#E6F1FB;color:#0C447C} .stable .hp-dot{background:#1A6FDB}
+.attention {background:#FFFAF0;color:#854F0B} .attention .hp-dot{background:#DD6B20}
+.atrisk    {background:#FFF5F5;color:#A32D2D} .atrisk .hp-dot{background:#E53E3E}
+
+.red{color:#E53E3E}.orange{color:#DD6B20}.green{color:#38A169}.blue{color:#1A6FDB}.gray{color:#5E6C84}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-links">
+    <a class="nl" href="https://tessell.atlassian.net/wiki/spaces/CSE/overview" target="_parent">Home</a>
+    <span class="nl">Runbooks</span>
+    <span class="nl active">Customers</span>
+    <span class="nl">Incidents</span>
+    <span class="nl">Onboarding</span>
+  </div>
+  <div class="status-badge"><div class="sdot"></div>All systems operational</div>
+</div>
+
+<div class="hero">
+  <div class="hero-top">
+    <div>
+      <div class="hero-title">Customer Portfolio</div>
+      <div class="hero-sub">CSE · Active customer health &amp; implementation status</div>
+    </div>
+    <span class="refresh-info" id="refresh-ts">Last refreshed: just now</span>
+  </div>
+  <div class="port-metrics">
+    <div class="pm">
+      <div class="pm-label">Total Customers</div>
+      <div class="pm-val" id="total-count">—</div>
+      <div class="pm-sub" style="color:rgba(255,255,255,0.4)">Active accounts</div>
+    </div>
+    <div class="pm">
+      <div class="pm-label">At Risk</div>
+      <div class="pm-val red" id="risk-count">—</div>
+      <div class="pm-sub" style="color:#FC8181">Needs immediate action</div>
+    </div>
+    <div class="pm">
+      <div class="pm-label">Open P0/P1</div>
+      <div class="pm-val" style="color:#FC8181" id="p0-count">—</div>
+      <div class="pm-sub" style="color:rgba(255,255,255,0.4)">Critical incidents</div>
+    </div>
+    <div class="pm">
+      <div class="pm-label">Needs Attention</div>
+      <div class="pm-val" style="color:#FFC107" id="attention-count">—</div>
+      <div class="pm-sub" style="color:rgba(255,255,255,0.4)">Monitoring required</div>
+    </div>
+    <div class="pm">
+      <div class="pm-label">Healthy</div>
+      <div class="pm-val" style="color:#68D391" id="healthy-count">—</div>
+      <div class="pm-sub" style="color:rgba(255,255,255,0.4)">Stable accounts</div>
+    </div>
+  </div>
+</div>
+
+<div class="body">
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="filterCards('all',this)">All</button>
+    <button class="filter-btn" onclick="filterCards('atrisk',this)">At Risk</button>
+    <button class="filter-btn" onclick="filterCards('attention',this)">Needs Attention</button>
+    <button class="filter-btn" onclick="filterCards('healthy',this)">Healthy</button>
+    <button class="filter-btn" onclick="filterCards('stable',this)">Stable</button>
+    <input class="search-input" type="text" placeholder="Search customers..." oninput="searchCards(this.value)" />
+  </div>
+
+  <div class="cards-grid" id="cards-grid"></div>
+
+</div>
+
+<script>
+const CUSTOMERS = [
+  {
+    id: "citizens",
+    name: "Citizens Bank, N.A.",
+    initials: "CB",
+    logoColor: "#0B1F45",
+    logoBg: "#E6F1FB",
+    cloud: "AWS",
+    region: "us-east-1",
+    engines: ["Oracle","MySQL","PostgreSQL"],
+    phase: "🟠 Stabilisation",
+    health: "atrisk",
+    healthLabel: "At Risk",
+    p0: 2, openTickets: 8, features: 5,
+    cseOwner: "Vinod",
+    dashboardUrl: "https://tessell.atlassian.net/wiki/spaces/CSE/pages/2164948993/Citizens+Bank+Customer+Dashboard"
+  },
+  {
+    id: "atlas-air",
+    name: "Atlas Air",
+    initials: "AA",
+    logoColor: "#0F5C8A",
+    logoBg: "#E6F1FB",
+    cloud: "AWS",
+    region: "us-east-1",
+    engines: ["Oracle"],
+    phase: "🟢 Production",
+    health: "stable",
+    healthLabel: "Stable",
+    p0: 0, openTickets: 2, features: 1,
+    cseOwner: "Vinod",
+    dashboardUrl: "#"
+  },
+  {
+    id: "aon",
+    name: "Aon",
+    initials: "Aon",
+    logoColor: "#7B2FBE",
+    logoBg: "#EEEDFE",
+    cloud: "Azure",
+    region: "eastus",
+    engines: ["Oracle"],
+    phase: "⚫ Steady State",
+    health: "healthy",
+    healthLabel: "Healthy",
+    p0: 0, openTickets: 1, features: 2,
+    cseOwner: "",
+    dashboardUrl: "#"
+  },
+  {
+    id: "placeholder1",
+    name: null
+  },
+  {
+    id: "placeholder2",
+    name: null
+  },
+  {
+    id: "placeholder3",
+    name: null
+  }
+];
+
+function healthClass(h) {
+  return {atrisk:"atrisk",attention:"attention",healthy:"healthy",stable:"stable"}[h]||"stable";
+}
+
+function renderCard(c) {
+  if (!c.name) {
+    return `<div class="placeholder-card" data-health="placeholder">
+      <div class="placeholder-icon">🏢</div>
+      <div>Customer page coming soon</div>
+    </div>`;
+  }
+  const hc    = healthClass(c.health);
+  const p0col = c.p0 > 0 ? "red" : "green";
+  const tkCol = c.openTickets > 5 ? "orange" : c.openTickets > 2 ? "gray" : "green";
+  const tags  = c.engines.map(e=>`<span class="tag">${e}</span>`).join("") +
+                `<span class="tag">${c.cloud}</span>`;
+
+  const url = c.dashboardUrl && c.dashboardUrl !== "#"
+    ? `href="${c.dashboardUrl}" target="_parent"`
+    : `href="#"`;
+
+  return `<a class="cust-card" data-health="${c.health}" data-name="${c.name.toLowerCase()}" ${url} style="text-decoration:none">
+    <div class="card-header">
+      <div class="card-logo" style="background:${c.logoBg};color:${c.logoColor}">${c.initials}</div>
+      <div>
+        <div class="card-name">${c.name}</div>
+        <div class="card-meta">${c.region} · CSE: ${c.cseOwner||"—"}</div>
+      </div>
+      <div class="health-pill ${hc}"><div class="hp-dot"></div>${c.healthLabel}</div>
+    </div>
+    <div class="card-body">
+      <div class="card-stats">
+        <div class="cs"><div class="cs-val ${p0col}">${c.p0}</div><div class="cs-label">P0/P1</div></div>
+        <div class="cs"><div class="cs-val ${tkCol}">${c.openTickets}</div><div class="cs-label">Open</div></div>
+        <div class="cs"><div class="cs-val blue">${c.features}</div><div class="cs-label">Features</div></div>
+      </div>
+      <div class="card-tags">${tags}</div>
+      <div class="card-footer">
+        <span class="phase-label">${c.phase}</span>
+        <span class="drill-btn">View Dashboard →</span>
+      </div>
+    </div>
+  </a>`;
+}
+
+function updatePortfolioMetrics() {
+  const real = CUSTOMERS.filter(c=>c.name);
+  document.getElementById('total-count').textContent    = real.length;
+  document.getElementById('risk-count').textContent     = real.filter(c=>c.health==='atrisk').length;
+  document.getElementById('p0-count').textContent       = real.reduce((s,c)=>s+c.p0,0);
+  document.getElementById('attention-count').textContent= real.filter(c=>c.health==='attention').length;
+  document.getElementById('healthy-count').textContent  = real.filter(c=>c.health==='healthy'||c.health==='stable').length;
+}
+
+function renderAll() {
+  document.getElementById('cards-grid').innerHTML = CUSTOMERS.map(renderCard).join('');
+  updatePortfolioMetrics();
+  document.getElementById('refresh-ts').textContent =
+    'Last refreshed: ' + new Date().toLocaleTimeString();
+}
+
+function filterCards(health, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.cust-card,[data-health]').forEach(el=>{
+    if (health==='all') { el.style.display=''; return; }
+    el.style.display = el.dataset.health===health ? '' : 'none';
+  });
+}
+
+function searchCards(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.cust-card').forEach(el=>{
+    const name = el.dataset.name||'';
+    el.style.display = name.includes(q) ? '' : 'none';
+  });
+}
+
+renderAll();
+</script>
+</body>
+</html>
