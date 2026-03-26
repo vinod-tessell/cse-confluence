@@ -217,7 +217,7 @@ def jql(query, max=20):
         f"{JIRA_BASE}/rest/api/3/search/jql",
         auth=auth, headers=headers,
         params={"jql": query, "maxResults": max,
-                "fields": "summary,priority,status,created,resolutiondate,issuetype"}
+                "fields": "summary,priority,status,created,resolutiondate,issuetype,labels"}
     )
     r.raise_for_status()
     return r.json().get("issues", [])
@@ -226,12 +226,12 @@ def make_jqls(keyword):
     return {
         "p0p1": (
             f'project in (TS, SR) AND text ~ "{keyword}" '
-            f'AND priority in (P0, P1, Highest, Critical) '
+            f'AND labels in (P0, P1) '
             f'AND statusCategory != Done ORDER BY created DESC'
         ),
         "open": (
             f'project in (TS, SR) AND text ~ "{keyword}" '
-            f'AND statusCategory != Done ORDER BY priority ASC, created DESC'
+            f'AND statusCategory != Done ORDER BY created DESC'
         ),
         "features": (
             f'project in (TS, SR) AND text ~ "{keyword}" '
@@ -271,14 +271,36 @@ def age_days(iso):
         return f"{d}d" if d > 0 else "today"
     except: return "—"
 
+def sre_priority(fields):
+    """Read P0/P1 from labels field — the SRE priority label."""
+    labels = [l.upper() for l in (fields.get("labels") or [])]
+    if "P0" in labels: return "pc", "P0"
+    if "P1" in labels: return "ph", "P1"
+    return None, None
+
 def priority_class(p):
+    """Fallback — Jira priority field for display on non-P0/P1 tickets."""
     p = (p or "").lower()
-    if p in ("p0","critical","highest"): return "pc","P0"
-    if p in ("p1","high"):               return "ph","High"
-    if p in ("p2","medium"):             return "pm","Medium"
+    if p in ("highest","critical"): return "pc", "Highest"
+    if p in ("high",):              return "ph", "High"
+    if p in ("medium",):            return "pm", "Medium"
     return "pl", p.capitalize() or "—"
 
-def status_class(s):
+def ticket_row(issue):
+    key  = issue["key"]
+    f    = issue["fields"]
+    summ = (f.get("summary") or "")[:72]
+    # Use SRE label P0/P1 if present, otherwise fall back to Jira priority
+    sre_pc, sre_pl = sre_priority(f)
+    if sre_pc:
+        pc, pl = sre_pc, sre_pl
+    else:
+        pc, pl = priority_class(f.get("priority", {}).get("name", ""))
+    sc_, sl = status_class(f.get("status", {}).get("name", ""))
+    url  = f"{JIRA_BASE}/browse/{key}"
+    return (f'<tr><td><a class="tlink" href="{url}" target="_blank">{key}</a></td>'
+            f'<td>{summ}</td><td><span class="pb {pc}">{pl}</span></td>'
+            f'<td><span class="sp {sc_}">{sl}</span></td><td>{age_days(f.get("created",""))}</td></tr>')
     s = (s or "").lower()
     if "progress" in s or "review"   in s: return "si",  "In Progress"
     if "pending"  in s or "wait"     in s: return "spe", "Pending Eng"
