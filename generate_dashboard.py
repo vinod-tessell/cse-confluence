@@ -37,19 +37,7 @@ STATIC_OVERRIDES = {
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle", "MySQL", "PostgreSQL"],
         "portal_url": "https://citizens.tessell.com",
-        "confluence_page_id": "2164948993",
-        "ticket_history": [
-            {"month": "Oct 2025", "count": 3}, {"month": "Nov 2025", "count": 5},
-            {"month": "Dec 2025", "count": 7}, {"month": "Jan 2026", "count": 6},
-            {"month": "Feb 2026", "count": 6}, {"month": "Mar 2026", "count": 8}
-        ],
-        "pulse": [
-            {"sentiment": "frustrated", "text": "Clone to QA blocked 4+ days"},
-            {"sentiment": "concerned",  "text": "Perf Insights dark since Nov 2025"},
-            {"sentiment": "concerned",  "text": "MySQL ZZ6 HA recurring, no permanent fix"},
-            {"sentiment": "waiting",    "text": "Billing download pending engineering"},
-            {"sentiment": "positive",   "text": "DB upgrade to 7.64.1 completed smoothly"}
-        ]
+        "confluence_page_id": "2164948993"
     },
     "atlas": {
         "id": "atlas-air", "jql_keyword": "Atlas Air",
@@ -249,14 +237,179 @@ def make_jqls(keyword):
         )
     }
 
-def fetch_customer_data(keyword):
+def fetch_monthly_buckets(keyword):
+    """
+    For the last 6 complete months, fetch open-ticket count and resolved count.
+    Returns a list of {"month": "Mon YYYY", "count": N, "resolved": N} dicts.
+    """
+    from datetime import date
+    buckets = []
+    today = date.today()
+    for i in range(5, -1, -1):                        # 5 months ago → current month
+        # first and last day of target month
+        month_offset = today.month - i
+        year_offset  = today.year + (month_offset - 1) // 12
+        month_num    = ((month_offset - 1) % 12) + 1
+        first = date(year_offset, month_num, 1)
+        # last day = first day of next month minus 1
+        if month_num == 12:
+            last = date(year_offset + 1, 1, 1)
+        else:
+            last = date(year_offset, month_num + 1, 1)
+        label = first.strftime("%b %Y")
+        f_str = first.strftime("%Y-%m-%d")
+        l_str = last.strftime("%Y-%m-%d")
+
+        # tickets that were open at any point during the month
+        try:
+            r_open = requests.get(
+                f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
+                params={
+                    "jql": (f'project = SR AND text ~ "{keyword}" '
+                            f'AND created <= "{l_str}" '
+                            f'AND (resolutiondate is EMPTY OR resolutiondate >= "{f_str}") '
+                            f'ORDER BY created DESC'),
+                    "maxResults": 0, "fields": "summary"
+                }
+            )
+            open_count = r_open.json().get("total", 0) if r_open.status_code == 200 else 0
+        except Exception:
+            open_count = 0
+
+        # tickets resolved within the month
+        try:
+            r_res = requests.get(
+                f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
+                params={
+                    "jql": (f'project = SR AND text ~ "{keyword}" '
+                            f'AND statusCategory = Done '
+                            f'AND resolutiondate >= "{f_str}" AND resolutiondate < "{l_str}" '
+                            f'ORDER BY resolutiondate DESC'),
+                    "maxResults": 0, "fields": "summary"
+                }
+            )
+            resolved_count = r_res.json().get("total", 0) if r_res.status_code == 200 else 0
+        except Exception:
+            resolved_count = 0
+
+        buckets.append({"month": label, "count": open_count, "resolved": resolved_count})
+    return buckets
+
+def fetch_pulse_from_comments(keyword):
+    """
+    Derive customer pulse from SR ticket signals — no LLM needed.
+    Uses ticket age, priority labels, status, and keyword signals in
+    customer-authored comments to assign sentiment.
+    """
+    try:
+        r = requests.get(
+            f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
+            params={
+                "jql": (f'project = SR AND text ~ "{keyword}" '
+                        f'AND updated >= -21d ORDER BY updated DESC'),
+                "maxResults": 15,
+                "fields": "summary,status,priority,labels,created,comment"
+            }
+        )
+        if r.status_code != 200:
+            return []
+        issues = r.json().get("issues", [])
+
+        # ── Keyword banks for comment-level signals ────────────────────────────
+        frustrated_kw = ["escalat","urgent","not working","still broken","days","week",
+                         "unacceptable","blocking","critical","frustrated","disappointed",
+                         "no progress","no update","no response","waiting","how long"]
+        concerned_kw  = ["issue","problem","error","fail","broken","wrong","incorrect",
+                         "unexpected","not expected","impact","affects","production"]
+        positive_kw   = ["thank","resolved","fixed","working","great","smooth","appreciate",
+                         "perfect","done","completed","success","good"]
+        waiting_kw    = ["waiting","pending","any update","please update","eta","when",
+                         "timeline","status update","follow up","followup"]
+
+        pulse_items   = []
+        seen_sentiments = set()
+
+        for issue in issues:
+            f       = issue["fields"]
+            summ    = (f.get("summary") or "")[:60]
+            status  = (f.get("status", {}).get("name") or "").lower()
+            labels  = [l.upper() for l in (f.get("labels") or [])]
+            created = f.get("created", "")
+
+            # ── Signal 1: P0/P1 label → frustrated ────────────────────────────
+            if ("P0" in labels or "P1" in labels) and "frustrated" not in seen_sentiments:
+                age = age_days(created)
+                pulse_items.append({
+                    "sentiment": "frustrated",
+                    "text": f"P{'0' if 'P0' in labels else '1'} open {age} — {summ[:40]}"
+                })
+                seen_sentiments.add("frustrated")
+                continue
+
+            # ── Signal 2: pending/waiting status → waiting ─────────────────
+            if any(x in status for x in ("pending","wait","hold")) \
+                    and "waiting" not in seen_sentiments:
+                pulse_items.append({
+                    "sentiment": "waiting",
+                    "text": f"Awaiting response — {summ[:45]}"
+                })
+                seen_sentiments.add("waiting")
+                continue
+
+            # ── Signal 3: scan customer comments for keyword signals ────────
+            comments = f.get("comment", {}).get("comments", [])
+            for c in reversed(comments):           # most recent first
+                author_email = (c.get("author", {}).get("emailAddress") or "").lower()
+                if "tessell" in author_email:
+                    continue                        # skip internal comments
+                body = c.get("body", {})
+                text = ""
+                if isinstance(body, dict):
+                    for block in body.get("content", []):
+                        for inline in block.get("content", []):
+                            if inline.get("type") == "text":
+                                text += inline.get("text", "") + " "
+                elif isinstance(body, str):
+                    text = body
+                text_l = text.lower()
+
+                if any(k in text_l for k in frustrated_kw) \
+                        and "frustrated" not in seen_sentiments:
+                    pulse_items.append({"sentiment": "frustrated", "text": summ[:55]})
+                    seen_sentiments.add("frustrated")
+                    break
+                elif any(k in text_l for k in waiting_kw) \
+                        and "waiting" not in seen_sentiments:
+                    pulse_items.append({"sentiment": "waiting", "text": summ[:55]})
+                    seen_sentiments.add("waiting")
+                    break
+                elif any(k in text_l for k in positive_kw) \
+                        and "positive" not in seen_sentiments:
+                    pulse_items.append({"sentiment": "positive", "text": summ[:55]})
+                    seen_sentiments.add("positive")
+                    break
+                elif any(k in text_l for k in concerned_kw) \
+                        and "concerned" not in seen_sentiments:
+                    pulse_items.append({"sentiment": "concerned", "text": summ[:55]})
+                    seen_sentiments.add("concerned")
+                    break
+
+            if len(pulse_items) >= 5:
+                break
+
+        return pulse_items[:5]
+
+    except Exception as e:
+        print(f"  ⚠️  Pulse fetch failed: {e}")
+        return []
     queries = make_jqls(keyword)
     return {
-        "p0p1":     jql(queries["p0p1"],     max=10),
-        "open":     jql(queries["open"],     max=20),
-        "features": jql(queries["features"], max=10),
-        "resolved": jql(queries["resolved"], max=50),
-        "recent":   jql(queries["recent"],   max=12)
+        "p0p1":           jql(queries["p0p1"],     max=10),
+        "open":           jql(queries["open"],     max=20),
+        "features":       jql(queries["features"], max=10),
+        "resolved":       jql(queries["resolved"], max=50),
+        "recent":         jql(queries["recent"],   max=12),
+        "ticket_history": fetch_monthly_buckets(keyword)
     }
 
 # ── Formatting helpers ─────────────────────────────────────────────────────────
@@ -621,7 +774,7 @@ def build_customer_html(cust, data):
   </div>"""
 
     # ── Ticket history timeseries (Chart.js) ───────────────────────────────────
-    hist = cust.get("ticket_history", [])
+    hist = data.get("ticket_history", [])
     if hist:
         chart_labels = json.dumps([h["month"][:6] for h in hist])
         chart_data   = json.dumps([h["count"] for h in hist])
@@ -638,32 +791,54 @@ def build_customer_html(cust, data):
           </div>
         </div>
       </div>"""
+        resolved_by_month = json.dumps([h.get("resolved", 0) for h in hist])
         timeseries_js = f"""
 new Chart(document.getElementById('trendChart'), {{
-  type: 'line',
+  type: 'bar',
   data: {{
     labels: {chart_labels},
-    datasets: [{{
-      label: 'Tickets',
-      data: {chart_data},
-      borderColor: '#1A6FDB',
-      backgroundColor: 'rgba(26,111,219,0.08)',
-      borderWidth: 2,
-      pointBackgroundColor: '#1A6FDB',
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      fill: true,
-      tension: 0.35
-    }}]
+    datasets: [
+      {{
+        label: 'Open',
+        data: {chart_data},
+        backgroundColor: 'rgba(26,111,219,0.85)',
+        borderRadius: 3,
+        barPercentage: 0.7,
+        categoryPercentage: 0.6
+      }},
+      {{
+        label: 'Resolved',
+        data: {resolved_by_month},
+        backgroundColor: 'rgba(56,161,105,0.85)',
+        borderRadius: 3,
+        barPercentage: 0.7,
+        categoryPercentage: 0.6
+      }}
+    ]
   }},
   options: {{
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {{ legend: {{ display: false }} }},
+    plugins: {{
+      legend: {{
+        display: true,
+        position: 'top',
+        align: 'end',
+        labels: {{
+          font: {{ size: 9 }},
+          color: 'rgba(255,255,255,0.5)',
+          boxWidth: 8,
+          boxHeight: 8,
+          borderRadius: 2,
+          padding: 8,
+          usePointStyle: false
+        }}
+      }}
+    }},
     scales: {{
-      x: {{ grid: {{ display: false }}, ticks: {{ font: {{ size: 10 }}, color: '#5E6C84' }}, border: {{ display: false }} }},
-      y: {{ min: 0, max: {chart_max}, grid: {{ color: '#F4F5F7' }},
-            ticks: {{ font: {{ size: 10 }}, color: '#5E6C84', stepSize: 2 }},
+      x: {{ grid: {{ display: false }}, ticks: {{ font: {{ size: 9 }}, color: 'rgba(255,255,255,0.4)' }}, border: {{ display: false }} }},
+      y: {{ min: 0, max: {chart_max}, grid: {{ color: 'rgba(255,255,255,0.06)' }},
+            ticks: {{ font: {{ size: 9 }}, color: 'rgba(255,255,255,0.4)', stepSize: 2 }},
             border: {{ display: false }} }}
     }}
   }}
@@ -676,7 +851,7 @@ new Chart(document.getElementById('trendChart'), {{
     pulse_colors = {"frustrated":"#E53E3E","concerned":"#DD6B20",
                     "waiting":"#D69E2E","positive":"#38A169","neutral":"#5E6C84"}
     pulse_html = ""
-    for p in cust.get("pulse", []):
+    for p in data.get("pulse", []):
         col  = pulse_colors.get(p["sentiment"], "#5E6C84")
         sent = p["sentiment"].capitalize()
         pulse_html += (
@@ -788,7 +963,30 @@ new Chart(document.getElementById('trendChart'), {{
     <div class="metric" id="m-open" onclick="toggleDrawer('drawer-open','m-open')"><div class="mlabel">Open Tickets</div><div class="mval {open_col}">{len(open_t)}</div><div class="msub">Across all priorities</div></div>
     <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">{len(features)}</div><div class="msub">Pending delivery</div></div>
     <div class="metric" id="m-res" onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">{len(resolved)}</div><div class="msub">Last 30 days</div></div>
-    <div class="metric"><div class="mlabel">Health Score</div><div class="mval" style="color:{health_color}">{score}/10</div><div class="msub">Rule-based</div></div>
+    <div class="metric" id="m-health" onclick="toggleDrawer('drawer-health','m-health')"><div class="mlabel">Health Score</div><div class="mval" style="color:{health_color}">{score}/10</div><div class="msub">Rule-based</div></div>
+  </div>
+  <div class="drawer" id="drawer-health">
+    <div class="drawer-head">
+      <span class="drawer-title">🧮 Health Score Breakdown — {score}/10 · <span style="color:{health_color}">{health_label}</span></span>
+      <button class="drawer-close" onclick="toggleDrawer('drawer-health','m-health')">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:.5px solid #DFE1E6">
+      <div style="padding:1rem 1.25rem;border-right:.5px solid #DFE1E6">
+        <div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">Impacting Factors</div>
+        <div id="health-factors"></div>
+      </div>
+      <div style="padding:1rem 1.25rem">
+        <div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">How to Improve</div>
+        <div id="health-actions"></div>
+      </div>
+    </div>
+    <div style="padding:.75rem 1.25rem;background:#FAFBFC;display:flex;align-items:center;gap:6px">
+      <div style="flex:1;height:8px;background:#F4F5F7;border-radius:4px;overflow:hidden">
+        <div id="health-bar" style="height:100%;border-radius:4px;background:{health_color};width:{score * 10}%;transition:width .6s ease"></div>
+      </div>
+      <span style="font-size:11px;font-weight:700;color:{health_color}">{score}/10</span>
+      <span style="font-size:10px;color:#5E6C84">· Max deduction: {10 - score} pts</span>
+    </div>
   </div>
   <div class="drawer" id="drawer-p0p1">
     <div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents ({len(p0p1)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div>
@@ -811,7 +1009,7 @@ new Chart(document.getElementById('trendChart'), {{
       <div class="ai-panel">
         <div class="ai-eyebrow">✦ Health Analysis</div>
         <div class="ai-title">Customer Health Assessment</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start">
           <div>
             <div class="ai-body" id="ai-body">Calculating...</div>
             <div class="ai-footer">
@@ -826,6 +1024,10 @@ new Chart(document.getElementById('trendChart'), {{
           <div>
             {f'''<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ticket Volume Trend</div>
             <div style="position:relative;height:120px"><canvas id="trendChart"></canvas></div>''' if hist else '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>'}
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Customer Pulse</div>
+            {pulse_html.replace('class="pulse-row"', 'style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px"').replace('class="pdot"', 'class="pdot"').replace('class="ptext"', 'style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"').replace('<b>', '<b style="color:#fff">') if pulse_html else '<div style="font-size:11px;color:rgba(255,255,255,0.3)">No pulse data yet.</div>'}
           </div>
         </div>
       </div>
@@ -844,10 +1046,6 @@ new Chart(document.getElementById('trendChart'), {{
     </div>
     <div>
       <div class="sb-sec">
-        <div class="sb-head">💬 Customer Pulse</div>
-        {pulse_html}
-      </div>
-      <div class="sb-sec">
         <div class="sb-head">📅 Recent Activity</div>
         <div class="tl">{timeline}</div>
       </div>
@@ -865,7 +1063,10 @@ new Chart(document.getElementById('trendChart'), {{
 {timeseries_js}
 const DATA = {data_js};
 {HEALTH_JS}
-window.onload = () => runHealth(DATA);
+window.onload = () => {{
+  runHealth(DATA);
+  buildHealthDrawer(DATA);
+}};
 function toggleDrawer(drawerId, metricId) {{
   const drawer = document.getElementById(drawerId);
   const metric = document.getElementById(metricId);
@@ -873,6 +1074,70 @@ function toggleDrawer(drawerId, metricId) {{
   document.querySelectorAll('.drawer').forEach(d => d.classList.remove('open'));
   document.querySelectorAll('.metric').forEach(m => m.classList.remove('active'));
   if (!isOpen) {{ drawer.classList.add('open'); metric.classList.add('active'); }}
+}}
+function buildHealthDrawer(DATA) {{
+  const factors = [];
+  const actions = [];
+  if (DATA.p0p1 >= 3) {{
+    factors.push(['−4 pts', `${{DATA.p0p1}} active P0 incidents (${{DATA.p0keys.join(', ')}})`, '#E53E3E']);
+    actions.push(['🚨', `Escalate ${{DATA.p0keys[0]}} to engineering leadership for same-day resolution`]);
+  }} else if (DATA.p0p1 === 2) {{
+    factors.push(['−3 pts', `2 active P0 incidents (${{DATA.p0keys.join(', ')}})`, '#E53E3E']);
+    actions.push(['🚨', `Both P0s need an engineering owner assigned today`]);
+  }} else if (DATA.p0p1 === 1) {{
+    factors.push(['−2 pts', `1 active P0/P1 open (${{DATA.p0keys[0]}})`, '#DD6B20']);
+    actions.push(['🚨', `Ensure ${{DATA.p0keys[0]}} has daily customer updates until resolved`]);
+  }} else {{
+    factors.push(['+0 pts', 'No active P0/P1 incidents', '#38A169']);
+  }}
+  if (DATA.open >= 8) {{
+    factors.push(['−2 pts', `High ticket backlog — ${{DATA.open}} open tickets`, '#DD6B20']);
+    actions.push(['🎫', `Review oldest open tickets and close or escalate stale ones`]);
+  }} else if (DATA.open >= 5) {{
+    factors.push(['−1 pt', `Moderate backlog — ${{DATA.open}} open tickets`, '#D69E2E']);
+    actions.push(['🎫', `Target resolving at least 3 open tickets this sprint`]);
+  }} else {{
+    factors.push(['+0 pts', `Healthy ticket volume — ${{DATA.open}} open`, '#38A169']);
+  }}
+  if (DATA.pendingEng >= 4) {{
+    factors.push(['−2 pts', `${{DATA.pendingEng}} tickets blocked pending engineering`, '#DD6B20']);
+    actions.push(['⏳', `Set ETAs on all ${{DATA.pendingEng}} blocked tickets and communicate to customer`]);
+  }} else if (DATA.pendingEng >= 2) {{
+    factors.push(['−1 pt', `${{DATA.pendingEng}} tickets pending engineering`, '#D69E2E']);
+    actions.push(['⏳', `Chase engineering ETAs on pending tickets this week`]);
+  }} else {{
+    factors.push(['+0 pts', 'No tickets stuck pending engineering', '#38A169']);
+  }}
+  if (DATA.features >= 5) {{
+    factors.push(['−1 pt', `Large feature backlog — ${{DATA.features}} open requests`, '#D69E2E']);
+    actions.push(['💡', `Schedule a roadmap call to set delivery expectations with customer`]);
+  }} else {{
+    factors.push(['+0 pts', `Feature backlog manageable — ${{DATA.features}} requests`, '#38A169']);
+  }}
+  if (DATA.resolved === 0) {{
+    factors.push(['−1 pt', 'No tickets resolved in the last 30 days', '#DD6B20']);
+    actions.push(['✅', `Prioritise closing at least one open ticket to show progress to customer`]);
+  }} else {{
+    factors.push(['+0 pts', `${{DATA.resolved}} tickets resolved in the last 30 days`, '#38A169']);
+  }}
+  const fEl = document.getElementById('health-factors');
+  fEl.innerHTML = factors.map(([pts, label, col]) =>
+    `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
+      <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:${{col}}1A;color:${{col}};flex-shrink:0;min-width:44px;text-align:center">${{pts}}</span>
+      <span style="font-size:11px;color:#172B4D;line-height:1.5">${{label}}</span>
+    </div>`
+  ).join('');
+  const aEl = document.getElementById('health-actions');
+  if (actions.length === 0) {{
+    aEl.innerHTML = '<p style="font-size:11px;color:#38A169;font-weight:600">✅ No actions needed — customer is healthy!</p>';
+  }} else {{
+    aEl.innerHTML = actions.map(([icon, text]) =>
+      `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
+        <span style="font-size:13px;flex-shrink:0">${{icon}}</span>
+        <span style="font-size:11px;color:#172B4D;line-height:1.5">${{text}}</span>
+      </div>`
+    ).join('');
+  }}
 }}
 </script>
 </body>
