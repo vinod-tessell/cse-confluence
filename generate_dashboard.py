@@ -499,6 +499,14 @@ tr:last-child td{border-bottom:none}
 .tl-t{font-size:11px;font-weight:700;color:#172B4D;margin-bottom:2px}
 .tl-d{font-size:10px;color:#5E6C84;line-height:1.5}
 .tl-dt{font-size:10px;color:#A0AEC0;margin-top:2px}
+.metric{cursor:pointer;transition:box-shadow .15s}
+.metric:hover{box-shadow:0 0 0 2px #1A6FDB}
+.metric.active{box-shadow:0 0 0 2px #1A6FDB;background:#F0F7FF}
+.drawer{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.25rem;display:none}
+.drawer.open{display:block}
+.drawer-head{padding:.7rem 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;justify-content:space-between}
+.drawer-title{font-size:12px;font-weight:700;color:#172B4D}
+.drawer-close{font-size:14px;color:#5E6C84;cursor:pointer;background:none;border:none;padding:0 4px;line-height:1}
 """
 
 NAV_HTML = """<div class="nav">
@@ -767,11 +775,27 @@ new Chart(document.getElementById('trendChart'), {{
 </div>
 <div class="body">
   <div class="metrics">
-    <div class="metric"><div class="mlabel">Open P0/P1</div><div class="mval {mv_col}">{len(p0p1)}</div><div class="msub">Active critical issues</div></div>
-    <div class="metric"><div class="mlabel">Open Tickets</div><div class="mval {open_col}">{len(open_t)}</div><div class="msub">Across all priorities</div></div>
-    <div class="metric"><div class="mlabel">Feature Requests</div><div class="mval blue">{len(features)}</div><div class="msub">Pending delivery</div></div>
-    <div class="metric"><div class="mlabel">Resolved (30d)</div><div class="mval green">{len(resolved)}</div><div class="msub">Last 30 days</div></div>
+    <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval {mv_col}">{len(p0p1)}</div><div class="msub">Active critical issues</div></div>
+    <div class="metric" id="m-open" onclick="toggleDrawer('drawer-open','m-open')"><div class="mlabel">Open Tickets</div><div class="mval {open_col}">{len(open_t)}</div><div class="msub">Across all priorities</div></div>
+    <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">{len(features)}</div><div class="msub">Pending delivery</div></div>
+    <div class="metric" id="m-res" onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">{len(resolved)}</div><div class="msub">Last 30 days</div></div>
     <div class="metric"><div class="mlabel">Health Score</div><div class="mval" style="color:{health_color}">{score}/10</div><div class="msub">Rule-based</div></div>
+  </div>
+  <div class="drawer" id="drawer-p0p1">
+    <div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents ({len(p0p1)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in p0p1) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No P0/P1 tickets</td></tr>'}</tbody></table>
+  </div>
+  <div class="drawer" id="drawer-open">
+    <div class="drawer-head"><span class="drawer-title">🎫 All Open Tickets ({len(open_t)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-open','m-open')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in open_t) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open tickets</td></tr>'}</tbody></table>
+  </div>
+  <div class="drawer" id="drawer-feat">
+    <div class="drawer-head"><span class="drawer-title">💡 Feature Requests ({len(features)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in features) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr>'}</tbody></table>
+  </div>
+  <div class="drawer" id="drawer-res">
+    <div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days ({len(resolved)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in resolved) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr>'}</tbody></table>
   </div>
   <div class="grid2">
     <div>
@@ -836,6 +860,14 @@ new Chart(document.getElementById('trendChart'), {{
 const DATA = {data_js};
 {HEALTH_JS}
 window.onload = () => runHealth(DATA);
+function toggleDrawer(drawerId, metricId) {{
+  const drawer = document.getElementById(drawerId);
+  const metric = document.getElementById(metricId);
+  const isOpen = drawer.classList.contains('open');
+  document.querySelectorAll('.drawer').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.metric').forEach(m => m.classList.remove('active'));
+  if (!isOpen) {{ drawer.classList.add('open'); metric.classList.add('active'); }}
+}}
 </script>
 </body>
 </html>"""
