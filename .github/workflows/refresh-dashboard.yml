@@ -1,4 +1,4 @@
-name: Refresh Citizens Bank Dashboard
+name: Refresh CSE Customer Dashboards
 
 on:
   schedule:
@@ -8,6 +8,8 @@ on:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repo
@@ -36,6 +38,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add citizens_bank_dashboard.html master_dashboard.html
+          git add *_dashboard.html customers.json
           git diff --cached --quiet || git commit -m "chore: refresh dashboards [$(date -u '+%Y-%m-%d %H:%M UTC')]"
           git push
