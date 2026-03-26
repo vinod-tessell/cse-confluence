@@ -995,7 +995,6 @@ function runHealth(DATA) {
   let html=findings.map(f=>`<p style="margin-bottom:6px">• ${f}</p>`).join('');
   if(actions.length)html+=`<div style="margin-top:8px;padding-top:8px;border-top:.5px solid rgba(255,255,255,0.1)"><p style="font-size:10px;font-weight:700;color:#00C2E0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Recommended Actions</p>${actions.map(a=>`<p style="margin-bottom:4px">→ ${a}</p>`).join('')}</div>`;
   el.innerHTML=html;sc.textContent=score;sc.style.color=color;
-  document.getElementById('ai-ts').textContent='Assessed: '+DATA.generated;
 }
 """
 
@@ -1078,7 +1077,7 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
   <div style="display:flex;align-items:center;gap:10px">
     <div style="width:42px;height:42px;background:{cust['logo_bg']};border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:{cust['logo_color']}">{cust['initials']}</div>
     <div><div style="font-size:18px;font-weight:700;color:#fff">{cust['name']}</div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">{cust['cloud']} · {cust['region']} · {engines_str} · {cust['phase']}</div></div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">{cust['cloud']} · {cust['region']} · {engines_str}</div></div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15)" id="health-wrap">
@@ -1126,8 +1125,8 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
         <div class="ai-eyebrow">✦ Health Analysis</div>
         <div class="ai-title">Customer Health Assessment</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start">
-          <div><div class="ai-body" id="ai-body">Calculating...</div>
-            <div class="ai-footer"><div style="display:flex;align-items:baseline;gap:4px"><span class="ai-score-label">Health score</span><span class="ai-score-val" id="ai-score" style="color:{health_color}">{score}</span><span class="ai-score-max">/10</span></div><span id="ai-ts" class="ai-ts"></span></div>
+          <div>
+            <div class="ai-body" id="ai-body">Calculating...</div>
           </div>
           <div>{chart_block}</div>
           <div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Customer Pulse</div>{pulse_html}</div>
@@ -1403,7 +1402,6 @@ def build_master_html(customer_results):
       <div class="action-head-title"><span style="font-size:14px">🔴</span> Action Required
         <span class="action-head-badge">{min(3,len([cr for cr in customer_results if cr['p0_count']>0 or cr['open_count']>5]))} items</span>
       </div>
-      <span class="action-head-ts">Auto-generated · {now}</span>
     </div>
     <div class="action-items">{''.join(action_items)}</div>
   </div>
@@ -1547,7 +1545,8 @@ if __name__ == "__main__":
             cust["confluence_page_id"] = page_id; pages_updated = True
 
         # ── All nav links point to Confluence only — GitHub URL is iframe-internal ──
-        conf_url = confluence_page_url(cust.get("confluence_page_id",""))
+        # Re-read page_id from cust after ensure_confluence_page may have written it back
+        conf_url = confluence_page_url(cust.get("confluence_page_id", ""))
 
         result = {
             "config":cust,"health_key":hk,"health_label":label,"health_color":color,
