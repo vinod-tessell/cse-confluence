@@ -89,14 +89,14 @@ tr:last-child td{border-bottom:none}
   <div style="display:flex;align-items:center;gap:10px">
     <div style="width:42px;height:42px;background:#E6F1FB;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#0B1F45">SM</div>
     <div><div style="font-size:18px;font-weight:700;color:#fff">SMFG</div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">AWS · us-east-1 · Oracle · Implementation</div></div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">AWS · us-east-1 · Oracle</div></div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15)" id="health-wrap">
       <div style="width:7px;height:7px;border-radius:50%;background:#FFC107" id="health-dot"></div>
       <span id="health-badge" style="color:#FFC107">Stable</span>
     </div>
-    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 21:35 UTC</span>
+    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 22:13 UTC</span>
   </div>
 </div>
 <div class="body">
@@ -137,8 +137,8 @@ tr:last-child td{border-bottom:none}
         <div class="ai-eyebrow">✦ Health Analysis</div>
         <div class="ai-title">Customer Health Assessment</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start">
-          <div><div class="ai-body" id="ai-body">Calculating...</div>
-            <div class="ai-footer"><div style="display:flex;align-items:baseline;gap:4px"><span class="ai-score-label">Health score</span><span class="ai-score-val" id="ai-score" style="color:#FFC107">7</span><span class="ai-score-max">/10</span></div><span id="ai-ts" class="ai-ts"></span></div>
+          <div>
+            <div class="ai-body" id="ai-body">Calculating...</div>
           </div>
           <div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ticket Volume Trend</div><div style="position:relative;height:120px"><canvas id="trendChart"></canvas></div></div>
           <div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Customer Pulse</div><div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px"><div class="pdot" style="background:#D69E2E"></div><div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"><b style="color:#fff">Waiting</b> — Awaiting response — SMFG- Install the required packages and patch</div></div><div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px"><div class="pdot" style="background:#38A169"></div><div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"><b style="color:#fff">Positive</b> — Execute Mention command</div></div><div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px"><div class="pdot" style="background:#DD6B20"></div><div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"><b style="color:#fff">Concerned</b> — Execute Mention command</div></div><div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px"><div class="pdot" style="background:#E53E3E"></div><div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"><b style="color:#fff">Frustrated</b> — Server stopped reporting to HX/EDR</div></div></div>
@@ -175,7 +175,7 @@ new Chart(document.getElementById('trendChart'),{type:'bar',data:{labels:["Oct 2
   plugins:{legend:{display:true,position:'top',align:'end',labels:{font:{size:9},color:'rgba(255,255,255,0.5)',boxWidth:8,padding:8}}},
   scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)'},border:{display:false}},
            y:{min:0,max:2,grid:{color:'rgba(255,255,255,0.06)'},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)',stepSize:2},border:{display:false}}}}}); 
-const DATA={"p0p1": 0, "open": 10, "features": 5, "resolved": 7, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8271", "TS-37536", "TS-37567"], "generated": "Mar 26, 2026 21:35 UTC", "score": 7, "scoreLabel": "Stable", "scoreColor": "#FFC107"};
+const DATA={"p0p1": 0, "open": 10, "features": 5, "resolved": 7, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8271", "TS-37536", "TS-37567"], "generated": "Mar 26, 2026 22:13 UTC", "score": 7, "scoreLabel": "Stable", "scoreColor": "#FFC107"};
 
 function runHealth(DATA) {
   const el=document.getElementById('ai-body'),sc=document.getElementById('ai-score');
@@ -202,7 +202,6 @@ function runHealth(DATA) {
   let html=findings.map(f=>`<p style="margin-bottom:6px">• ${f}</p>`).join('');
   if(actions.length)html+=`<div style="margin-top:8px;padding-top:8px;border-top:.5px solid rgba(255,255,255,0.1)"><p style="font-size:10px;font-weight:700;color:#00C2E0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Recommended Actions</p>${actions.map(a=>`<p style="margin-bottom:4px">→ ${a}</p>`).join('')}</div>`;
   el.innerHTML=html;sc.textContent=score;sc.style.color=color;
-  document.getElementById('ai-ts').textContent='Assessed: '+DATA.generated;
 }
 
 window.onload=()=>{runHealth(DATA);buildHealthDrawer(DATA);};
