@@ -957,7 +957,6 @@ NAV_MASTER = """<div class="nav">
     <span class="nl">Runbooks</span><span class="nl active">Customers</span>
     <span class="nl">Incidents</span><span class="nl">Onboarding</span>
   </div>
-  <div class="nav-status"><div class="sdot"></div>All systems operational</div>
 </div>"""
 
 NAV_CUSTOMER = """<div class="nav">
