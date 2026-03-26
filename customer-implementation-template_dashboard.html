@@ -1,8 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <title>Customer Implementation Template — Customer Dashboard</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
@@ -12,9 +11,13 @@ body{background:#F4F5F7}
 .nl{font-size:12px;font-weight:500;color:rgba(255,255,255,0.45);text-decoration:none;padding-bottom:2px;border-bottom:2px solid transparent}
 .nl.active{color:#fff;border-color:#00C2E0}
 .nav-back{font-size:11px;color:#00C2E0;text-decoration:none}
+.nav-status{display:flex;align-items:center;gap:5px;font-size:11px;color:#7DDBA3;background:rgba(125,219,163,0.12);padding:3px 10px;border-radius:20px;border:.5px solid rgba(125,219,163,0.25)}
+.sdot{width:6px;height:6px;border-radius:50%;background:#7DDBA3}
 .body{padding:1.25rem 1.5rem}
 .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:1.25rem}
-.metric{background:#fff;border-radius:8px;padding:.9rem 1rem;border:.5px solid #DFE1E6}
+.metric{background:#fff;border-radius:8px;padding:.9rem 1rem;border:.5px solid #DFE1E6;cursor:pointer;transition:box-shadow .15s}
+.metric:hover{box-shadow:0 0 0 2px #1A6FDB}
+.metric.active{box-shadow:0 0 0 2px #1A6FDB;background:#F0F7FF}
 .mlabel{font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
 .mval{font-size:24px;font-weight:700;line-height:1;margin-bottom:3px}
 .msub{font-size:10px;color:#5E6C84}
@@ -48,16 +51,10 @@ tr:last-child td{border-bottom:none}
 .ir{display:flex;align-items:center;justify-content:space-between;padding:7px 1rem;border-bottom:.5px solid #DFE1E6}
 .ir:last-child{border-bottom:none}
 .ilabel{font-size:11px;color:#5E6C84}.ival{font-size:11px;font-weight:600;color:#172B4D}
-.bar-row{display:flex;align-items:center;gap:6px;padding:4px 1rem}
-.blabel{font-size:10px;color:#5E6C84;width:60px;flex-shrink:0}
-.btrack{flex:1;height:7px;background:#F4F5F7;border-radius:4px;overflow:hidden}
-.bfill{height:100%;border-radius:4px}
-.bval{font-size:10px;font-weight:700;width:16px;text-align:right}
 .pulse-row{padding:7px 1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:flex-start;gap:7px}
 .pulse-row:last-child{border-bottom:none}
 .pdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px}
 .ptext{font-size:11px;color:#5E6C84;line-height:1.4}
-.ptext b{color:#172B4D}
 .fr-item{padding:9px 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:flex-start;gap:8px}
 .fr-item:last-child{border-bottom:none}
 .fr-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:1px}
@@ -74,50 +71,40 @@ tr:last-child td{border-bottom:none}
 .tl-t{font-size:11px;font-weight:700;color:#172B4D;margin-bottom:2px}
 .tl-d{font-size:10px;color:#5E6C84;line-height:1.5}
 .tl-dt{font-size:10px;color:#A0AEC0;margin-top:2px}
-.metric{cursor:pointer;transition:box-shadow .15s}
-.metric:hover{box-shadow:0 0 0 2px #1A6FDB}
-.metric.active{box-shadow:0 0 0 2px #1A6FDB;background:#F0F7FF}
 .drawer{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.25rem;display:none}
 .drawer.open{display:block}
 .drawer-head{padding:.7rem 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;justify-content:space-between}
 .drawer-title{font-size:12px;font-weight:700;color:#172B4D}
 .drawer-close{font-size:14px;color:#5E6C84;cursor:pointer;background:none;border:none;padding:0 4px;line-height:1}
-</style>
-</head>
-<body>
+</style></head><body>
 <div class="nav">
   <div class="nav-links">
     <a class="nl" href="https://tessell.atlassian.net/wiki/spaces/CSE/overview" target="_parent">Home</a>
-    <span class="nl">Runbooks</span>
-    <span class="nl active">Customers</span>
-    <span class="nl">Incidents</span>
-    <span class="nl">Onboarding</span>
+    <span class="nl">Runbooks</span><span class="nl active">Customers</span>
+    <span class="nl">Incidents</span><span class="nl">Onboarding</span>
   </div>
   <a class="nav-back" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/1990557712" target="_parent">← All Customers</a>
 </div>
 <div style="background:#0B1F45;padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid #122752">
   <div style="display:flex;align-items:center;gap:10px">
     <div style="width:42px;height:42px;background:#E6F1FB;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#0B1F45">CT</div>
-    <div>
-      <div style="font-size:18px;font-weight:700;color:#fff">Customer Implementation Template</div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">AWS · us-east-1 · Oracle · Onboarding</div>
-    </div>
+    <div><div style="font-size:18px;font-weight:700;color:#fff">Customer Implementation Template</div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">AWS · us-east-1 · Oracle · Onboarding</div></div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15)" id="health-wrap">
       <div style="width:7px;height:7px;border-radius:50%;background:#68D391" id="health-dot"></div>
       <span id="health-badge" style="color:#68D391">Healthy</span>
     </div>
-    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 19:42 UTC</span>
+    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 21:11 UTC</span>
   </div>
 </div>
 <div class="body">
-  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;padding:.75rem 1.5rem;margin-bottom:1rem;display:grid;grid-template-columns:repeat(7,1fr);gap:1rem;align-items:center">
+  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;padding:.75rem 1.5rem;margin-bottom:1rem;display:grid;grid-template-columns:repeat(7,1fr);gap:1rem;align-items:start">
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Account</div><div style="font-size:12px;font-weight:700;color:#172B4D">Customer Implementation Template</div></div>
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">CSE Owner</div><div style="font-size:12px;font-weight:700;color:#172B4D"></div></div>
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div><div style="font-size:12px;font-weight:700;color:#172B4D">—</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Exec Sponsor</div><div style="font-size:12px;font-weight:700;color:#172B4D">—</div></div>
+    <div style="grid-column:span 2"><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div><div style="font-size:12px;font-weight:700;color:#172B4D">—</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cloud</div><div style="font-size:12px;font-weight:700;color:#172B4D">AWS · us-east-1</div></div>
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Engines</div><div style="font-size:12px;font-weight:700;color:#172B4D">Oracle</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">Onboarding</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div>—</div></div>
   </div>
@@ -126,67 +113,43 @@ tr:last-child td{border-bottom:none}
     <div class="metric" id="m-open" onclick="toggleDrawer('drawer-open','m-open')"><div class="mlabel">Open Tickets</div><div class="mval yellow">3</div><div class="msub">Across all priorities</div></div>
     <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">1</div><div class="msub">Pending delivery</div></div>
     <div class="metric" id="m-res" onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">1</div><div class="msub">Last 30 days</div></div>
-    <div class="metric"><div class="mlabel">Health Score</div><div class="mval" style="color:#68D391">10/10</div><div class="msub">Rule-based</div></div>
+    <div class="metric" id="m-health" onclick="toggleDrawer('drawer-health','m-health')"><div class="mlabel">Health Score</div><div class="mval" style="color:#68D391">10/10</div><div class="msub">Rule-based</div></div>
   </div>
-  <div class="drawer" id="drawer-p0p1">
-    <div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div>
-    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No P0/P1 tickets</td></tr></tbody></table>
+  <div class="drawer" id="drawer-health">
+    <div class="drawer-head"><span class="drawer-title">🧮 Health Score — 10/10 · <span style="color:#68D391">Healthy</span></span><button class="drawer-close" onclick="toggleDrawer('drawer-health','m-health')">✕</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:.5px solid #DFE1E6">
+      <div style="padding:1rem 1.25rem;border-right:.5px solid #DFE1E6"><div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">Impacting Factors</div><div id="health-factors"></div></div>
+      <div style="padding:1rem 1.25rem"><div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">How to Improve</div><div id="health-actions"></div></div>
+    </div>
+    <div style="padding:.75rem 1.25rem;background:#FAFBFC;display:flex;align-items:center;gap:6px">
+      <div style="flex:1;height:8px;background:#F4F5F7;border-radius:4px;overflow:hidden"><div style="height:100%;border-radius:4px;background:#68D391;width:100%;transition:width .6s ease"></div></div>
+      <span style="font-size:11px;font-weight:700;color:#68D391">10/10</span>
+      <span style="font-size:10px;color:#5E6C84">· Max deduction: 0 pts</span>
+    </div>
   </div>
-  <div class="drawer" id="drawer-open">
-    <div class="drawer-head"><span class="drawer-title">🎫 All Open Tickets (3)</span><button class="drawer-close" onclick="toggleDrawer('drawer-open','m-open')">✕</button></div>
-    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a></td><td>Upgrade terraform and kubectl to latest versions to address vulnerabilit</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>30d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37268" target="_blank">TS-37268</a></td><td>[Internal] - Email Alert Resolution - Service Details Missing in Resolve</td><td><span class="pb ph">High</span></td><td><span class="sp so">Fixed</span></td><td>55d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-18155" target="_blank">TS-18155</a></td><td>Account De-boarding in VPT@Customer</td><td><span class="pb ph">High</span></td><td><span class="sp so">To do</span></td><td>812d</td></tr></tbody></table>
-  </div>
-  <div class="drawer" id="drawer-feat">
-    <div class="drawer-head"><span class="drawer-title">💡 Feature Requests (1)</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div>
-    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a></td><td>Upgrade terraform and kubectl to latest versions to address vulnerabilit</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>30d</td></tr></tbody></table>
-  </div>
-  <div class="drawer" id="drawer-res">
-    <div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days (1)</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div>
-    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37262" target="_blank">TS-37262</a></td><td>[PWC] - Database Provisioning - Duplicate /opt/tessell-base fstab entrie</td><td><span class="pb pc">Highest</span></td><td><span class="sp sc">Closed</span></td><td>44d</td></tr></tbody></table>
-  </div>
+  <div class="drawer" id="drawer-p0p1"><div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr></tbody></table></div>
+  <div class="drawer" id="drawer-open"><div class="drawer-head"><span class="drawer-title">🎫 All Open Tickets (3)</span><button class="drawer-close" onclick="toggleDrawer('drawer-open','m-open')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a></td><td>Upgrade terraform and kubectl to latest versions to address vulnerabilit</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>30d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37268" target="_blank">TS-37268</a></td><td>[Internal] - Email Alert Resolution - Service Details Missing in Resolve</td><td><span class="pb ph">High</span></td><td><span class="sp so">Fixed</span></td><td>55d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-18155" target="_blank">TS-18155</a></td><td>Account De-boarding in VPT@Customer</td><td><span class="pb ph">High</span></td><td><span class="sp so">To do</span></td><td>812d</td></tr></tbody></table></div>
+  <div class="drawer" id="drawer-feat"><div class="drawer-head"><span class="drawer-title">💡 Feature Requests (1)</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a></td><td>Upgrade terraform and kubectl to latest versions to address vulnerabilit</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>30d</td></tr></tbody></table></div>
+  <div class="drawer" id="drawer-res"><div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days (1)</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37262" target="_blank">TS-37262</a></td><td>[PWC] - Database Provisioning - Duplicate /opt/tessell-base fstab entrie</td><td><span class="pb pc">Highest</span></td><td><span class="sp sc">Closed</span></td><td>44d</td></tr></tbody></table></div>
   <div class="grid2">
     <div>
       <div class="ai-panel">
         <div class="ai-eyebrow">✦ Health Analysis</div>
         <div class="ai-title">Customer Health Assessment</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start">
-          <div>
-            <div class="ai-body" id="ai-body">Calculating...</div>
-            <div class="ai-footer">
-              <div style="display:flex;align-items:baseline;gap:4px">
-                <span class="ai-score-label">Health score</span>
-                <span class="ai-score-val" id="ai-score" style="color:#68D391">10</span>
-                <span class="ai-score-max">/10</span>
-              </div>
-              <span id="ai-ts" class="ai-ts"></span>
-            </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start">
+          <div><div class="ai-body" id="ai-body">Calculating...</div>
+            <div class="ai-footer"><div style="display:flex;align-items:baseline;gap:4px"><span class="ai-score-label">Health score</span><span class="ai-score-val" id="ai-score" style="color:#68D391">10</span><span class="ai-score-max">/10</span></div><span id="ai-ts" class="ai-ts"></span></div>
           </div>
-          <div>
-            <div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>
-          </div>
+          <div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ticket Volume Trend</div><div style="position:relative;height:120px"><canvas id="trendChart"></canvas></div></div>
+          <div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Customer Pulse</div><div style="font-size:11px;color:rgba(255,255,255,0.3)">No pulse data yet.</div></div>
         </div>
       </div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">🚨 Active P0 / P1 Incidents</span><span class="badge br">0 Open</span></div>
-        <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr></tbody></table>
-      </div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">🎫 Open Support Tickets</span><span class="badge bo">3 Open</span></div>
-        <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a></td><td>Upgrade terraform and kubectl to latest versions to address vulnerabilit</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>30d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37268" target="_blank">TS-37268</a></td><td>[Internal] - Email Alert Resolution - Service Details Missing in Resolve</td><td><span class="pb ph">High</span></td><td><span class="sp so">Fixed</span></td><td>55d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-18155" target="_blank">TS-18155</a></td><td>Account De-boarding in VPT@Customer</td><td><span class="pb ph">High</span></td><td><span class="sp so">To do</span></td><td>812d</td></tr></tbody></table>
-      </div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">1 Active</span></div>
-        <div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">Upgrade terraform and kubectl to latest versions to address vulne</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a></div></div><span class="fr-status si">In Progress</span></div>
-      </div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">🚨 Active P0 / P1 Incidents</span><span class="badge br">0 Open</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr></tbody></table></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">🎫 Open Support Tickets</span><span class="badge bo">3 Open</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a></td><td>Upgrade terraform and kubectl to latest versions to address vulnerabilit</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>30d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37268" target="_blank">TS-37268</a></td><td>[Internal] - Email Alert Resolution - Service Details Missing in Resolve</td><td><span class="pb ph">High</span></td><td><span class="sp so">Fixed</span></td><td>55d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-18155" target="_blank">TS-18155</a></td><td>Account De-boarding in VPT@Customer</td><td><span class="pb ph">High</span></td><td><span class="sp so">To do</span></td><td>812d</td></tr></tbody></table></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">1 Active</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">Upgrade terraform and kubectl to latest versions to address vulne</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a></div></div><span class="fr-status si">In Progress</span></div></div>
     </div>
     <div>
-      <div class="sb-sec">
-        <div class="sb-head">💬 Customer Pulse</div>
-        <div class="pulse-row"><div class="ptext">No pulse data yet.</div></div>
-      </div>
-      <div class="sb-sec">
-        <div class="sb-head">📅 Recent Activity</div>
-        <div class="tl"><div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a> — Update on TS-37561</div><div class="tl-d">Testing Details The following testing steps were performed to validate the changes. Environment Setup Workflow Template  — Naresh Vanaparthi</div><div class="tl-dt">Mar 11, 2026</div></div></div>
+      <div class="sb-sec"><div class="sb-head">📅 Recent Activity</div><div class="tl"><div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a> — Update on TS-37561</div><div class="tl-d">Testing Details The following testing steps were performed to validate the changes. Environment Setup Workflow Template  — Naresh Vanaparthi</div><div class="tl-dt">Mar 11, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">🔵</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a> — TS-37561 moved to In Progress</div><div class="tl-d">Upgrade terraform and kubectl to latest versions to address vulnerabil — picked up by Naresh Vanaparthi</div><div class="tl-dt">Mar 11, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🔄</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a> — TS-37561 status → Selected for Development</div><div class="tl-d">Upgrade terraform and kubectl to latest versions to address vulnerabil — Naresh Vanaparthi</div><div class="tl-dt">Mar 11, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🔄</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a> — TS-37561 status → Prioritised By CS</div><div class="tl-d">Upgrade terraform and kubectl to latest versions to address vulnerabil — Sreejith Kesavan</div><div class="tl-dt">Mar 10, 2026</div></div></div>
@@ -194,10 +157,8 @@ tr:last-child td{border-bottom:none}
 <div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37268" target="_blank">TS-37268</a> — Update on TS-37268</div><div class="tl-d">Testing: Firing: Resolved: — Karan Bajrang</div><div class="tl-dt">Mar 06, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37262" target="_blank">TS-37262</a> — Update on TS-37262</div><div class="tl-d">Testing (venv_39) udayhegde@Udays-MacBook-Pro-2 genie_e968950e-f538-4d94-85bc-174c557c9bfe % bash genie_autorun.sh
 Start — Vijay Purohit</div><div class="tl-dt">Mar 06, 2026</div></div></div>
-<div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🎫</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a> — TS-37561 opened</div><div class="tl-d">Upgrade terraform and kubectl to latest versions to address vulnerabil</div><div class="tl-dt">Feb 24, 2026</div></div></div></div>
-      </div>
-      <div class="sb-sec">
-        <div class="sb-head">🔗 Quick Links</div>
+<div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🎫</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37561" target="_blank">TS-37561</a> — TS-37561 opened</div><div class="tl-d">Upgrade terraform and kubectl to latest versions to address vulnerabil</div><div class="tl-dt">Feb 24, 2026</div></div></div></div></div>
+      <div class="sb-sec"><div class="sb-head">🔗 Quick Links</div>
         <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/issues/?jql=text+~+%22Customer+Implementation+Template%22+AND+statusCategory+%21%3D+Done" target="_blank">All Open Tickets</a></div>
         <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/1990557712" target="_blank">Customer Portfolio</a></div>
         
@@ -208,52 +169,63 @@ Start — Vijay Purohit</div><div class="tl-dt">Mar 06, 2026</div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 
-const DATA = {"p0p1": 0, "open": 3, "features": 1, "resolved": 1, "pendingEng": 0, "p0keys": [], "highKeys": ["TS-37268", "TS-18155"], "generated": "Mar 26, 2026 19:42 UTC", "score": 10, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+new Chart(document.getElementById('trendChart'),{type:'bar',data:{labels:["Oct 20", "Nov 20", "Dec 20", "Jan 20", "Feb 20", "Mar 20"],datasets:[
+  {label:'Open',data:[0, 0, 0, 0, 0, 0],backgroundColor:'rgba(26,111,219,0.85)',borderRadius:3,barPercentage:0.7,categoryPercentage:0.6},
+  {label:'Resolved',data:[0, 0, 0, 0, 0, 0],backgroundColor:'rgba(56,161,105,0.85)',borderRadius:3,barPercentage:0.7,categoryPercentage:0.6}
+]},options:{responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:true,position:'top',align:'end',labels:{font:{size:9},color:'rgba(255,255,255,0.5)',boxWidth:8,padding:8}}},
+  scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)'},border:{display:false}},
+           y:{min:0,max:2,grid:{color:'rgba(255,255,255,0.06)'},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)',stepSize:2},border:{display:false}}}}}); 
+const DATA={"p0p1": 0, "open": 3, "features": 1, "resolved": 1, "pendingEng": 0, "p0keys": [], "highKeys": ["TS-37268", "TS-18155"], "generated": "Mar 26, 2026 21:11 UTC", "score": 10, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
-  const el = document.getElementById('ai-body');
-  const sc = document.getElementById('ai-score');
-  let score = 10, findings = [], actions = [];
-  if (DATA.p0p1 >= 3)       { score-=4; findings.push(`<b style="color:#FC8181">${DATA.p0p1} active P0 incidents</b> (${DATA.p0keys.join(', ')})`); actions.push(`Escalate ${DATA.p0keys[0]} to engineering leadership for same-day resolution`); }
-  else if (DATA.p0p1 === 2) { score-=3; findings.push(`<b style="color:#FC8181">2 active P0 incidents</b> (${DATA.p0keys.join(', ')})`); actions.push(`Escalate ${DATA.p0keys[0]} and ${DATA.p0keys[1]} — both need engineering owner today`); }
-  else if (DATA.p0p1 === 1) { score-=2; findings.push(`<b style="color:#FFC107">1 active P0/P1</b> (${DATA.p0keys[0]})`); actions.push(`Ensure ${DATA.p0keys[0]} has daily updates to customer`); }
-  else                       { findings.push('<b style="color:#68D391">No active P0/P1 incidents</b>'); }
-  if (DATA.open >= 8)        { score-=2; findings.push(`High backlog: <b>${DATA.open} tickets</b> open`); }
-  else if (DATA.open >= 5)   { score-=1; findings.push(`Moderate backlog: <b>${DATA.open} open tickets</b>`); }
-  else                       { findings.push(`<b style="color:#68D391">Healthy ticket volume</b>: ${DATA.open} open`); }
-  if (DATA.pendingEng >= 4)  { score-=2; findings.push(`<b>${DATA.pendingEng} tickets stuck pending engineering</b>`); actions.push(`Review ${DATA.pendingEng} blocked tickets and set ETAs for customer`); }
-  else if (DATA.pendingEng >= 2) { score-=1; findings.push(`${DATA.pendingEng} tickets pending engineering`); }
-  if (DATA.features >= 5)    { score-=1; findings.push(`Large feature backlog: <b>${DATA.features} requests</b>`); actions.push('Schedule a feature roadmap call to set delivery expectations'); }
-  if (DATA.resolved === 0)   { score-=1; findings.push('<b style="color:#FFC107">No tickets resolved in 30 days</b>'); }
-  else                       { findings.push(`<b style="color:#68D391">${DATA.resolved} resolved</b> in last 30 days`); }
-  score = Math.max(1, Math.min(10, score));
-  const color = score>=8?'#68D391':score>=6?'#FFC107':'#FC8181';
-  const label = score>=8?'Healthy':score>=6?'Stable':score>=4?'Needs Attention':'At Risk';
-  const badge = document.getElementById('health-badge');
-  const dot   = document.getElementById('health-dot');
-  if (badge) { badge.textContent=label; badge.style.color=color; }
-  if (dot)   { dot.style.background=color; }
-  if (badge && badge.parentElement) {
-    badge.parentElement.style.borderColor = color+'4D';
-    badge.parentElement.style.background  = color+'1A';
-  }
-  let html = findings.map(f=>`<p style="margin-bottom:6px">• ${f}</p>`).join('');
-  if (actions.length) html += `<div style="margin-top:8px;padding-top:8px;border-top:.5px solid rgba(255,255,255,0.1)"><p style="font-size:10px;font-weight:700;color:#00C2E0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Recommended Actions</p>${actions.map(a=>`<p style="margin-bottom:4px">→ ${a}</p>`).join('')}</div>`;
-  el.innerHTML = html;
-  sc.textContent = score;
-  sc.style.color  = color;
-  document.getElementById('ai-ts').textContent = 'Assessed: ' + DATA.generated;
+  const el=document.getElementById('ai-body'),sc=document.getElementById('ai-score');
+  let score=10,findings=[],actions=[];
+  if(DATA.p0p1>=3){score-=4;findings.push(`<b style="color:#FC8181">${DATA.p0p1} active P0 incidents</b> (${DATA.p0keys.join(', ')})`);actions.push(`Escalate ${DATA.p0keys[0]} to engineering leadership for same-day resolution`);}
+  else if(DATA.p0p1===2){score-=3;findings.push(`<b style="color:#FC8181">2 active P0 incidents</b> (${DATA.p0keys.join(', ')})`);actions.push(`Both need an engineering owner today`);}
+  else if(DATA.p0p1===1){score-=2;findings.push(`<b style="color:#FFC107">1 active P0/P1</b> (${DATA.p0keys[0]})`);actions.push(`Ensure ${DATA.p0keys[0]} has daily updates to customer`);}
+  else{findings.push('<b style="color:#68D391">No active P0/P1 incidents</b>');}
+  if(DATA.open>=8){score-=2;findings.push(`High backlog: <b>${DATA.open} tickets</b> open`);}
+  else if(DATA.open>=5){score-=1;findings.push(`Moderate backlog: <b>${DATA.open} open tickets</b>`);}
+  else{findings.push(`<b style="color:#68D391">Healthy ticket volume</b>: ${DATA.open} open`);}
+  if(DATA.pendingEng>=4){score-=2;findings.push(`<b>${DATA.pendingEng} tickets stuck pending engineering</b>`);actions.push(`Set ETAs on all ${DATA.pendingEng} blocked tickets`);}
+  else if(DATA.pendingEng>=2){score-=1;findings.push(`${DATA.pendingEng} tickets pending engineering`);}
+  if(DATA.features>=5){score-=1;findings.push(`Large feature backlog: <b>${DATA.features} requests</b>`);actions.push('Schedule a feature roadmap call');}
+  if(DATA.resolved===0){score-=1;findings.push('<b style="color:#FFC107">No tickets resolved in 30 days</b>');}
+  else{findings.push(`<b style="color:#68D391">${DATA.resolved} resolved</b> in last 30 days`);}
+  score=Math.max(1,Math.min(10,score));
+  const color=score>=8?'#68D391':score>=6?'#FFC107':'#FC8181';
+  const label=score>=8?'Healthy':score>=6?'Stable':score>=4?'Needs Attention':'At Risk';
+  const badge=document.getElementById('health-badge'),dot=document.getElementById('health-dot');
+  if(badge){badge.textContent=label;badge.style.color=color;}
+  if(dot){dot.style.background=color;}
+  if(badge&&badge.parentElement){badge.parentElement.style.borderColor=color+'4D';badge.parentElement.style.background=color+'1A';}
+  let html=findings.map(f=>`<p style="margin-bottom:6px">• ${f}</p>`).join('');
+  if(actions.length)html+=`<div style="margin-top:8px;padding-top:8px;border-top:.5px solid rgba(255,255,255,0.1)"><p style="font-size:10px;font-weight:700;color:#00C2E0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Recommended Actions</p>${actions.map(a=>`<p style="margin-bottom:4px">→ ${a}</p>`).join('')}</div>`;
+  el.innerHTML=html;sc.textContent=score;sc.style.color=color;
+  document.getElementById('ai-ts').textContent='Assessed: '+DATA.generated;
 }
 
-window.onload = () => runHealth(DATA);
-function toggleDrawer(drawerId, metricId) {
-  const drawer = document.getElementById(drawerId);
-  const metric = document.getElementById(metricId);
-  const isOpen = drawer.classList.contains('open');
-  document.querySelectorAll('.drawer').forEach(d => d.classList.remove('open'));
-  document.querySelectorAll('.metric').forEach(m => m.classList.remove('active'));
-  if (!isOpen) { drawer.classList.add('open'); metric.classList.add('active'); }
+window.onload=()=>{runHealth(DATA);buildHealthDrawer(DATA);};
+function toggleDrawer(dId,mId){const d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.metric').forEach(x=>x.classList.remove('active'));if(!open){d.classList.add('open');m.classList.add('active');}}
+function buildHealthDrawer(DATA){
+  const factors=[],actions=[];
+  if(DATA.p0p1>=3){factors.push(['−4 pts',`${DATA.p0p1} active P0 incidents (${DATA.p0keys.join(', ')})`, '#E53E3E']);actions.push(['🚨','Escalate to engineering leadership']);}
+  else if(DATA.p0p1===2){factors.push(['−3 pts',`2 P0 incidents (${DATA.p0keys.join(', ')})`, '#E53E3E']);actions.push(['🚨','Both need engineering owner today']);}
+  else if(DATA.p0p1===1){factors.push(['−2 pts',`1 active P0/P1 (${DATA.p0keys[0]})`, '#DD6B20']);actions.push(['🚨','Daily updates to customer until resolved']);}
+  else{factors.push(['+0 pts','No active P0/P1 incidents','#38A169']);}
+  if(DATA.open>=8){factors.push(['−2 pts',`High backlog — ${DATA.open} open`,'#DD6B20']);actions.push(['🎫','Close or escalate stale tickets']);}
+  else if(DATA.open>=5){factors.push(['−1 pt',`Moderate backlog — ${DATA.open} open`,'#D69E2E']);actions.push(['🎫','Target 3 resolutions this sprint']);}
+  else{factors.push(['+0 pts',`Healthy volume — ${DATA.open} open`,'#38A169']);}
+  if(DATA.pendingEng>=4){factors.push(['−2 pts',`${DATA.pendingEng} blocked pending eng`,'#DD6B20']);actions.push(['⏳','Set ETAs and communicate to customer']);}
+  else if(DATA.pendingEng>=2){factors.push(['−1 pt',`${DATA.pendingEng} pending engineering`,'#D69E2E']);actions.push(['⏳','Chase ETAs this week']);}
+  else{factors.push(['+0 pts','No tickets blocked on engineering','#38A169']);}
+  if(DATA.features>=5){factors.push(['−1 pt',`${DATA.features} open feature requests`,'#D69E2E']);actions.push(['💡','Schedule roadmap call']);}
+  else{factors.push(['+0 pts',`${DATA.features} feature requests`,'#38A169']);}
+  if(DATA.resolved===0){factors.push(['−1 pt','No tickets resolved in 30d','#DD6B20']);actions.push(['✅','Close at least one ticket']);}
+  else{factors.push(['+0 pts',`${DATA.resolved} resolved in 30d`,'#38A169']);}
+  document.getElementById('health-factors').innerHTML=factors.map(([pts,label,col])=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:${col}1A;color:${col};flex-shrink:0;min-width:44px;text-align:center">${pts}</span><span style="font-size:11px;color:#172B4D;line-height:1.5">${label}</span></div>`).join('');
+  const aEl=document.getElementById('health-actions');
+  aEl.innerHTML=actions.length===0?'<p style="font-size:11px;color:#38A169;font-weight:600">✅ Customer is healthy!</p>':actions.map(([icon,text])=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:13px;flex-shrink:0">${icon}</span><span style="font-size:11px;color:#172B4D;line-height:1.5">${text}</span></div>`).join('');
 }
-</script>
-</body>
-</html>
+</script></body></html>
