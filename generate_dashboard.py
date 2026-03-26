@@ -36,7 +36,7 @@ JQL_RECENT_UPDATED = (
 
 def jql(query, max=20):
     r = requests.get(
-        f"{JIRA_BASE}/rest/api/3/search",
+        f"{JIRA_BASE}/rest/api/3/search/jql",
         auth=auth, headers=headers,
         params={"jql": query, "maxResults": max,
                 "fields": "summary,priority,status,created,resolutiondate,issuetype"}
