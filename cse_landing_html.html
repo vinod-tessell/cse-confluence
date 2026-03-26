@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Success Engineering</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F4F5F7; }
+
+  /* Nav */
+  .nav {
+    background: #0B1F45;
+    padding: 0 2rem;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-links { display: flex; align-items: center; gap: 1.75rem; }
+  .nav-link {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.55);
+    text-decoration: none;
+    padding-bottom: 3px;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .nav-link:hover { color: rgba(255,255,255,0.9); }
+  .nav-link.active { color: #fff; border-color: #00C2E0; }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #7DDBA3;
+    background: rgba(125,219,163,0.14);
+    border: 0.5px solid rgba(125,219,163,0.3);
+    padding: 4px 11px;
+    border-radius: 20px;
+  }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #7DDBA3; }
+
+  /* Body */
+  .body { padding: 2rem; }
+  .section-title { font-size: 22px; font-weight: 600; color: #172B4D; margin-bottom: 0.25rem; }
+  .section-sub { font-size: 13px; color: #5E6C84; margin-bottom: 1.25rem; }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 1fr 240px; gap: 1.5rem; align-items: start; }
+
+  /* Card grid */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+  .card {
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    min-height: 82px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.15s;
+  }
+  .card:hover { filter: brightness(1.1); transform: translateY(-2px); }
+  .card-label { font-size: 13px; font-weight: 600; line-height: 1.4; }
+  .card-arrow { font-size: 18px; opacity: 0.55; flex-shrink: 0; margin-left: 4px; }
+
+  .cc1 { background: #1A6FDB; color: #fff; }
+  .cc2 { background: #1044A0; color: #BDD8FF; }
+  .cc3 { background: #0D6E85; color: #C5F0FA; }
+  .cc4 { background: #7B2FBE; color: #EDD8FF; }
+  .cc5 { background: #1C3A6E; color: #A8C4F0; }
+  .cc6 { background: #0F5C8A; color: #C0E8FF; }
+  .cc7 { background: #184E8C; color: #B8D6FF; }
+  .cc8 { background: #0B9B6E; color: #C5F5E8; }
+
+  /* Sidebar */
+  .sidebar { border-radius: 10px; overflow: hidden; border: 1px solid #DFE1E6; background: #fff; }
+  .sidebar-head {
+    background: #0B1F45;
+    padding: 1.1rem 1.25rem 1rem;
+    border-bottom: 2px solid #00C2E0;
+  }
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #00C2E0;
+    margin-bottom: 6px;
+  }
+  .sidebar-title { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.3; margin-bottom: 5px; }
+  .sidebar-desc { font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.5; }
+  .sidebar-links { padding: 4px 0; }
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 1.25rem;
+    font-size: 13px;
+    color: #172B4D;
+    text-decoration: none;
+    border-bottom: 1px solid #F4F5F7;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .sidebar-link:last-child { border-bottom: none; }
+  .sidebar-link:hover { background: #F4F5F7; }
+  .sidebar-arrow { color: #1A6FDB; font-size: 16px; }
+
+  /* Search results */
+  .results { display: none; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .result {
+    background: #fff;
+    border: 1px solid #DFE1E6;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .result:hover { background: #F4F5F7; }
+  .result-title { font-size: 13px; font-weight: 600; color: #1A6FDB; margin-bottom: 2px; }
+  .result-cat { font-size: 11px; color: #5E6C84; }
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<div class="nav">
+  <div class="nav-links">
+    <span class="nav-link active">Home</span>
+    <span class="nav-link">Runbooks</span>
+    <span class="nav-link">Customers</span>
+    <span class="nav-link">Incidents</span>
+    <span class="nav-link">Onboarding</span>
+  </div>
+  <div class="status">
+    <div class="status-dot"></div>
+    All systems operational
+  </div>
+</div>
+
+<!-- Body -->
+<div class="body">
+  <p class="section-title">Find answers</p>
+  <p class="section-sub">Browse by topic, or use the search bar above to jump straight to any page.</p>
+
+  <div class="layout">
+
+    <!-- Card grid -->
+    <div>
+      <div class="grid">
+        <a class="card cc1" href="#">
+          <span class="card-label">Implementation lifecycle</span>
+          <span class="card-arrow">&#8250;</span>
+        </a>
+        <a class="card cc2" href="#">
+          <span class="card-label">Oracle operations</span>
+          <span class="card-arrow">&#8250;</span>
+        </a>
+        <a class="card cc3" href="#">
+          <span class="card-label">MySQL operations</span>
+          <span class="card-arrow">&#8250;</span>
+        </a>
+        <a class="card cc4" href="#">
+          <span class="card-label">Incident response</span>
+          <span class="card-arrow">&#8250;</span>
+        </a>
+        <a class="card cc5" href="#">
+          <span class="card-label">Infra &amp; connectivity</span>
+          <span class="card-arrow">&#8250;</span>
+        </a>
+        <a class="card cc6" href="#">
+          <span class="card-label">Database migration</span>
+          <span class="card-arrow">&#8250;</span>
+        </a>
+        <a class="card cc7" href="#">
+          <span class="card-label">SR &amp; CCB tickets</span>
+          <span class="card-arrow">&#8250;</span>
+        </a>
+        <a class="card cc8" href="#">
+          <span class="card-label">New hire onboarding</span>
+          <span class="card-arrow">&#8250;</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-head">
+        <div class="sidebar-label">Guide</div>
+        <div class="sidebar-title">New to the CSE team?</div>
+        <div class="sidebar-desc">Start here &mdash; orientation, tooling setup, and your first 30 days.</div>
+      </div>
+      <div class="sidebar-links">
+        <a class="sidebar-link" href="#">Team orientation <span class="sidebar-arrow">&#8250;</span></a>
+        <a class="sidebar-link" href="#">Tooling setup <span class="sidebar-arrow">&#8250;</span></a>
+        <a class="sidebar-link" href="#">Training plan <span class="sidebar-arrow">&#8250;</span></a>
+        <a class="sidebar-link" href="#">Customer portfolio <span class="sidebar-arrow">&#8250;</span></a>
+        <a class="sidebar-link" href="#">Shadow an incident <span class="sidebar-arrow">&#8250;</span></a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
