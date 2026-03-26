@@ -287,6 +287,15 @@ def priority_class(p):
     if p in ("medium",):            return "pm", "Medium"
     return "pl", p.capitalize() or "—"
 
+# ── FIX 1: status_class extracted as proper top-level function ─────────────────
+def status_class(s):
+    s = (s or "").lower()
+    if "progress" in s or "review"   in s: return "si",  "In Progress"
+    if "pending"  in s or "wait"     in s: return "spe", "Pending Eng"
+    if "done"     in s or "closed"   in s or "resolved" in s: return "sc", "Closed"
+    return "so", s.capitalize() or "Open"
+
+# ── FIX 2: single ticket_row, duplicate + dead code removed ───────────────────
 def ticket_row(issue):
     key  = issue["key"]
     f    = issue["fields"]
@@ -298,22 +307,6 @@ def ticket_row(issue):
     else:
         pc, pl = priority_class(f.get("priority", {}).get("name", ""))
     sc_, sl = status_class(f.get("status", {}).get("name", ""))
-    url  = f"{JIRA_BASE}/browse/{key}"
-    return (f'<tr><td><a class="tlink" href="{url}" target="_blank">{key}</a></td>'
-            f'<td>{summ}</td><td><span class="pb {pc}">{pl}</span></td>'
-            f'<td><span class="sp {sc_}">{sl}</span></td><td>{age_days(f.get("created",""))}</td></tr>')
-    s = (s or "").lower()
-    if "progress" in s or "review"   in s: return "si",  "In Progress"
-    if "pending"  in s or "wait"     in s: return "spe", "Pending Eng"
-    if "done"     in s or "closed"   in s or "resolved" in s: return "sc", "Closed"
-    return "so", s.capitalize() or "Open"
-
-def ticket_row(issue):
-    key  = issue["key"]
-    f    = issue["fields"]
-    summ = (f.get("summary") or "")[:72]
-    pc, pl  = priority_class(f.get("priority",{}).get("name",""))
-    sc_, sl = status_class(f.get("status",{}).get("name",""))
     url  = f"{JIRA_BASE}/browse/{key}"
     return (f'<tr><td><a class="tlink" href="{url}" target="_blank">{key}</a></td>'
             f'<td>{summ}</td><td><span class="pb {pc}">{pl}</span></td>'
@@ -707,13 +700,33 @@ new Chart(document.getElementById('trendChart'), {{
             })
         return json.dumps(out)
 
+    # ── FIX 5: define portal_link, bars, ql_jira before HTML template ──────────
+    portal_link = (
+        f'<div class="ir"><span class="ilabel">Portal</span>'
+        f'<span class="ival"><a class="tlink" href="{cust["portal_url"]}" target="_blank">'
+        f'{cust["portal_url"]}</a></span></div>'
+    ) if cust.get("portal_url") else ""
+
+    kw_enc  = cust["jql_keyword"].replace(" ", "+").replace('"', '%22')
+    ql_jira = f'{JIRA_BASE}/issues/?jql=text+~+%22{kw_enc}%22+AND+statusCategory+%21%3D+Done'
+
+    bar_max = max((h["count"] for h in hist), default=1)
+    avg     = sum(h["count"] for h in hist) / len(hist) if hist else 0
+    bars    = "".join(
+        f'<div class="bar-row"><span class="blabel">{h["month"][:6]}</span>'
+        f'<div class="btrack"><div class="bfill" style="width:{round(h["count"]/bar_max*100)}%;'
+        f'background:{"#38A169" if h["count"]<=avg else "#DD6B20" if h["count"]<bar_max else "#E53E3E"}"></div></div>'
+        f'<span class="bval {"green" if h["count"]<=avg else "orange" if h["count"]<bar_max else "red"}">{h["count"]}</span></div>'
+        for h in hist
+    ) if hist else ""
+
+    # ── FIX 3: data_js — signals removed ──────────────────────────────────────
     data_js = json.dumps({
         "p0p1": len(p0p1), "open": len(open_t),
         "features": len(features), "resolved": len(resolved),
         "pendingEng": pending, "p0keys": p0_keys,
         "highKeys": high_keys, "generated": now,
-        "score": score, "scoreLabel": health_label, "scoreColor": health_color,
-        "signals": [{"deduction": s[0], "label": s[1], "suggestion": s[2]} for s in signals]
+        "score": score, "scoreLabel": health_label, "scoreColor": health_color
     })
     p0p1_js    = ticket_list_js(p0p1)
     open_js    = ticket_list_js(open_t)
@@ -1279,7 +1292,8 @@ if __name__ == "__main__":
         print(f"  P0/P1:{len(data['p0p1'])}  Open:{len(data['open'])}  "
               f"Features:{len(data['features'])}  Resolved(30d):{len(data['resolved'])}")
 
-        score, label, color, hk, _, _signals = compute_health(
+        # ── FIX 4: correct unpack — 5 values only ─────────────────────────────
+        score, label, color, hk, pending = compute_health(
             data["p0p1"], data["open"], data["features"], data["resolved"]
         )
 
