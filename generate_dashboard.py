@@ -226,7 +226,7 @@ def make_jqls(keyword):
     return {
         "p0p1": (
             f'project in (TS, SR) AND text ~ "{keyword}" '
-            f'AND labels in (P0, P1) '
+            f'AND (labels = P0 OR labels = P1) '
             f'AND statusCategory != Done ORDER BY created DESC'
         ),
         "open": (
@@ -273,11 +273,11 @@ def age_days(iso):
     except: return "—"
 
 def sre_priority(fields):
-    """Read P0/P1 from labels field — the SRE priority label."""
+    """Read P0/P1 strictly from SRE label only. Returns None if neither P0 nor P1 label present."""
     labels = [l.upper() for l in (fields.get("labels") or [])]
     if "P0" in labels: return "pc", "P0"
     if "P1" in labels: return "ph", "P1"
-    return None, None
+    return None, None  # explicitly not P0/P1 — do not categorise as such
 
 def priority_class(p):
     """Fallback — Jira priority field for display on non-P0/P1 tickets."""
@@ -300,7 +300,7 @@ def ticket_row(issue):
     key  = issue["key"]
     f    = issue["fields"]
     summ = (f.get("summary") or "")[:72]
-    # Use SRE label P0/P1 if present, otherwise fall back to Jira priority
+    # Use SRE label P0/P1 strictly — if no P0/P1 label, do not show in P0/P1 bucket
     sre_pc, sre_pl = sre_priority(f)
     if sre_pc:
         pc, pl = sre_pc, sre_pl
