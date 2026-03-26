@@ -1,0 +1,579 @@
+[
+  {
+    "id": "collectors",
+    "name": "Collectors",
+    "initials": "CO",
+    "logo_color": "#0B1F45",
+    "logo_bg": "#E6F1FB",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Stabilisation",
+    "cse_owner": "Soumi",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Collectors",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-696",
+    "cso_status": "In Maintenance"
+  },
+  {
+    "id": "aon",
+    "name": "AON",
+    "initials": "AO",
+    "logo_color": "#0F5C8A",
+    "logo_bg": "#E6F1FB",
+    "cloud": "Azure",
+    "region": "eastus",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Stabilisation",
+    "cse_owner": "Soumi",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Aon",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-180",
+    "cso_status": "In Maintenance"
+  },
+  {
+    "id": "boost-mobile",
+    "name": "Boost Mobile",
+    "initials": "BM",
+    "logo_color": "#7B2FBE",
+    "logo_bg": "#EEEDFE",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Onboarding",
+    "cse_owner": "siva.pradeep",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Boost Mobile",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-846",
+    "cso_status": "To Do"
+  },
+  {
+    "id": "darlingii",
+    "name": "Darlingii",
+    "initials": "DA",
+    "logo_color": "#0D6E85",
+    "logo_bg": "#E1F5EE",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Onboarding",
+    "cse_owner": "siva.pradeep",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Darlingii",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-152",
+    "cso_status": "To Do"
+  },
+  {
+    "id": "onity-group-phase-1",
+    "name": "Onity Group - Phase 1",
+    "initials": "O1",
+    "logo_color": "#854F0B",
+    "logo_bg": "#FAEEDA",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Implementation",
+    "cse_owner": "siva.pradeep",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Onity Group - Phase 1",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-646",
+    "cso_status": "In Progress"
+  },
+  {
+    "id": "williams",
+    "name": "Williams",
+    "initials": "WI",
+    "logo_color": "#27500A",
+    "logo_bg": "#EAF3DE",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Stabilisation",
+    "cse_owner": "siva.pradeep",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Williams",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-627",
+    "cso_status": "In Maintenance"
+  },
+  {
+    "id": "equinor",
+    "name": "Equinor",
+    "initials": "EQ",
+    "logo_color": "#993556",
+    "logo_bg": "#FBEAF0",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Onboarding",
+    "cse_owner": "Ankush",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Equinor",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-201",
+    "cso_status": "To Do"
+  },
+  {
+    "id": "bhfl",
+    "name": "BHFL",
+    "initials": "BH",
+    "logo_color": "#1C3A6E",
+    "logo_bg": "#E6F1FB",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Implementation",
+    "cse_owner": "srivasram.devarajan",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "BHFL",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-90",
+    "cso_status": "In Progress"
+  },
+  {
+    "id": "smfg",
+    "name": "SMFG",
+    "initials": "SM",
+    "logo_color": "#0B1F45",
+    "logo_bg": "#E6F1FB",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Implementation",
+    "cse_owner": "srivasram.devarajan",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "SMFG",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-67",
+    "cso_status": "In Progress"
+  },
+  {
+    "id": "usda-exadata-solaris-aix-implementation",
+    "name": "USDA Exadata & Solaris/AIX - Implementation",
+    "initials": "UI",
+    "logo_color": "#0F5C8A",
+    "logo_bg": "#E6F1FB",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Implementation",
+    "cse_owner": "Vinod",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "USDA Exadata & Solaris/AIX - Implementation",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-1220",
+    "cso_status": "In Progress"
+  },
+  {
+    "id": "atlas-air",
+    "name": "Atlas Airlines",
+    "initials": "AA",
+    "logo_color": "#7B2FBE",
+    "logo_bg": "#EEEDFE",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Onboarding",
+    "cse_owner": "Vinod",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Atlas Air",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-1049",
+    "cso_status": "To Do"
+  },
+  {
+    "id": "duncan-solutions-phase-2",
+    "name": "Duncan Solutions -  Phase 2",
+    "initials": "D2",
+    "logo_color": "#0D6E85",
+    "logo_bg": "#E1F5EE",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Implementation",
+    "cse_owner": "Vinod",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Duncan Solutions -  Phase 2",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-1009",
+    "cso_status": "In Progress"
+  },
+  {
+    "id": "advizex-solutions",
+    "name": "Advizex Solutions",
+    "initials": "AS",
+    "logo_color": "#854F0B",
+    "logo_bg": "#FAEEDA",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Implementation",
+    "cse_owner": "Vinod",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Advizex Solutions",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-761",
+    "cso_status": "In Progress"
+  },
+  {
+    "id": "usss",
+    "name": "USSS",
+    "initials": "US",
+    "logo_color": "#27500A",
+    "logo_bg": "#EAF3DE",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Implementation",
+    "cse_owner": "Vinod",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "USSS",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-673",
+    "cso_status": "In Progress"
+  },
+  {
+    "id": "citizens",
+    "name": "Citizens",
+    "initials": "CI",
+    "logo_color": "#993556",
+    "logo_bg": "#FBEAF0",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle",
+      "MySQL",
+      "PostgreSQL"
+    ],
+    "phase": "Stabilisation",
+    "cse_owner": "Vinod",
+    "tam": "",
+    "portal_url": "https://citizens.tessell.com",
+    "confluence_page_id": "2164948993",
+    "jql_keyword": "Citizens",
+    "active": true,
+    "ticket_history": [
+      {
+        "month": "Oct 2025",
+        "count": 3
+      },
+      {
+        "month": "Nov 2025",
+        "count": 5
+      },
+      {
+        "month": "Dec 2025",
+        "count": 7
+      },
+      {
+        "month": "Jan 2026",
+        "count": 6
+      },
+      {
+        "month": "Feb 2026",
+        "count": 6
+      },
+      {
+        "month": "Mar 2026",
+        "count": 8
+      }
+    ],
+    "pulse": [
+      {
+        "sentiment": "frustrated",
+        "text": "Clone to QA blocked 4+ days"
+      },
+      {
+        "sentiment": "concerned",
+        "text": "Perf Insights dark since Nov 2025"
+      },
+      {
+        "sentiment": "concerned",
+        "text": "MySQL ZZ6 HA recurring, no permanent fix"
+      },
+      {
+        "sentiment": "waiting",
+        "text": "Billing download pending engineering"
+      },
+      {
+        "sentiment": "positive",
+        "text": "DB upgrade to 7.64.1 completed smoothly"
+      }
+    ],
+    "cso_epic": "CSO-496",
+    "cso_status": "In Maintenance"
+  },
+  {
+    "id": "levis-phase-1",
+    "name": "Levis Phase-1",
+    "initials": "LP",
+    "logo_color": "#1C3A6E",
+    "logo_bg": "#E6F1FB",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Implementation",
+    "cse_owner": "siva.pradeep",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Levis Phase-1",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-357",
+    "cso_status": "In Progress"
+  },
+  {
+    "id": "customer-implementation-template",
+    "name": "Customer Implementation Template",
+    "initials": "CT",
+    "logo_color": "#0B1F45",
+    "logo_bg": "#E6F1FB",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Onboarding",
+    "cse_owner": "",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Customer Implementation Template",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-1",
+    "cso_status": "To Do"
+  },
+  {
+    "id": "sallie-mae",
+    "name": "Sallie Mae",
+    "initials": "SM",
+    "logo_color": "#0F5C8A",
+    "logo_bg": "#E6F1FB",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Onboarding",
+    "cse_owner": "Uday",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Sallie Mae",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-23",
+    "cso_status": "To Do"
+  },
+  {
+    "id": "att",
+    "name": "ATT",
+    "initials": "AT",
+    "logo_color": "#7B2FBE",
+    "logo_bg": "#EEEDFE",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Onboarding",
+    "cse_owner": "Jonathan",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "ATT",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-869",
+    "cso_status": "To Do"
+  },
+  {
+    "id": "pwc-services",
+    "name": "PWC - Services",
+    "initials": "PS",
+    "logo_color": "#0D6E85",
+    "logo_bg": "#E1F5EE",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Stabilisation",
+    "cse_owner": "abdul.ali",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "PWC - Services",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-177",
+    "cso_status": "In Maintenance"
+  },
+  {
+    "id": "landisgyr",
+    "name": "LandisGyr",
+    "initials": "LA",
+    "logo_color": "#854F0B",
+    "logo_bg": "#FAEEDA",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Implementation",
+    "cse_owner": "Sajesh",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "LandisGyr",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-306",
+    "cso_status": "In Progress"
+  },
+  {
+    "id": "brocacef-nl",
+    "name": "Brocacef-NL",
+    "initials": "BR",
+    "logo_color": "#27500A",
+    "logo_bg": "#EAF3DE",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Onboarding",
+    "cse_owner": "Sajesh",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Brocacef-NL",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-900",
+    "cso_status": "To Do"
+  },
+  {
+    "id": "magaya",
+    "name": "Magaya",
+    "initials": "MA",
+    "logo_color": "#993556",
+    "logo_bg": "#FBEAF0",
+    "cloud": "AWS",
+    "region": "us-east-1",
+    "engines": [
+      "Oracle"
+    ],
+    "phase": "Stabilisation",
+    "cse_owner": "Vinod",
+    "tam": "",
+    "portal_url": "",
+    "confluence_page_id": "",
+    "jql_keyword": "Magaya",
+    "active": true,
+    "ticket_history": [],
+    "pulse": [],
+    "cso_epic": "CSO-399",
+    "cso_status": "In Maintenance"
+  }
+]
