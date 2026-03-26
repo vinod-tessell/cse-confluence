@@ -100,7 +100,7 @@ tr:last-child td{border-bottom:none}
       <div style="width:7px;height:7px;border-radius:50%;background:#68D391" id="health-dot"></div>
       <span id="health-badge" style="color:#68D391">Healthy</span>
     </div>
-    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 16:04 UTC</span>
+    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 19:22 UTC</span>
   </div>
 </div>
 <div class="body">
@@ -132,7 +132,7 @@ tr:last-child td{border-bottom:none}
       </div>
       <div class="sec">
         <div class="sec-head"><span class="sec-title">🎫 Open Support Tickets</span><span class="badge bo">2 Open</span></div>
-        <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37541" target="_blank">TS-37541</a></td><td>ATT HCP POC deployment</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>30d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8302" target="_blank">SR-8302</a></td><td>Database import to SQL HA</td><td><span class="pb ph">High</span></td><td><span class="sp spe">Pending Eng</span></td><td>15d</td></tr></tbody></table>
+        <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8302" target="_blank">SR-8302</a></td><td>Database import to SQL HA</td><td><span class="pb ph">High</span></td><td><span class="sp spe">Pending Eng</span></td><td>15d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37541" target="_blank">TS-37541</a></td><td>ATT HCP POC deployment</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>31d</td></tr></tbody></table>
       </div>
       <div class="sec">
         <div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">0 Active</span></div>
@@ -168,15 +168,17 @@ tr:last-child td{border-bottom:none}
       </div>
       <div class="sb-sec">
         <div class="sb-head">🔗 Quick Links</div>
-        <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/issues/?jql=text+~+%22ATT.%22+AND+statusCategory+!%3D+Done" target="_blank">All Open Tickets</a></div>
+        <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/issues/?jql=text+~+%22ATT%22+AND+statusCategory+%21%3D+Done" target="_blank">All Open Tickets</a></div>
         <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/1990557712" target="_blank">Customer Portfolio</a></div>
         
       </div>
     </div>
   </div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const DATA = {"p0p1": 0, "open": 2, "features": 0, "resolved": 0, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8302"], "generated": "Mar 26, 2026 16:04 UTC"};
+
+const DATA = {"p0p1": 0, "open": 2, "features": 0, "resolved": 0, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8302"], "generated": "Mar 26, 2026 19:22 UTC", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const el = document.getElementById('ai-body');

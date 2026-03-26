@@ -100,7 +100,7 @@ tr:last-child td{border-bottom:none}
       <div style="width:7px;height:7px;border-radius:50%;background:#68D391" id="health-dot"></div>
       <span id="health-badge" style="color:#68D391">Healthy</span>
     </div>
-    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 16:04 UTC</span>
+    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 19:22 UTC</span>
   </div>
 </div>
 <div class="body">
@@ -167,15 +167,17 @@ tr:last-child td{border-bottom:none}
       </div>
       <div class="sb-sec">
         <div class="sb-head">🔗 Quick Links</div>
-        <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/issues/?jql=text+~+%22Brocacef-NL.%22+AND+statusCategory+!%3D+Done" target="_blank">All Open Tickets</a></div>
+        <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/issues/?jql=text+~+%22Brocacef-NL%22+AND+statusCategory+%21%3D+Done" target="_blank">All Open Tickets</a></div>
         <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/1990557712" target="_blank">Customer Portfolio</a></div>
         
       </div>
     </div>
   </div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const DATA = {"p0p1": 0, "open": 0, "features": 0, "resolved": 1, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 26, 2026 16:04 UTC"};
+
+const DATA = {"p0p1": 0, "open": 0, "features": 0, "resolved": 1, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 26, 2026 19:22 UTC", "score": 10, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const el = document.getElementById('ai-body');
