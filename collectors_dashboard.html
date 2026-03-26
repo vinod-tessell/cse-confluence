@@ -74,6 +74,14 @@ tr:last-child td{border-bottom:none}
 .tl-t{font-size:11px;font-weight:700;color:#172B4D;margin-bottom:2px}
 .tl-d{font-size:10px;color:#5E6C84;line-height:1.5}
 .tl-dt{font-size:10px;color:#A0AEC0;margin-top:2px}
+.metric{cursor:pointer;transition:box-shadow .15s}
+.metric:hover{box-shadow:0 0 0 2px #1A6FDB}
+.metric.active{box-shadow:0 0 0 2px #1A6FDB;background:#F0F7FF}
+.drawer{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.25rem;display:none}
+.drawer.open{display:block}
+.drawer-head{padding:.7rem 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;justify-content:space-between}
+.drawer-title{font-size:12px;font-weight:700;color:#172B4D}
+.drawer-close{font-size:14px;color:#5E6C84;cursor:pointer;background:none;border:none;padding:0 4px;line-height:1}
 </style>
 </head>
 <body>
@@ -100,30 +108,62 @@ tr:last-child td{border-bottom:none}
       <div style="width:7px;height:7px;border-radius:50%;background:#FFC107" id="health-dot"></div>
       <span id="health-badge" style="color:#FFC107">Stable</span>
     </div>
-    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 19:20 UTC</span>
+    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 19:33 UTC</span>
   </div>
 </div>
 <div class="body">
+  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;padding:.75rem 1.5rem;margin-bottom:1rem;display:grid;grid-template-columns:repeat(7,1fr);gap:1rem;align-items:center">
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Account</div><div style="font-size:12px;font-weight:700;color:#172B4D">Collectors</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">CSE Owner</div><div style="font-size:12px;font-weight:700;color:#172B4D">Soumi</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div><div style="font-size:12px;font-weight:700;color:#172B4D">—</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cloud</div><div style="font-size:12px;font-weight:700;color:#172B4D">AWS · us-east-1</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Engines</div><div style="font-size:12px;font-weight:700;color:#172B4D">Oracle</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">Stabilisation</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div>—</div></div>
+  </div>
   <div class="metrics">
-    <div class="metric"><div class="mlabel">Open P0/P1</div><div class="mval green">0</div><div class="msub">Active critical issues</div></div>
-    <div class="metric"><div class="mlabel">Open Tickets</div><div class="mval orange">20</div><div class="msub">Across all priorities</div></div>
-    <div class="metric"><div class="mlabel">Feature Requests</div><div class="mval blue">10</div><div class="msub">Pending delivery</div></div>
-    <div class="metric"><div class="mlabel">Resolved (30d)</div><div class="mval green">7</div><div class="msub">Last 30 days</div></div>
+    <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval green">0</div><div class="msub">Active critical issues</div></div>
+    <div class="metric" id="m-open" onclick="toggleDrawer('drawer-open','m-open')"><div class="mlabel">Open Tickets</div><div class="mval orange">20</div><div class="msub">Across all priorities</div></div>
+    <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">10</div><div class="msub">Pending delivery</div></div>
+    <div class="metric" id="m-res" onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">7</div><div class="msub">Last 30 days</div></div>
     <div class="metric"><div class="mlabel">Health Score</div><div class="mval" style="color:#FFC107">6/10</div><div class="msub">Rule-based</div></div>
+  </div>
+  <div class="drawer" id="drawer-p0p1">
+    <div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No P0/P1 tickets</td></tr></tbody></table>
+  </div>
+  <div class="drawer" id="drawer-open">
+    <div class="drawer-head"><span class="drawer-title">🎫 All Open Tickets (20)</span><button class="drawer-close" onclick="toggleDrawer('drawer-open','m-open')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8494" target="_blank">SR-8494</a></td><td>MultiAZ SQL Server 2022 Provisioning is failing</td><td><span class="pb ph">High</span></td><td><span class="sp spe">Pending Eng</span></td><td>1d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38182" target="_blank">TS-38182</a></td><td>Snapshot was failed for service aws21d-ccedb-01-hpc | Collectors on 15th</td><td><span class="pb ph">High</span></td><td><span class="sp so">To do</span></td><td>10d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38109" target="_blank">TS-38109</a></td><td>DB exporter down for service aws52d-webdb-d03|Collectors</td><td><span class="pb ph">High</span></td><td><span class="sp so">To do</span></td><td>13d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37896" target="_blank">TS-37896</a></td><td>[Collectors] - Snapshot Backup Failed - MSSQL Native Backup Output File </td><td><span class="pb ph">High</span></td><td><span class="sp so">To do</span></td><td>19d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37836" target="_blank">TS-37836</a></td><td>AM SLA Unhealthy alerts receiving for Sallie Mae and Collectors servers.</td><td><span class="pb pc">Highest</span></td><td><span class="sp so">To do</span></td><td>20d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37547" target="_blank">TS-37547</a></td><td>[Collectors] Implement Proactive T-Log Growth & Replication Monitoring</td><td><span class="pb ph">High</span></td><td><span class="sp so">On hold</span></td><td>30d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37507" target="_blank">TS-37507</a></td><td>Support for Enhanced AWS gp3 Storage Limits (64 TiB, 80k IOPS)</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Ready for prioritisation</span></td><td>33d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37500" target="_blank">TS-37500</a></td><td>Evaluation of Tessell r8i.4xlarge compute shapes</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Prioritised by cs</span></td><td>33d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8049" target="_blank">SR-8049</a></td><td>Support for new AWS EBS gp3 Specifications</td><td><span class="pb ph">High</span></td><td><span class="sp spe">Pending Eng</span></td><td>34d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37398" target="_blank">TS-37398</a></td><td>[Collectors] - MSSQL DbRoleMonitor False Failovers - Transient Connectio</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Fixed</span></td><td>37d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37391" target="_blank">TS-37391</a></td><td>[Williams] - Script Library - Unable to delete pre/post clone scripts du</td><td><span class="pb ph">High</span></td><td><span class="sp si">In Progress</span></td><td>40d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-7946" target="_blank">SR-7946</a></td><td>Tessell oracle datadog metrics </td><td><span class="pb pc">Highest</span></td><td><span class="sp spe">Pending Eng</span></td><td>41d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37264" target="_blank">TS-37264</a></td><td>[Collectors] - Availability Graph Failure - Database Services Showing In</td><td><span class="pb ph">High</span></td><td><span class="sp so">Fixed</span></td><td>44d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37028" target="_blank">TS-37028</a></td><td>[Collectors] SQL Agent Jobs Incorrectly Recreated</td><td><span class="pb ph">High</span></td><td><span class="sp so">Fixed</span></td><td>47d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37269" target="_blank">TS-37269</a></td><td>[Collectors] - MSSQL Native Backup - Severe CPU Spikes and System Slowdo</td><td><span class="pb ph">High</span></td><td><span class="sp si">In Progress</span></td><td>48d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38083" target="_blank">TS-38083</a></td><td>[Collectors] - Snapshot Creation Failure - AWS EBS Volume Not Found Erro</td><td><span class="pb ph">High</span></td><td><span class="sp so">To do</span></td><td>51d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-36432" target="_blank">TS-36432</a></td><td>[Collectors] - AG Health Alert - False positive alerts for 'distribution</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>63d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-7698" target="_blank">SR-7698</a></td><td>SQL Server backups are NOT being created for system DBs</td><td><span class="pb ph">High</span></td><td><span class="sp spe">Pending Eng</span></td><td>64d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-35989" target="_blank">TS-35989</a></td><td>[Internal] - Login Event Tracking - SQL Server Logins with Spaces Not Ca</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Fixed</span></td><td>76d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37299" target="_blank">TS-37299</a></td><td>[Equinor] - Oracle DB Replication Lag Alert Not Triggered - DbMetrics Se</td><td><span class="pb pc">Highest</span></td><td><span class="sp so">Fixed</span></td><td>77d</td></tr></tbody></table>
+  </div>
+  <div class="drawer" id="drawer-feat">
+    <div class="drawer-head"><span class="drawer-title">💡 Feature Requests (10)</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37547" target="_blank">TS-37547</a></td><td>[Collectors] Implement Proactive T-Log Growth & Replication Monitoring</td><td><span class="pb ph">High</span></td><td><span class="sp so">On hold</span></td><td>30d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37507" target="_blank">TS-37507</a></td><td>Support for Enhanced AWS gp3 Storage Limits (64 TiB, 80k IOPS)</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Ready for prioritisation</span></td><td>33d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37500" target="_blank">TS-37500</a></td><td>Evaluation of Tessell r8i.4xlarge compute shapes</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Prioritised by cs</span></td><td>33d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-31538" target="_blank">TS-31538</a></td><td>Source Adapter Changes WRT Debezium Metrics</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Dev complete</span></td><td>197d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-30042" target="_blank">TS-30042</a></td><td>Encrypt tables and Databases to determine cloning</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Requirements gathering</span></td><td>268d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-27008" target="_blank">TS-27008</a></td><td>Make Windows Exporter more reliable</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Requirements gathering</span></td><td>407d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-24736" target="_blank">TS-24736</a></td><td>Upgrade Datadog version to latest</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Requirements gathering</span></td><td>499d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-23862" target="_blank">TS-23862</a></td><td>Availability to set HA for SQL Server Standard Edition</td><td><span class="pb pc">Highest</span></td><td><span class="sp so">Requirements gathering</span></td><td>545d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-23852" target="_blank">TS-23852</a></td><td>Scalability Testing - Data Platform Services</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Dev complete</span></td><td>546d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-23691" target="_blank">TS-23691</a></td><td>Improvements for sql-exporter</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Requirements gathering</span></td><td>555d</td></tr></tbody></table>
+  </div>
+  <div class="drawer" id="drawer-res">
+    <div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days (7)</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8219" target="_blank">SR-8219</a></td><td>Add NSG rules to HA instance (default Darling services)</td><td><span class="pb ph">High</span></td><td><span class="sp sc">Closed</span></td><td>21d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8362" target="_blank">SR-8362</a></td><td>Update VMNASAGESQLDB04-sg-rules-2</td><td><span class="pb ph">High</span></td><td><span class="sp sc">Closed</span></td><td>12d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-7530" target="_blank">SR-7530</a></td><td>Logins missing after failover of aws52p-gradwebdb-p03</td><td><span class="pb ph">High</span></td><td><span class="sp sc">Closed</span></td><td>78d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37872" target="_blank">TS-37872</a></td><td>Enable kube_pod_container_status_last_terminated_reason metric</td><td><span class="pb pm">Medium</span></td><td><span class="sp sc">Closed</span></td><td>17d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8048" target="_blank">SR-8048</a></td><td>Add shape AWS r8i.4xlarge</td><td><span class="pb ph">High</span></td><td><span class="sp sc">Closed</span></td><td>34d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37305" target="_blank">TS-37305</a></td><td>[CSX] - Oracle Snapshot Failure - TGS Command Timeout Due to High CPU Lo</td><td><span class="pb pc">Highest</span></td><td><span class="sp sc">Closed</span></td><td>65d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-6643" target="_blank">SR-6643</a></td><td>Backups spike the CPU on our 48-core SQL Server instance</td><td><span class="pb ph">High</span></td><td><span class="sp sc">Closed</span></td><td>154d</td></tr></tbody></table>
   </div>
   <div class="grid2">
     <div>
       <div class="ai-panel">
         <div class="ai-eyebrow">✦ Health Analysis</div>
         <div class="ai-title">Customer Health Assessment</div>
-        <div class="ai-body" id="ai-body">Calculating...</div>
-        <div class="ai-footer">
-          <div style="display:flex;align-items:baseline;gap:4px">
-            <span class="ai-score-label">Health score</span>
-            <span class="ai-score-val" id="ai-score" style="color:#FFC107">6</span>
-            <span class="ai-score-max">/10</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start">
+          <div>
+            <div class="ai-body" id="ai-body">Calculating...</div>
+            <div class="ai-footer">
+              <div style="display:flex;align-items:baseline;gap:4px">
+                <span class="ai-score-label">Health score</span>
+                <span class="ai-score-val" id="ai-score" style="color:#FFC107">6</span>
+                <span class="ai-score-max">/10</span>
+              </div>
+              <span id="ai-ts" class="ai-ts"></span>
+            </div>
           </div>
-          <span id="ai-ts" class="ai-ts"></span>
+          <div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>
+          </div>
         </div>
       </div>
       <div class="sec">
@@ -138,8 +178,14 @@ tr:last-child td{border-bottom:none}
         <div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">10 Active</span></div>
         <div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">[Collectors] Implement Proactive T-Log Growth & Replication Monit</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37547" target="_blank">TS-37547</a></div></div><span class="fr-status so">On hold</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">Support for Enhanced AWS gp3 Storage Limits (64 TiB, 80k IOPS)</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37507" target="_blank">TS-37507</a></div></div><span class="fr-status so">Ready for prioritisation</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">Evaluation of Tessell r8i.4xlarge compute shapes</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37500" target="_blank">TS-37500</a></div></div><span class="fr-status so">Prioritised by cs</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">Source Adapter Changes WRT Debezium Metrics</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-31538" target="_blank">TS-31538</a></div></div><span class="fr-status so">Dev complete</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">Encrypt tables and Databases to determine cloning</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-30042" target="_blank">TS-30042</a></div></div><span class="fr-status so">Requirements gathering</span></div>
       </div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">📅 Recent Activity</span><span class="badge bg">Live</span></div>
+    </div>
+    <div>
+      <div class="sb-sec">
+        <div class="sb-head">💬 Customer Pulse</div>
+        <div class="pulse-row"><div class="ptext">No pulse data yet.</div></div>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-head">📅 Recent Activity</div>
         <div class="tl"><div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-7946" target="_blank">SR-7946</a> — Update on SR-7946</div><div class="tl-d">Hi Satya/Team, We would like to request a call at 9:30 AM CST on   to discuss the endpoint configurations. Please involv — Naveen Athelly</div><div class="tl-dt">Mar 26, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8494" target="_blank">SR-8494</a> — Update on SR-8494</div><div class="tl-d">Hi RK - adding the "allow all" rules to the security groups seems to have done the trick. That multiAZ SQL Server servic — Jim Vogler</div><div class="tl-dt">Mar 26, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8494" target="_blank">SR-8494</a> — Update on SR-8494</div><div class="tl-d">Hi Jim, Thank you for running the connectivity tests and sharing the detailed results — this is very helpful. From the o — RK Bandaru</div><div class="tl-dt">Mar 26, 2026</div></div></div>
@@ -148,23 +194,6 @@ tr:last-child td{border-bottom:none}
 <div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🔄</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8494" target="_blank">SR-8494</a> — SR-8494 status → Waiting for customer</div><div class="tl-d">MultiAZ SQL Server 2022 Provisioning is failing — RK Bandaru</div><div class="tl-dt">Mar 25, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🔄</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8494" target="_blank">SR-8494</a> — SR-8494 status → SRE in Action</div><div class="tl-d">MultiAZ SQL Server 2022 Provisioning is failing — RK Bandaru</div><div class="tl-dt">Mar 25, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🎫</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8494" target="_blank">SR-8494</a> — SR-8494 opened</div><div class="tl-d">MultiAZ SQL Server 2022 Provisioning is failing</div><div class="tl-dt">Mar 25, 2026</div></div></div></div>
-      </div>
-    </div>
-    <div>
-      <div class="sb-sec">
-        <div class="sb-head">🏢 Account Details</div>
-        <div class="ir"><span class="ilabel">Account</span><span class="ival">Collectors</span></div>
-        <div class="ir"><span class="ilabel">CSE Owner</span><span class="ival">Soumi</span></div>
-        <div class="ir"><span class="ilabel">TAM / TPM</span><span class="ival"></span></div>
-        <div class="ir"><span class="ilabel">Cloud</span><span class="ival">AWS · us-east-1</span></div>
-        <div class="ir"><span class="ilabel">Engines</span><span class="ival">Oracle</span></div>
-        <div class="ir"><span class="ilabel">Phase</span><span class="ival">Stabilisation</span></div>
-        
-      </div>
-      
-      <div class="sb-sec">
-        <div class="sb-head">💬 Customer Pulse</div>
-        <div class="pulse-row"><div class="ptext">No pulse data yet.</div></div>
       </div>
       <div class="sb-sec">
         <div class="sb-head">🔗 Quick Links</div>
@@ -178,7 +207,7 @@ tr:last-child td{border-bottom:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 
-const DATA = {"p0p1": 0, "open": 20, "features": 10, "resolved": 7, "pendingEng": 2, "p0keys": [], "highKeys": ["SR-8494", "TS-38182", "TS-38109"], "generated": "Mar 26, 2026 19:20 UTC", "score": 6, "scoreLabel": "Stable", "scoreColor": "#FFC107"};
+const DATA = {"p0p1": 0, "open": 20, "features": 10, "resolved": 7, "pendingEng": 2, "p0keys": [], "highKeys": ["SR-8494", "TS-38182", "TS-38109"], "generated": "Mar 26, 2026 19:33 UTC", "score": 6, "scoreLabel": "Stable", "scoreColor": "#FFC107"};
 
 function runHealth(DATA) {
   const el = document.getElementById('ai-body');
@@ -216,6 +245,14 @@ function runHealth(DATA) {
 }
 
 window.onload = () => runHealth(DATA);
+function toggleDrawer(drawerId, metricId) {
+  const drawer = document.getElementById(drawerId);
+  const metric = document.getElementById(metricId);
+  const isOpen = drawer.classList.contains('open');
+  document.querySelectorAll('.drawer').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.metric').forEach(m => m.classList.remove('active'));
+  if (!isOpen) { drawer.classList.add('open'); metric.classList.add('active'); }
+}
 </script>
 </body>
 </html>

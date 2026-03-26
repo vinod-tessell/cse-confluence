@@ -74,6 +74,14 @@ tr:last-child td{border-bottom:none}
 .tl-t{font-size:11px;font-weight:700;color:#172B4D;margin-bottom:2px}
 .tl-d{font-size:10px;color:#5E6C84;line-height:1.5}
 .tl-dt{font-size:10px;color:#A0AEC0;margin-top:2px}
+.metric{cursor:pointer;transition:box-shadow .15s}
+.metric:hover{box-shadow:0 0 0 2px #1A6FDB}
+.metric.active{box-shadow:0 0 0 2px #1A6FDB;background:#F0F7FF}
+.drawer{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.25rem;display:none}
+.drawer.open{display:block}
+.drawer-head{padding:.7rem 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;justify-content:space-between}
+.drawer-title{font-size:12px;font-weight:700;color:#172B4D}
+.drawer-close{font-size:14px;color:#5E6C84;cursor:pointer;background:none;border:none;padding:0 4px;line-height:1}
 </style>
 </head>
 <body>
@@ -100,30 +108,62 @@ tr:last-child td{border-bottom:none}
       <div style="width:7px;height:7px;border-radius:50%;background:#68D391" id="health-dot"></div>
       <span id="health-badge" style="color:#68D391">Healthy</span>
     </div>
-    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 19:21 UTC</span>
+    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 19:34 UTC</span>
   </div>
 </div>
 <div class="body">
+  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;padding:.75rem 1.5rem;margin-bottom:1rem;display:grid;grid-template-columns:repeat(7,1fr);gap:1rem;align-items:center">
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Account</div><div style="font-size:12px;font-weight:700;color:#172B4D">Levis Phase-1</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">CSE Owner</div><div style="font-size:12px;font-weight:700;color:#172B4D">siva.pradeep</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div><div style="font-size:12px;font-weight:700;color:#172B4D">—</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cloud</div><div style="font-size:12px;font-weight:700;color:#172B4D">AWS · us-east-1</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Engines</div><div style="font-size:12px;font-weight:700;color:#172B4D">Oracle</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">Implementation</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div>—</div></div>
+  </div>
   <div class="metrics">
-    <div class="metric"><div class="mlabel">Open P0/P1</div><div class="mval green">0</div><div class="msub">Active critical issues</div></div>
-    <div class="metric"><div class="mlabel">Open Tickets</div><div class="mval yellow">0</div><div class="msub">Across all priorities</div></div>
-    <div class="metric"><div class="mlabel">Feature Requests</div><div class="mval blue">0</div><div class="msub">Pending delivery</div></div>
-    <div class="metric"><div class="mlabel">Resolved (30d)</div><div class="mval green">0</div><div class="msub">Last 30 days</div></div>
+    <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval green">0</div><div class="msub">Active critical issues</div></div>
+    <div class="metric" id="m-open" onclick="toggleDrawer('drawer-open','m-open')"><div class="mlabel">Open Tickets</div><div class="mval yellow">0</div><div class="msub">Across all priorities</div></div>
+    <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">0</div><div class="msub">Pending delivery</div></div>
+    <div class="metric" id="m-res" onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">0</div><div class="msub">Last 30 days</div></div>
     <div class="metric"><div class="mlabel">Health Score</div><div class="mval" style="color:#68D391">9/10</div><div class="msub">Rule-based</div></div>
+  </div>
+  <div class="drawer" id="drawer-p0p1">
+    <div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No P0/P1 tickets</td></tr></tbody></table>
+  </div>
+  <div class="drawer" id="drawer-open">
+    <div class="drawer-head"><span class="drawer-title">🎫 All Open Tickets (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-open','m-open')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open tickets</td></tr></tbody></table>
+  </div>
+  <div class="drawer" id="drawer-feat">
+    <div class="drawer-head"><span class="drawer-title">💡 Feature Requests (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr></tbody></table>
+  </div>
+  <div class="drawer" id="drawer-res">
+    <div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr></tbody></table>
   </div>
   <div class="grid2">
     <div>
       <div class="ai-panel">
         <div class="ai-eyebrow">✦ Health Analysis</div>
         <div class="ai-title">Customer Health Assessment</div>
-        <div class="ai-body" id="ai-body">Calculating...</div>
-        <div class="ai-footer">
-          <div style="display:flex;align-items:baseline;gap:4px">
-            <span class="ai-score-label">Health score</span>
-            <span class="ai-score-val" id="ai-score" style="color:#68D391">9</span>
-            <span class="ai-score-max">/10</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start">
+          <div>
+            <div class="ai-body" id="ai-body">Calculating...</div>
+            <div class="ai-footer">
+              <div style="display:flex;align-items:baseline;gap:4px">
+                <span class="ai-score-label">Health score</span>
+                <span class="ai-score-val" id="ai-score" style="color:#68D391">9</span>
+                <span class="ai-score-max">/10</span>
+              </div>
+              <span id="ai-ts" class="ai-ts"></span>
+            </div>
           </div>
-          <span id="ai-ts" class="ai-ts"></span>
+          <div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>
+          </div>
         </div>
       </div>
       <div class="sec">
@@ -138,26 +178,15 @@ tr:last-child td{border-bottom:none}
         <div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">0 Active</span></div>
         <p style="padding:1rem;font-size:12px;color:#5E6C84">No open feature requests.</p>
       </div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">📅 Recent Activity</span><span class="badge bg">Live</span></div>
-        <div class="tl"><p style="padding:1rem;font-size:12px;color:#5E6C84">No recent activity found.</p></div>
-      </div>
     </div>
     <div>
       <div class="sb-sec">
-        <div class="sb-head">🏢 Account Details</div>
-        <div class="ir"><span class="ilabel">Account</span><span class="ival">Levis Phase-1</span></div>
-        <div class="ir"><span class="ilabel">CSE Owner</span><span class="ival">siva.pradeep</span></div>
-        <div class="ir"><span class="ilabel">TAM / TPM</span><span class="ival"></span></div>
-        <div class="ir"><span class="ilabel">Cloud</span><span class="ival">AWS · us-east-1</span></div>
-        <div class="ir"><span class="ilabel">Engines</span><span class="ival">Oracle</span></div>
-        <div class="ir"><span class="ilabel">Phase</span><span class="ival">Implementation</span></div>
-        
-      </div>
-      
-      <div class="sb-sec">
         <div class="sb-head">💬 Customer Pulse</div>
         <div class="pulse-row"><div class="ptext">No pulse data yet.</div></div>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-head">📅 Recent Activity</div>
+        <div class="tl"><p style="padding:1rem;font-size:12px;color:#5E6C84">No recent activity found.</p></div>
       </div>
       <div class="sb-sec">
         <div class="sb-head">🔗 Quick Links</div>
@@ -171,7 +200,7 @@ tr:last-child td{border-bottom:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 
-const DATA = {"p0p1": 0, "open": 0, "features": 0, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 26, 2026 19:21 UTC", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+const DATA = {"p0p1": 0, "open": 0, "features": 0, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 26, 2026 19:34 UTC", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const el = document.getElementById('ai-body');
@@ -209,6 +238,14 @@ function runHealth(DATA) {
 }
 
 window.onload = () => runHealth(DATA);
+function toggleDrawer(drawerId, metricId) {
+  const drawer = document.getElementById(drawerId);
+  const metric = document.getElementById(metricId);
+  const isOpen = drawer.classList.contains('open');
+  document.querySelectorAll('.drawer').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.metric').forEach(m => m.classList.remove('active'));
+  if (!isOpen) { drawer.classList.add('open'); metric.classList.add('active'); }
+}
 </script>
 </body>
 </html>
