@@ -1,4 +1,4 @@
-import os, json, re, requests
+import os, json, re, requests, hashlib
 from datetime import datetime, timezone
 from requests.auth import HTTPBasicAuth
 
@@ -12,12 +12,91 @@ CONFLUENCE_TOKEN = os.environ.get("CONFLUENCE_API_TOKEN", JIRA_TOKEN)
 CONFLUENCE_SPACE = os.environ.get("CONFLUENCE_SPACE_ID", "1225719811")
 CONFLUENCE_PARENT= os.environ.get("CONFLUENCE_PARENT_ID", "1990557712")
 
+# ── Force-rebuild flag: set env var FORCE_REBUILD=1 to ignore build state ─────
+FORCE_REBUILD = os.environ.get("FORCE_REBUILD", "0") == "1"
+
+# ── Build state file — tracks last-built fingerprint per customer ──────────────
+BUILD_STATE_FILE = "build_state.json"
+
 auth         = HTTPBasicAuth(JIRA_EMAIL, JIRA_TOKEN)
 conf_auth    = HTTPBasicAuth(CONFLUENCE_EMAIL, CONFLUENCE_TOKEN)
 headers      = {"Accept": "application/json"}
 conf_headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
-# ── Logo colours — cycled by index for auto-generated customers ────────────────
+CACHE_BUST = int(datetime.now(timezone.utc).timestamp())
+
+# ── Customer reference data — sourced from Confluence page ────────────────────
+# Maintained at: https://tessell.atlassian.net/wiki/spaces/CSE/pages/2166030367
+# The page contains a table with columns: Customer Key | TAM Secondary | Exec Sponsor
+# Keys are lowercase first-word fragments of the CSO epic name.
+REFERENCE_PAGE_ID = "2166030367"
+
+def load_customer_reference():
+    """
+    Fetch the Customer Reference Data page from Confluence and parse the
+    markdown table into a dict keyed by customer name fragment.
+    Falls back to {} on any error so the build never hard-fails.
+    """
+    try:
+        r = requests.get(
+            f"{CONFLUENCE_BASE}/wiki/api/v2/pages/{REFERENCE_PAGE_ID}",
+            auth=conf_auth,
+            headers={"Accept": "application/json"},
+            params={"body-format": "atlas_doc_format"}
+        )
+        if r.status_code != 200:
+            print(f"  ⚠️  Could not fetch reference page: {r.status_code}")
+            return {}
+
+        # Extract plain text from ADF body
+        body = r.json().get("body", {})
+        adf  = body.get("atlas_doc_format", {}).get("value", "{}")
+        doc  = json.loads(adf) if isinstance(adf, str) else adf
+
+        ref_data = {}
+        # Walk ADF nodes looking for table rows
+        def walk(node):
+            if not isinstance(node, dict):
+                return
+            if node.get("type") == "tableRow":
+                cells = node.get("content", [])
+                texts = []
+                for cell in cells:
+                    cell_text = ""
+                    for block in cell.get("content", []):
+                        for inline in block.get("content", []):
+                            if inline.get("type") == "text":
+                                cell_text += inline.get("text", "")
+                    texts.append(cell_text.strip())
+                # Skip header row (first cell is "Customer Key") and note rows
+                if len(texts) >= 3 and texts[0] and texts[0].lower() != "customer key" and not texts[0].startswith("_"):
+                    key = texts[0].lower().strip()
+                    ref_data[key] = {
+                        "tam_secondary": texts[1] if texts[1] not in ("—", "-", "") else "",
+                        "exec_sponsor":  texts[2] if texts[2] not in ("—", "-", "") else "",
+                    }
+            for child in node.get("content", []):
+                walk(child)
+
+        walk(doc)
+        print(f"  📋 Customer reference loaded from Confluence — {len(ref_data)} entries")
+        return ref_data
+
+    except Exception as e:
+        print(f"  ⚠️  Customer reference fetch failed: {e}")
+        return {}
+
+def lookup_reference(name, ref_data):
+    """
+    Find a customer's reference record by fuzzy-matching the lowercase name
+    against keys parsed from the Confluence reference page.
+    """
+    nl = name.lower()
+    for key, rec in ref_data.items():
+        if key and key in nl:
+            return rec
+    return {}
+
 LOGO_PALETTE = [
     {"logo_color": "#0B1F45", "logo_bg": "#E6F1FB"},
     {"logo_color": "#0F5C8A", "logo_bg": "#E6F1FB"},
@@ -29,41 +108,313 @@ LOGO_PALETTE = [
     {"logo_color": "#1C3A6E", "logo_bg": "#E6F1FB"},
 ]
 
-# ── Static overrides — anything you want pinned for specific customers ─────────
-# Keyed by lowercase customer name fragment for fuzzy matching
 STATIC_OVERRIDES = {
+    # ── page IDs sourced directly from Confluence — parent: 1990557712 ─────────
     "citizens": {
         "id": "citizens", "jql_keyword": "Citizens",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle", "MySQL", "PostgreSQL"],
         "portal_url": "https://citizens.tessell.com",
-        "confluence_page_id": "2164948993"
+        "confluence_page_id": "2164948993"         # Citizens — Customer Dashboard
     },
     "atlas": {
-        "id": "atlas-air", "jql_keyword": "Atlas Air",
+        "id": "atlas-airlines", "jql_keyword": "Atlas Air",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "",
-        "confluence_page_id": "",
-        "ticket_history": [], "pulse": []
+        "confluence_page_id": "2165178370"         # Atlas Airlines — Customer Dashboard
     },
     "aon": {
         "id": "aon", "jql_keyword": "Aon",
         "cloud": "Azure", "region": "eastus",
         "engines": ["Oracle"],
         "portal_url": "",
-        "confluence_page_id": "",
-        "ticket_history": [], "pulse": []
-    }
+        "confluence_page_id": "2165407755"         # AON — Customer Dashboard
+    },
+    "usda": {
+        "id": "usda-exadata", "jql_keyword": "USDA",
+        "cloud": "Azure", "region": "eastus",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165243927"         # USDA Exadata & Solaris/AIX — Customer Dashboard
+    },
+    "duncan": {
+        "id": "duncan-solutions", "jql_keyword": "Duncan",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165866507"         # Duncan Solutions - Phase 2 — Customer Dashboard
+    },
+    "att": {
+        "id": "att", "jql_keyword": "ATT",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165243947"         # ATT — Customer Dashboard
+    },
+    "boost": {
+        "id": "boost-mobile", "jql_keyword": "Boost Mobile",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165800962"         # Boost Mobile — Customer Dashboard
+    },
+    "smfg": {
+        "id": "smfg", "jql_keyword": "SMFG",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165538818"         # SMFG — Customer Dashboard
+    },
+    "pwc": {
+        "id": "pwc-services", "jql_keyword": "PWC",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165604374"         # PWC - Services — Customer Dashboard
+    },
+    "advizex": {
+        "id": "advizex-solutions", "jql_keyword": "Advizex",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165899266"         # Advizex Solutions — Customer Dashboard
+    },
+    "levis": {
+        "id": "levis-phase-1", "jql_keyword": "Levis",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2164916227"         # Levis Phase-1 — Customer Dashboard
+    },
+    "williams": {
+        "id": "williams", "jql_keyword": "Williams",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165243907"         # Williams — Customer Dashboard
+    },
+    "equinor": {
+        "id": "equinor", "jql_keyword": "Equinor",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165604354"         # Equinor — Customer Dashboard
+    },
+    "brocacef": {
+        "id": "brocacef-nl", "jql_keyword": "Brocacef",
+        "cloud": "Azure", "region": "westeurope",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165309452"         # Brocacef-NL — Customer Dashboard
+    },
+    "magaya": {
+        "id": "magaya", "jql_keyword": "Magaya",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2164719623"         # Magaya — Customer Dashboard
+    },
+    "darlingii": {
+        "id": "darlingii", "jql_keyword": "Darlingii",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165932033"         # Darlingii — Customer Dashboard
+    },
+    "onity": {
+        "id": "onity-group", "jql_keyword": "Onity",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165800982"         # Onity Group - Phase 1 — Customer Dashboard
+    },
+    "bhfl": {
+        "id": "bhfl", "jql_keyword": "BHFL",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165964801"         # BHFL — Customer Dashboard
+    },
+    "collectors": {
+        "id": "collectors", "jql_keyword": "Collectors",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165702658"         # Collectors — Customer Dashboard
+    },
+    "usss": {
+        "id": "usss", "jql_keyword": "USSS",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165997569"         # USSS — Customer Dashboard
+    },
+    "landis": {
+        "id": "landisgyr", "jql_keyword": "LandisGyr",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165768194"         # LandisGyr — Customer Dashboard
+    },
+    "sallie": {
+        "id": "sallie-mae", "jql_keyword": "Sallie Mae",
+        "cloud": "AWS", "region": "us-east-1",
+        "engines": ["Oracle"],
+        "portal_url": "",
+        "confluence_page_id": "2165080066"         # Sallie Mae — Customer Dashboard
+    },
 }
 
 def find_override(name):
-    """Fuzzy match customer name against static overrides."""
+    """Match customer name against STATIC_OVERRIDES — substring on lowercase."""
     nl = name.lower()
     for key, override in STATIC_OVERRIDES.items():
-        if key in nl or nl.startswith(key[:4]):
+        if key in nl:
             return override
     return {}
+
+# ── Normalise raw Jira displayNames to human-readable equivalents ──────────────
+# Some accounts use username format (e.g. "siva.pradeep") instead of full names.
+DISPLAY_NAME_MAP = {
+    "siva.pradeep":        "Pradeep",
+    "srivasram.devarajan": "Srivasram",
+    "abdul.ali":           "Abdul",
+    "Vinod K":             "Vinod",
+    "Soumi Bose":          "Soumi",
+    "Sajesh Rajagopal":    "Sajesh",
+    "Uday Dhanikonda":     "Uday",
+    "Ankush Jain":         "Ankush",
+    "Jonathan Andrews":    "Jonathan",
+}
+
+def first_name(name):
+    """
+    Return first name only, Title Cased.
+    Handles compound values like 'Kamal & Maneesh' by preserving the
+    full string but capitalising each word — those are intentional combos.
+    """
+    if not name:
+        return name
+    # Compound names (contain &) — capitalise each word, keep full string
+    if "&" in name:
+        return " ".join(w.capitalize() for w in name.split())
+    # Normal name — return first word only, Title Cased
+    return name.split()[0].capitalize()
+
+def normalise_display_name(raw):
+    """Map raw Jira displayName → first name only."""
+    if not raw:
+        return "—"
+    mapped = DISPLAY_NAME_MAP.get(raw, raw)
+    return first_name(mapped)
+# Populated once at startup by fetch_confluence_page_map()
+_CONFLUENCE_PAGE_MAP = {}   # normalised customer name fragment → page_id
+
+def fetch_confluence_page_map():
+    """
+    Fetch all child pages of CONFLUENCE_PARENT once per run.
+    Builds a map of normalised title fragment → page_id so new customers
+    get their Confluence page ID automatically without touching STATIC_OVERRIDES.
+    e.g. "Citizens — Customer Dashboard" → key "citizens" → "2164948993"
+    """
+    global _CONFLUENCE_PAGE_MAP
+    try:
+        r = requests.get(
+            f"{CONFLUENCE_BASE}/wiki/api/v2/pages/{CONFLUENCE_PARENT}/children",
+            auth=conf_auth,
+            headers={"Accept": "application/json"},
+            params={"limit": 50}
+        )
+        if r.status_code != 200:
+            print(f"  ⚠️  Could not fetch Confluence children: {r.status_code}")
+            return
+        pages = r.json().get("results", [])
+        for p in pages:
+            title = p.get("title", "")
+            page_id = p.get("id", "")
+            # Strip " — Customer Dashboard" suffix, lowercase, strip spaces
+            name_part = title.replace("— Customer Dashboard", "").replace("- Customer Dashboard", "").strip().lower()
+            # Store under the first word and full normalised name for flexible matching
+            _CONFLUENCE_PAGE_MAP[name_part] = page_id
+            first_word = name_part.split()[0] if name_part.split() else name_part
+            _CONFLUENCE_PAGE_MAP[first_word] = page_id
+        print(f"  📄 Confluence page map loaded — {len(pages)} pages under Customer Portfolio")
+    except Exception as e:
+        print(f"  ⚠️  Confluence page map fetch failed: {e}")
+
+def lookup_confluence_page_id(customer_name):
+    """
+    Look up an existing Confluence page ID for a customer by name.
+    Checks STATIC_OVERRIDES first, then falls back to the live page map.
+    Returns "" if not found (script will then create a new page).
+    """
+    # 1. Static overrides win
+    override = find_override(customer_name)
+    if override.get("confluence_page_id"):
+        return override["confluence_page_id"]
+    # 2. Live Confluence page map
+    nl = customer_name.lower()
+    # Try progressively shorter matches
+    for key, page_id in _CONFLUENCE_PAGE_MAP.items():
+        if key and key in nl:
+            return page_id
+    return ""
+
+# ── Description parser — extract cloud/region/engines/portal from epic text ───
+def parse_epic_description(description):
+    """
+    Extract cloud, region, engines, and portal URL from free-text epic description.
+    Falls back to sensible defaults when signals are absent.
+    """
+    if not description:
+        return {}
+    text = description.lower()
+
+    # Cloud
+    if "azure" in text:
+        cloud = "Azure"
+        region = "eastus"   # default Azure region
+    else:
+        cloud = "AWS"
+        region = "us-east-1"   # default AWS region
+
+    # Region hints — look for explicit region strings
+    region_hints = {
+        "us-east-1": "us-east-1", "us-east-2": "us-east-2",
+        "us-west-1": "us-west-1", "us-west-2": "us-west-2",
+        "eu-west-1": "eu-west-1", "eu-central-1": "eu-central-1",
+        "ap-southeast-1": "ap-southeast-1", "ap-south-1": "ap-south-1",
+        "eastus": "eastus", "westeurope": "westeurope",
+        "centralus": "centralus", "southeastasia": "southeastasia",
+    }
+    for hint, val in region_hints.items():
+        if hint in text:
+            region = val
+            break
+
+    # Engines — scan for known engine names
+    engines = []
+    engine_map = [
+        (["oracle"],                          "Oracle"),
+        (["mysql"],                           "MySQL"),
+        (["postgresql", "postgres"],          "PostgreSQL"),
+        (["sql server", "mssql", "sqlserver"],"SQL Server"),
+    ]
+    for keywords, label in engine_map:
+        if any(k in text for k in keywords):
+            engines.append(label)
+    if not engines:
+        engines = ["Oracle"]   # default
+
+    # Portal URL — look for tessell.com domain patterns
+    portal_url = ""
+    import re as _re
+    portal_match = _re.search(r'https?://[\w.-]+\.tessell\.com[^\s\)\"\']*', description)
+    if portal_match:
+        portal_url = portal_match.group(0).rstrip(".,;")
+
+    return {"cloud": cloud, "region": region, "engines": engines, "portal_url": portal_url}
 
 def status_to_phase(status_name):
     s = status_name.lower()
@@ -78,132 +429,201 @@ def make_initials(name):
         return (parts[0][0] + parts[-1][0]).upper()
     return name[:2].upper()
 
-def build_customer_entry(idx, name, status, owner, epic_key, phase_override=None):
-    """Build a customer dict from raw Jira epic data + static overrides."""
-    owner_short = owner.split()[0] if owner else ""
-    phase       = phase_override or status_to_phase(status)
-    palette     = LOGO_PALETTE[idx % len(LOGO_PALETTE)]
-    override    = find_override(name)
-    slug        = override.get("id") or re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+def build_customer_entry(idx, name, status, owner, epic_key, description="", phase_override=None, ref_data=None):
+    """
+    Priority order for people fields:
+      tam_primary   → CSO epic assignee.displayName (normalised)  [PRIMARY]
+                    → ref tam_secondary from customer_reference.json  [FALLBACK if no assignee]
+      tam_secondary → customer_reference.json only
+      exec_sponsor  → customer_reference.json only
+    SRE contact is intentionally excluded from all dashboard views.
+    """
+    ref_data     = ref_data or {}
+    phase        = phase_override or status_to_phase(status)
+    palette      = LOGO_PALETTE[idx % len(LOGO_PALETTE)]
+    override     = find_override(name)
+    parsed       = parse_epic_description(description)
+    ref          = lookup_reference(name, ref_data)
+    slug         = override.get("id") or re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+    conf_page_id = override.get("confluence_page_id") or lookup_confluence_page_id(name)
+
+    # tam_primary: CSO assignee (normalised) is always primary;
+    # fall back to ref tam_secondary only if epic has no assignee
+    tam_primary   = normalise_display_name(owner) if owner else (ref.get("tam_secondary") or "—")
+    tam_secondary = first_name(ref.get("tam_secondary", "") or "")
+    exec_sponsor  = first_name(ref.get("exec_sponsor",  "") or "")
+
+    # Avoid showing same name in both primary and secondary
+    if tam_secondary and tam_secondary == tam_primary:
+        tam_secondary = ""
+
     return {
         "id":                 slug,
         "name":               name,
         "initials":           make_initials(name),
         "logo_color":         palette["logo_color"],
         "logo_bg":            palette["logo_bg"],
-        "cloud":              override.get("cloud", "AWS"),
-        "region":             override.get("region", "us-east-1"),
-        "engines":            override.get("engines", ["Oracle"]),
+        "cloud":              override.get("cloud")   or parsed.get("cloud",   "AWS"),
+        "region":             override.get("region")  or parsed.get("region",  "us-east-1"),
+        "engines":            override.get("engines") or parsed.get("engines", ["Oracle"]),
         "phase":              phase,
-        "cse_owner":          owner_short,
-        "tam":                override.get("tam", ""),
-        "portal_url":         override.get("portal_url", ""),
-        "confluence_page_id": override.get("confluence_page_id", ""),
+        "tam_primary":        tam_primary,
+        "tam_secondary":      tam_secondary,
+        "exec_sponsor":       exec_sponsor,
+        "portal_url":         override.get("portal_url") or parsed.get("portal_url", ""),
+        "confluence_page_id": conf_page_id,
         "jql_keyword":        override.get("jql_keyword", name),
         "active":             True,
-        "ticket_history":     override.get("ticket_history", []),
-        "pulse":              override.get("pulse", []),
+        "ticket_history":     [],
+        "pulse":              [],
         "cso_epic":           epic_key,
         "cso_status":         status,
     }
 
-def fetch_active_customers():
-    """
-    Tier 1 — CSO epics where statusCategory != Done (active implementations).
-    Tier 2 — CSO epics where statusCategory = Done BUT customer has open
-              TS/SR tickets updated in the last 30 days (live operational customers).
-    Both tiers are merged, deduped by customer name, and returned.
-    """
+# ── Build state helpers ────────────────────────────────────────────────────────
+def load_build_state():
+    """Load persisted per-customer fingerprints from last run."""
+    if os.path.exists(BUILD_STATE_FILE):
+        try:
+            with open(BUILD_STATE_FILE) as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
 
-    # ── Tier 1: In-progress implementations ───────────────────────────────────
+def save_build_state(state):
+    with open(BUILD_STATE_FILE, "w") as f:
+        json.dump(state, f, indent=2)
+
+def customer_fingerprint(keyword):
+    """
+    Lightweight dirtiness check — fetch only the 3 most-recently-updated
+    SR/TS ticket keys + their updated timestamps for this customer.
+    Returns a short hash string. Cost: 1 Jira API call per customer.
+    """
+    try:
+        r = requests.get(
+            f"{JIRA_BASE}/rest/api/3/search/jql",
+            auth=auth, headers=headers,
+            params={
+                "jql": (f'project in (TS, SR) AND text ~ "{keyword}" '
+                        f'AND updated >= -7d ORDER BY updated DESC'),
+                "maxResults": 5,
+                "fields": "updated,status,priority"
+            }
+        )
+        if r.status_code != 200:
+            return None   # can't determine — treat as dirty
+        issues = r.json().get("issues", [])
+        # fingerprint = hash of (key, updated, status, priority) tuples
+        sig = "|".join(
+            f"{i['key']}:{i['fields'].get('updated','')}:"
+            f"{i['fields'].get('status',{}).get('name','')}:"
+            f"{(i['fields'].get('priority') or {}).get('name','')}"
+            for i in issues
+        )
+        return hashlib.md5(sig.encode()).hexdigest()
+    except Exception:
+        return None   # network error → treat as dirty
+
+def is_dirty(cust_id, keyword, build_state):
+    """Return True if this customer needs a rebuild."""
+    if FORCE_REBUILD:
+        return True
+    fp = customer_fingerprint(keyword)
+    if fp is None:
+        return True   # unknown → rebuild to be safe
+    return build_state.get(cust_id) != fp
+
+def mark_clean(cust_id, keyword, build_state):
+    fp = customer_fingerprint(keyword)
+    if fp:
+        build_state[cust_id] = fp
+
+# ── Jira helpers ───────────────────────────────────────────────────────────────
+def fetch_active_customers():
+    # ── Load reference data and Confluence page map once ──────────────────────
+    ref_data = load_customer_reference()
+    print(f"  📋 Customer reference loaded — {len(ref_data)} entries")
+    fetch_confluence_page_map()
+
     print("Tier 1: Fetching active implementation epics (CSO != Done)...")
     r1 = requests.get(
-        f"{JIRA_BASE}/rest/api/3/search/jql",
-        auth=auth, headers=headers,
-        params={
-            "jql": "project = CSO AND issuetype = Epic AND statusCategory != Done ORDER BY updated DESC",
-            "maxResults": 50,
-            "fields": "summary,status,assignee,created,updated"
-        }
+        f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
+        params={"jql": "project = CSO AND issuetype = Epic AND statusCategory != Done ORDER BY updated DESC",
+                "maxResults": 50, "fields": "summary,status,assignee,description,created,updated"}
     )
     r1.raise_for_status()
     tier1_epics = r1.json().get("issues", [])
     print(f"  Found {len(tier1_epics)} active implementation epics")
 
-    # ── Tier 2: Completed implementations that still have open operational tickets
     print("Tier 2: Fetching completed epics with live TS/SR activity...")
     r2 = requests.get(
-        f"{JIRA_BASE}/rest/api/3/search/jql",
-        auth=auth, headers=headers,
-        params={
-            "jql": "project = CSO AND issuetype = Epic AND statusCategory = Done ORDER BY updated DESC",
-            "maxResults": 100,
-            "fields": "summary,status,assignee,created,updated"
-        }
+        f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
+        params={"jql": "project = CSO AND issuetype = Epic AND statusCategory = Done ORDER BY updated DESC",
+                "maxResults": 100, "fields": "summary,status,assignee,description,created,updated"}
     )
     r2.raise_for_status()
     done_epics = r2.json().get("issues", [])
-    print(f"  Found {len(done_epics)} completed epics — checking for live operational tickets...")
 
-    # For each done epic, check if the customer has any open TS/SR tickets in last 30d
     tier2_epics = []
     for epic in done_epics:
-        name = (epic["fields"].get("summary") or "").strip()
-        override = find_override(name)
-        keyword  = override.get("jql_keyword", name)
+        name    = (epic["fields"].get("summary") or "").strip()
+        override= find_override(name)
+        keyword = override.get("jql_keyword", name)
         try:
             check = requests.get(
-                f"{JIRA_BASE}/rest/api/3/search/jql",
-                auth=auth, headers=headers,
-                params={
-                    "jql": (f'project in (TS, SR) AND text ~ "{keyword}" '
-                            f'AND statusCategory != Done AND updated >= -30d'),
-                    "maxResults": 1,
-                    "fields": "summary"
-                }
+                f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
+                params={"jql": (f'project in (TS, SR) AND text ~ "{keyword}" '
+                                f'AND statusCategory != Done AND updated >= -30d'),
+                        "maxResults": 1, "fields": "summary"}
             )
             if check.status_code == 200 and check.json().get("total", 0) > 0:
                 tier2_epics.append(epic)
-                print(f"  ✅ {name} — live operational tickets found, including in Tier 2")
         except Exception:
-            pass  # skip on error, don't block the whole run
+            pass
 
-    print(f"  {len(tier2_epics)} completed implementations with active operational tickets")
+    def extract(epic):
+        f = epic["fields"]
+        desc = f.get("description") or ""
+        if isinstance(desc, dict):
+            parts = []
+            for block in desc.get("content", []):
+                for inline in block.get("content", []):
+                    if inline.get("type") == "text":
+                        parts.append(inline.get("text", ""))
+            desc = " ".join(parts)
+        return (
+            (f.get("summary") or "").strip(),
+            f.get("status", {}).get("name", "To Do"),
+            (f.get("assignee") or {}).get("displayName", ""),
+            desc,
+        )
 
-    # ── Merge tiers, dedupe by name ────────────────────────────────────────────
-    seen_names = set()
-    customers  = []
-
+    seen_names, customers = set(), []
     for idx, epic in enumerate(tier1_epics):
-        f       = epic["fields"]
-        name    = (f.get("summary") or "").strip()
-        status  = f.get("status", {}).get("name", "To Do")
-        owner   = (f.get("assignee") or {}).get("displayName", "")
+        name, status, owner, desc = extract(epic)
         if name.lower() not in seen_names:
             seen_names.add(name.lower())
-            customers.append(build_customer_entry(idx, name, status, owner, epic["key"]))
-
-    for epic in tier2_epics:
-        f       = epic["fields"]
-        name    = (f.get("summary") or "").strip()
-        owner   = (f.get("assignee") or {}).get("displayName", "")
-        if name.lower() not in seen_names:
-            seen_names.add(name.lower())
-            idx = len(customers)
-            # Phase = Steady State for completed implementations still generating tickets
             customers.append(build_customer_entry(
-                idx, name, "Done", owner, epic["key"], phase_override="Steady State"
+                idx, name, status, owner, epic["key"], desc, ref_data=ref_data
             ))
 
-    print(f"\n  Total customers to process: {len(customers)} "
-          f"({len(tier1_epics)} active + {len(tier2_epics)} live operational)")
+    for epic in tier2_epics:
+        name, _, owner, desc = extract(epic)
+        if name.lower() not in seen_names:
+            seen_names.add(name.lower())
+            customers.append(build_customer_entry(
+                len(customers), name, "Done", owner, epic["key"], desc,
+                phase_override="Steady State", ref_data=ref_data
+            ))
+
+    print(f"\n  Total customers: {len(customers)}")
     return customers
 
-# ── Jira helpers ───────────────────────────────────────────────────────────────
 def jql(query, max=20):
     r = requests.get(
-        f"{JIRA_BASE}/rest/api/3/search/jql",
-        auth=auth, headers=headers,
+        f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
         params={"jql": query, "maxResults": max,
                 "fields": "summary,priority,status,created,resolutiondate,issuetype,labels"}
     )
@@ -212,196 +632,14 @@ def jql(query, max=20):
 
 def make_jqls(keyword):
     return {
-        "p0p1": (
-            f'project in (TS, SR) AND text ~ "{keyword}" '
-            f'AND (labels = P0 OR labels = P1) '
-            f'AND statusCategory != Done ORDER BY created DESC'
-        ),
-        "open": (
-            f'project in (TS, SR) AND text ~ "{keyword}" '
-            f'AND statusCategory != Done ORDER BY created DESC'
-        ),
-        "features": (
-            f'project in (TS, SR) AND text ~ "{keyword}" '
-            f'AND (issuetype in (Feature, "Feature Request", Story) '
-            f'OR labels in ("FeatureRequest", "Feature-Request")) '
-            f'AND statusCategory != Done ORDER BY created DESC'
-        ),
-        "resolved": (
-            f'project in (TS, SR) AND text ~ "{keyword}" '
-            f'AND statusCategory = Done AND resolutiondate >= -30d ORDER BY resolutiondate DESC'
-        ),
-        "recent": (
-            f'project in (TS, SR) AND text ~ "{keyword}" '
-            f'AND updated >= -30d ORDER BY updated DESC'
-        )
+        "p0p1":     (f'project in (TS, SR) AND text ~ "{keyword}" AND (labels = P0 OR labels = P1) AND statusCategory != Done ORDER BY created DESC'),
+        "open":     (f'project in (TS, SR) AND text ~ "{keyword}" AND statusCategory != Done ORDER BY created DESC'),
+        "features": (f'project in (TS, SR) AND text ~ "{keyword}" AND (issuetype in (Feature, "Feature Request", Story) OR labels in ("FeatureRequest", "Feature-Request")) AND statusCategory != Done ORDER BY created DESC'),
+        "resolved": (f'project in (TS, SR) AND text ~ "{keyword}" AND statusCategory = Done AND resolutiondate >= -30d ORDER BY resolutiondate DESC'),
+        "recent":   (f'project in (TS, SR) AND text ~ "{keyword}" AND updated >= -30d ORDER BY updated DESC'),
     }
 
-def fetch_monthly_buckets(keyword):
-    """
-    For the last 6 complete months, fetch open-ticket count and resolved count.
-    Returns a list of {"month": "Mon YYYY", "count": N, "resolved": N} dicts.
-    """
-    from datetime import date
-    buckets = []
-    today = date.today()
-    for i in range(5, -1, -1):                        # 5 months ago → current month
-        # first and last day of target month
-        month_offset = today.month - i
-        year_offset  = today.year + (month_offset - 1) // 12
-        month_num    = ((month_offset - 1) % 12) + 1
-        first = date(year_offset, month_num, 1)
-        # last day = first day of next month minus 1
-        if month_num == 12:
-            last = date(year_offset + 1, 1, 1)
-        else:
-            last = date(year_offset, month_num + 1, 1)
-        label = first.strftime("%b %Y")
-        f_str = first.strftime("%Y-%m-%d")
-        l_str = last.strftime("%Y-%m-%d")
-
-        # tickets that were open at any point during the month
-        try:
-            r_open = requests.get(
-                f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
-                params={
-                    "jql": (f'project = SR AND text ~ "{keyword}" '
-                            f'AND created <= "{l_str}" '
-                            f'AND (resolutiondate is EMPTY OR resolutiondate >= "{f_str}") '
-                            f'ORDER BY created DESC'),
-                    "maxResults": 0, "fields": "summary"
-                }
-            )
-            open_count = r_open.json().get("total", 0) if r_open.status_code == 200 else 0
-        except Exception:
-            open_count = 0
-
-        # tickets resolved within the month
-        try:
-            r_res = requests.get(
-                f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
-                params={
-                    "jql": (f'project = SR AND text ~ "{keyword}" '
-                            f'AND statusCategory = Done '
-                            f'AND resolutiondate >= "{f_str}" AND resolutiondate < "{l_str}" '
-                            f'ORDER BY resolutiondate DESC'),
-                    "maxResults": 0, "fields": "summary"
-                }
-            )
-            resolved_count = r_res.json().get("total", 0) if r_res.status_code == 200 else 0
-        except Exception:
-            resolved_count = 0
-
-        buckets.append({"month": label, "count": open_count, "resolved": resolved_count})
-    return buckets
-
-def fetch_pulse_from_comments(keyword):
-    """
-    Derive customer pulse from SR ticket signals — no LLM needed.
-    Uses ticket age, priority labels, status, and keyword signals in
-    customer-authored comments to assign sentiment.
-    """
-    try:
-        r = requests.get(
-            f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
-            params={
-                "jql": (f'project = SR AND text ~ "{keyword}" '
-                        f'AND updated >= -21d ORDER BY updated DESC'),
-                "maxResults": 15,
-                "fields": "summary,status,priority,labels,created,comment"
-            }
-        )
-        if r.status_code != 200:
-            return []
-        issues = r.json().get("issues", [])
-
-        # ── Keyword banks for comment-level signals ────────────────────────────
-        frustrated_kw = ["escalat","urgent","not working","still broken","days","week",
-                         "unacceptable","blocking","critical","frustrated","disappointed",
-                         "no progress","no update","no response","waiting","how long"]
-        concerned_kw  = ["issue","problem","error","fail","broken","wrong","incorrect",
-                         "unexpected","not expected","impact","affects","production"]
-        positive_kw   = ["thank","resolved","fixed","working","great","smooth","appreciate",
-                         "perfect","done","completed","success","good"]
-        waiting_kw    = ["waiting","pending","any update","please update","eta","when",
-                         "timeline","status update","follow up","followup"]
-
-        pulse_items   = []
-        seen_sentiments = set()
-
-        for issue in issues:
-            f       = issue["fields"]
-            summ    = (f.get("summary") or "")[:60]
-            status  = (f.get("status", {}).get("name") or "").lower()
-            labels  = [l.upper() for l in (f.get("labels") or [])]
-            created = f.get("created", "")
-
-            # ── Signal 1: P0/P1 label → frustrated ────────────────────────────
-            if ("P0" in labels or "P1" in labels) and "frustrated" not in seen_sentiments:
-                age = age_days(created)
-                pulse_items.append({
-                    "sentiment": "frustrated",
-                    "text": f"P{'0' if 'P0' in labels else '1'} open {age} — {summ[:40]}"
-                })
-                seen_sentiments.add("frustrated")
-                continue
-
-            # ── Signal 2: pending/waiting status → waiting ─────────────────
-            if any(x in status for x in ("pending","wait","hold")) \
-                    and "waiting" not in seen_sentiments:
-                pulse_items.append({
-                    "sentiment": "waiting",
-                    "text": f"Awaiting response — {summ[:45]}"
-                })
-                seen_sentiments.add("waiting")
-                continue
-
-            # ── Signal 3: scan customer comments for keyword signals ────────
-            comments = f.get("comment", {}).get("comments", [])
-            for c in reversed(comments):           # most recent first
-                author_email = (c.get("author", {}).get("emailAddress") or "").lower()
-                if "tessell" in author_email:
-                    continue                        # skip internal comments
-                body = c.get("body", {})
-                text = ""
-                if isinstance(body, dict):
-                    for block in body.get("content", []):
-                        for inline in block.get("content", []):
-                            if inline.get("type") == "text":
-                                text += inline.get("text", "") + " "
-                elif isinstance(body, str):
-                    text = body
-                text_l = text.lower()
-
-                if any(k in text_l for k in frustrated_kw) \
-                        and "frustrated" not in seen_sentiments:
-                    pulse_items.append({"sentiment": "frustrated", "text": summ[:55]})
-                    seen_sentiments.add("frustrated")
-                    break
-                elif any(k in text_l for k in waiting_kw) \
-                        and "waiting" not in seen_sentiments:
-                    pulse_items.append({"sentiment": "waiting", "text": summ[:55]})
-                    seen_sentiments.add("waiting")
-                    break
-                elif any(k in text_l for k in positive_kw) \
-                        and "positive" not in seen_sentiments:
-                    pulse_items.append({"sentiment": "positive", "text": summ[:55]})
-                    seen_sentiments.add("positive")
-                    break
-                elif any(k in text_l for k in concerned_kw) \
-                        and "concerned" not in seen_sentiments:
-                    pulse_items.append({"sentiment": "concerned", "text": summ[:55]})
-                    seen_sentiments.add("concerned")
-                    break
-
-            if len(pulse_items) >= 5:
-                break
-
-        return pulse_items[:5]
-
-    except Exception as e:
-        print(f"  ⚠️  Pulse fetch failed: {e}")
-        return []
+def fetch_customer_data(keyword):
     queries = make_jqls(keyword)
     return {
         "p0p1":           jql(queries["p0p1"],     max=10),
@@ -409,8 +647,79 @@ def fetch_pulse_from_comments(keyword):
         "features":       jql(queries["features"], max=10),
         "resolved":       jql(queries["resolved"], max=50),
         "recent":         jql(queries["recent"],   max=12),
-        "ticket_history": fetch_monthly_buckets(keyword)
+        "ticket_history": fetch_monthly_buckets(keyword),
+        "pulse":          fetch_pulse_from_comments(keyword),
     }
+
+def fetch_monthly_buckets(keyword):
+    from datetime import date
+    buckets = []
+    today = date.today()
+    for i in range(5, -1, -1):
+        month_offset = today.month - i
+        year_offset  = today.year + (month_offset - 1) // 12
+        month_num    = ((month_offset - 1) % 12) + 1
+        first = date(year_offset, month_num, 1)
+        last  = date(year_offset + 1, 1, 1) if month_num == 12 else date(year_offset, month_num + 1, 1)
+        f_str, l_str = first.strftime("%Y-%m-%d"), last.strftime("%Y-%m-%d")
+        try:
+            r_open = requests.get(f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
+                params={"jql": f'project = SR AND text ~ "{keyword}" AND created <= "{l_str}" AND (resolutiondate is EMPTY OR resolutiondate >= "{f_str}") ORDER BY created DESC',
+                        "maxResults": 0, "fields": "summary"})
+            open_count = r_open.json().get("total", 0) if r_open.status_code == 200 else 0
+        except Exception:
+            open_count = 0
+        try:
+            r_res = requests.get(f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
+                params={"jql": f'project = SR AND text ~ "{keyword}" AND statusCategory = Done AND resolutiondate >= "{f_str}" AND resolutiondate < "{l_str}" ORDER BY resolutiondate DESC',
+                        "maxResults": 0, "fields": "summary"})
+            resolved_count = r_res.json().get("total", 0) if r_res.status_code == 200 else 0
+        except Exception:
+            resolved_count = 0
+        buckets.append({"month": first.strftime("%b %Y"), "count": open_count, "resolved": resolved_count})
+    return buckets
+
+def fetch_pulse_from_comments(keyword):
+    try:
+        r = requests.get(f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
+            params={"jql": f'project = SR AND text ~ "{keyword}" AND updated >= -21d ORDER BY updated DESC',
+                    "maxResults": 15, "fields": "summary,status,priority,labels,created,comment"})
+        if r.status_code != 200: return []
+        issues = r.json().get("issues", [])
+        frustrated_kw = ["escalat","urgent","not working","still broken","days","week","unacceptable","blocking","critical","frustrated","disappointed","no progress","no update","no response","waiting","how long"]
+        concerned_kw  = ["issue","problem","error","fail","broken","wrong","incorrect","unexpected","not expected","impact","affects","production"]
+        positive_kw   = ["thank","resolved","fixed","working","great","smooth","appreciate","perfect","done","completed","success","good"]
+        waiting_kw    = ["waiting","pending","any update","please update","eta","when","timeline","status update","follow up","followup"]
+        pulse_items, seen = [], set()
+        for issue in issues:
+            f       = issue["fields"]
+            summ    = (f.get("summary") or "")[:60]
+            status  = (f.get("status", {}).get("name") or "").lower()
+            labels  = [l.upper() for l in (f.get("labels") or [])]
+            created = f.get("created", "")
+            if ("P0" in labels or "P1" in labels) and "frustrated" not in seen:
+                pulse_items.append({"sentiment":"frustrated","text":f"P{'0' if 'P0' in labels else '1'} open {age_days(created)} — {summ[:40]}"})
+                seen.add("frustrated"); continue
+            if any(x in status for x in ("pending","wait","hold")) and "waiting" not in seen:
+                pulse_items.append({"sentiment":"waiting","text":f"Awaiting response — {summ[:45]}"})
+                seen.add("waiting"); continue
+            for c in reversed(f.get("comment", {}).get("comments", [])):
+                if "tessell" in (c.get("author", {}).get("emailAddress") or "").lower(): continue
+                body = c.get("body", {})
+                text = ""
+                if isinstance(body, dict):
+                    for block in body.get("content", []):
+                        for inline in block.get("content", []):
+                            if inline.get("type") == "text": text += inline.get("text", "") + " "
+                elif isinstance(body, str): text = body
+                tl = text.lower()
+                for kws, sent in [(frustrated_kw,"frustrated"),(waiting_kw,"waiting"),(positive_kw,"positive"),(concerned_kw,"concerned")]:
+                    if any(k in tl for k in kws) and sent not in seen:
+                        pulse_items.append({"sentiment":sent,"text":summ[:55]}); seen.add(sent); break
+            if len(pulse_items) >= 5: break
+        return pulse_items[:5]
+    except Exception as e:
+        print(f"  ⚠️  Pulse fetch failed: {e}"); return []
 
 # ── Formatting helpers ─────────────────────────────────────────────────────────
 def fmt_date(iso):
@@ -426,39 +735,31 @@ def age_days(iso):
     except: return "—"
 
 def sre_priority(fields):
-    """Read P0/P1 strictly from SRE label only. Returns None if neither P0 nor P1 label present."""
     labels = [l.upper() for l in (fields.get("labels") or [])]
     if "P0" in labels: return "pc", "P0"
     if "P1" in labels: return "ph", "P1"
-    return None, None  # explicitly not P0/P1 — do not categorise as such
+    return None, None
 
 def priority_class(p):
-    """Fallback — Jira priority field for display on non-P0/P1 tickets."""
     p = (p or "").lower()
     if p in ("highest","critical"): return "pc", "Highest"
     if p in ("high",):              return "ph", "High"
     if p in ("medium",):            return "pm", "Medium"
     return "pl", p.capitalize() or "—"
 
-# ── FIX 1: status_class extracted as proper top-level function ─────────────────
 def status_class(s):
     s = (s or "").lower()
-    if "progress" in s or "review"   in s: return "si",  "In Progress"
-    if "pending"  in s or "wait"     in s: return "spe", "Pending Eng"
-    if "done"     in s or "closed"   in s or "resolved" in s: return "sc", "Closed"
+    if "progress" in s or "review" in s:                        return "si",  "In Progress"
+    if "pending"  in s or "wait"   in s:                        return "spe", "Pending Eng"
+    if "done"     in s or "closed" in s or "resolved" in s:     return "sc",  "Closed"
     return "so", s.capitalize() or "Open"
 
-# ── FIX 2: single ticket_row, duplicate + dead code removed ───────────────────
 def ticket_row(issue):
     key  = issue["key"]
     f    = issue["fields"]
     summ = (f.get("summary") or "")[:72]
-    # Use SRE label P0/P1 strictly — if no P0/P1 label, do not show in P0/P1 bucket
     sre_pc, sre_pl = sre_priority(f)
-    if sre_pc:
-        pc, pl = sre_pc, sre_pl
-    else:
-        pc, pl = priority_class(f.get("priority", {}).get("name", ""))
+    pc, pl = (sre_pc, sre_pl) if sre_pc else priority_class(f.get("priority", {}).get("name", ""))
     sc_, sl = status_class(f.get("status", {}).get("name", ""))
     url  = f"{JIRA_BASE}/browse/{key}"
     return (f'<tr><td><a class="tlink" href="{url}" target="_blank">{key}</a></td>'
@@ -469,22 +770,22 @@ def compute_health(p0p1, open_tickets, features, resolved):
     score   = 10
     pending = len([i for i in open_tickets
                    if 'pending' in (i['fields'].get('status',{}).get('name','') or '').lower()])
-    if   len(p0p1) >= 3:  score -= 4
-    elif len(p0p1) == 2:  score -= 3
-    elif len(p0p1) == 1:  score -= 2
+    if   len(p0p1) >= 3:          score -= 4
+    elif len(p0p1) == 2:          score -= 3
+    elif len(p0p1) == 1:          score -= 2
     if   len(open_tickets) >= 10: score -= 2
     elif len(open_tickets) >= 6:  score -= 1
-    if   pending >= 4: score -= 2
-    elif pending >= 2: score -= 1
-    if len(features) >= 5: score -= 1
-    if len(resolved) == 0: score -= 1
+    if   pending >= 4:            score -= 2
+    elif pending >= 2:            score -= 1
+    if   len(features) >= 5:      score -= 1
+    if   len(resolved) == 0:      score -= 1
     score = max(1, min(10, score))
     label = ("Healthy" if score >= 8 else "Stable" if score >= 6
              else "Needs Attention" if score >= 4 else "At Risk")
     color = "#68D391" if score >= 8 else "#FFC107" if score >= 6 else "#FC8181"
-    health_key = ("healthy" if score >= 8 else "stable" if score >= 6
-                  else "attention" if score >= 4 else "atrisk")
-    return score, label, color, health_key, pending
+    hk    = ("healthy" if score >= 8 else "stable" if score >= 6
+             else "attention" if score >= 4 else "atrisk")
+    return score, label, color, hk, pending
 
 # ── Timeline builder ───────────────────────────────────────────────────────────
 def get_changelog(key):
@@ -495,9 +796,8 @@ def get_changelog(key):
     for h in r.json().get("values", []):
         ts, author = h.get("created",""), h.get("author",{}).get("displayName","Tessell")
         for item in h.get("items", []):
-            field = item.get("field","")
-            if field in ("status","priority"):
-                events.append({"ts":ts,"key":key,"type":field,
+            if item.get("field","") in ("status","priority"):
+                events.append({"ts":ts,"key":key,"type":item["field"],
                                 "from":item.get("fromString","") or "",
                                 "to":item.get("toString","") or "","author":author})
     return events
@@ -514,10 +814,8 @@ def get_comments(key, max=2):
         if isinstance(body, dict):
             for block in body.get("content", []):
                 for inline in block.get("content", []):
-                    if inline.get("type") == "text":
-                        text += inline.get("text","") + " "
-        elif isinstance(body, str):
-            text = body
+                    if inline.get("type") == "text": text += inline.get("text","") + " "
+        elif isinstance(body, str): text = body
         text = text.strip()[:120]
         if text:
             out.append({"ts":c.get("created",""),"key":key,"type":"comment",
@@ -534,7 +832,7 @@ def build_timeline(recent_issues, limit=8):
             for ev in get_changelog(key): ev["summary"]=summ; all_events.append(ev)
         except: pass
         try:
-            for ev in get_comments(key):  ev["summary"]=summ; all_events.append(ev)
+            for ev in get_comments(key): ev["summary"]=summ; all_events.append(ev)
         except: pass
 
     def sk(e):
@@ -549,7 +847,6 @@ def build_timeline(recent_issues, limit=8):
         url    = f"{JIRA_BASE}/browse/{k}"
         summ   = ev.get("summary","")
         if t == "created" and k in seen: continue
-
         if t == "status":
             tl = ev["to"].lower()
             if any(x in tl for x in ("done","resolved","closed")):
@@ -568,16 +865,13 @@ def build_timeline(recent_issues, limit=8):
         elif t == "created":
             icon,bg,title,desc = "🎫","#F4F5F7",f"{k} opened",summ
             seen.add(k)
-        else:
-            continue
-
+        else: continue
         timeline.append(
             f'<div class="tl-item"><div class="tl-ic" style="background:{bg}">{icon}</div>'
             f'<div class="tl-content"><div class="tl-t"><a class="tlink" href="{url}" target="_blank">{k}</a> — {title}</div>'
             f'<div class="tl-d">{desc}</div><div class="tl-dt">{ts_fmt}</div></div></div>'
         )
         if len(timeline) >= limit: break
-
     return "\n".join(timeline) if timeline else \
            '<p style="padding:1rem;font-size:12px;color:#5E6C84">No recent activity found.</p>'
 
@@ -590,9 +884,13 @@ body{background:#F4F5F7}
 .nl{font-size:12px;font-weight:500;color:rgba(255,255,255,0.45);text-decoration:none;padding-bottom:2px;border-bottom:2px solid transparent}
 .nl.active{color:#fff;border-color:#00C2E0}
 .nav-back{font-size:11px;color:#00C2E0;text-decoration:none}
+.nav-status{display:flex;align-items:center;gap:5px;font-size:11px;color:#7DDBA3;background:rgba(125,219,163,0.12);padding:3px 10px;border-radius:20px;border:.5px solid rgba(125,219,163,0.25)}
+.sdot{width:6px;height:6px;border-radius:50%;background:#7DDBA3}
 .body{padding:1.25rem 1.5rem}
 .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:1.25rem}
-.metric{background:#fff;border-radius:8px;padding:.9rem 1rem;border:.5px solid #DFE1E6}
+.metric{background:#fff;border-radius:8px;padding:.9rem 1rem;border:.5px solid #DFE1E6;cursor:pointer;transition:box-shadow .15s}
+.metric:hover{box-shadow:0 0 0 2px #1A6FDB}
+.metric.active{box-shadow:0 0 0 2px #1A6FDB;background:#F0F7FF}
 .mlabel{font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
 .mval{font-size:24px;font-weight:700;line-height:1;margin-bottom:3px}
 .msub{font-size:10px;color:#5E6C84}
@@ -626,16 +924,10 @@ tr:last-child td{border-bottom:none}
 .ir{display:flex;align-items:center;justify-content:space-between;padding:7px 1rem;border-bottom:.5px solid #DFE1E6}
 .ir:last-child{border-bottom:none}
 .ilabel{font-size:11px;color:#5E6C84}.ival{font-size:11px;font-weight:600;color:#172B4D}
-.bar-row{display:flex;align-items:center;gap:6px;padding:4px 1rem}
-.blabel{font-size:10px;color:#5E6C84;width:60px;flex-shrink:0}
-.btrack{flex:1;height:7px;background:#F4F5F7;border-radius:4px;overflow:hidden}
-.bfill{height:100%;border-radius:4px}
-.bval{font-size:10px;font-weight:700;width:16px;text-align:right}
 .pulse-row{padding:7px 1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:flex-start;gap:7px}
 .pulse-row:last-child{border-bottom:none}
 .pdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px}
 .ptext{font-size:11px;color:#5E6C84;line-height:1.4}
-.ptext b{color:#172B4D}
 .fr-item{padding:9px 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:flex-start;gap:8px}
 .fr-item:last-child{border-bottom:none}
 .fr-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:1px}
@@ -652,9 +944,6 @@ tr:last-child td{border-bottom:none}
 .tl-t{font-size:11px;font-weight:700;color:#172B4D;margin-bottom:2px}
 .tl-d{font-size:10px;color:#5E6C84;line-height:1.5}
 .tl-dt{font-size:10px;color:#A0AEC0;margin-top:2px}
-.metric{cursor:pointer;transition:box-shadow .15s}
-.metric:hover{box-shadow:0 0 0 2px #1A6FDB}
-.metric.active{box-shadow:0 0 0 2px #1A6FDB;background:#F0F7FF}
 .drawer{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.25rem;display:none}
 .drawer.open{display:block}
 .drawer-head{padding:.7rem 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;justify-content:space-between}
@@ -662,283 +951,134 @@ tr:last-child td{border-bottom:none}
 .drawer-close{font-size:14px;color:#5E6C84;cursor:pointer;background:none;border:none;padding:0 4px;line-height:1}
 """
 
-NAV_HTML = """<div class="nav">
+NAV_MASTER = """<div class="nav">
   <div class="nav-links">
     <a class="nl" href="https://tessell.atlassian.net/wiki/spaces/CSE/overview" target="_parent">Home</a>
-    <span class="nl">Runbooks</span>
-    <span class="nl active">Customers</span>
-    <span class="nl">Incidents</span>
-    <span class="nl">Onboarding</span>
+    <span class="nl">Runbooks</span><span class="nl active">Customers</span>
+    <span class="nl">Incidents</span><span class="nl">Onboarding</span>
   </div>
-  {back}
+  <div class="nav-status"><div class="sdot"></div>All systems operational</div>
+</div>"""
+
+NAV_CUSTOMER = """<div class="nav">
+  <div class="nav-links">
+    <a class="nl" href="https://tessell.atlassian.net/wiki/spaces/CSE/overview" target="_parent">Home</a>
+    <span class="nl">Runbooks</span><span class="nl active">Customers</span>
+    <span class="nl">Incidents</span><span class="nl">Onboarding</span>
+  </div>
+  <a class="nav-back" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/{parent}" target="_parent">← All Customers</a>
 </div>"""
 
 HEALTH_JS = """
 function runHealth(DATA) {
-  const el = document.getElementById('ai-body');
-  const sc = document.getElementById('ai-score');
-  let score = 10, findings = [], actions = [];
-  if (DATA.p0p1 >= 3)       { score-=4; findings.push(`<b style="color:#FC8181">${DATA.p0p1} active P0 incidents</b> (${DATA.p0keys.join(', ')})`); actions.push(`Escalate ${DATA.p0keys[0]} to engineering leadership for same-day resolution`); }
-  else if (DATA.p0p1 === 2) { score-=3; findings.push(`<b style="color:#FC8181">2 active P0 incidents</b> (${DATA.p0keys.join(', ')})`); actions.push(`Escalate ${DATA.p0keys[0]} and ${DATA.p0keys[1]} — both need engineering owner today`); }
-  else if (DATA.p0p1 === 1) { score-=2; findings.push(`<b style="color:#FFC107">1 active P0/P1</b> (${DATA.p0keys[0]})`); actions.push(`Ensure ${DATA.p0keys[0]} has daily updates to customer`); }
-  else                       { findings.push('<b style="color:#68D391">No active P0/P1 incidents</b>'); }
-  if (DATA.open >= 8)        { score-=2; findings.push(`High backlog: <b>${DATA.open} tickets</b> open`); }
-  else if (DATA.open >= 5)   { score-=1; findings.push(`Moderate backlog: <b>${DATA.open} open tickets</b>`); }
-  else                       { findings.push(`<b style="color:#68D391">Healthy ticket volume</b>: ${DATA.open} open`); }
-  if (DATA.pendingEng >= 4)  { score-=2; findings.push(`<b>${DATA.pendingEng} tickets stuck pending engineering</b>`); actions.push(`Review ${DATA.pendingEng} blocked tickets and set ETAs for customer`); }
-  else if (DATA.pendingEng >= 2) { score-=1; findings.push(`${DATA.pendingEng} tickets pending engineering`); }
-  if (DATA.features >= 5)    { score-=1; findings.push(`Large feature backlog: <b>${DATA.features} requests</b>`); actions.push('Schedule a feature roadmap call to set delivery expectations'); }
-  if (DATA.resolved === 0)   { score-=1; findings.push('<b style="color:#FFC107">No tickets resolved in 30 days</b>'); }
-  else                       { findings.push(`<b style="color:#68D391">${DATA.resolved} resolved</b> in last 30 days`); }
-  score = Math.max(1, Math.min(10, score));
-  const color = score>=8?'#68D391':score>=6?'#FFC107':'#FC8181';
-  const label = score>=8?'Healthy':score>=6?'Stable':score>=4?'Needs Attention':'At Risk';
-  const badge = document.getElementById('health-badge');
-  const dot   = document.getElementById('health-dot');
-  if (badge) { badge.textContent=label; badge.style.color=color; }
-  if (dot)   { dot.style.background=color; }
-  if (badge && badge.parentElement) {
-    badge.parentElement.style.borderColor = color+'4D';
-    badge.parentElement.style.background  = color+'1A';
-  }
-  let html = findings.map(f=>`<p style="margin-bottom:6px">• ${f}</p>`).join('');
-  if (actions.length) html += `<div style="margin-top:8px;padding-top:8px;border-top:.5px solid rgba(255,255,255,0.1)"><p style="font-size:10px;font-weight:700;color:#00C2E0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Recommended Actions</p>${actions.map(a=>`<p style="margin-bottom:4px">→ ${a}</p>`).join('')}</div>`;
-  el.innerHTML = html;
-  sc.textContent = score;
-  sc.style.color  = color;
-  document.getElementById('ai-ts').textContent = 'Assessed: ' + DATA.generated;
+  const el=document.getElementById('ai-body'),sc=document.getElementById('ai-score');
+  let score=10,findings=[],actions=[];
+  if(DATA.p0p1>=3){score-=4;findings.push(`<b style="color:#FC8181">${DATA.p0p1} active P0 incidents</b> (${DATA.p0keys.join(', ')})`);actions.push(`Escalate ${DATA.p0keys[0]} to engineering leadership for same-day resolution`);}
+  else if(DATA.p0p1===2){score-=3;findings.push(`<b style="color:#FC8181">2 active P0 incidents</b> (${DATA.p0keys.join(', ')})`);actions.push(`Both need an engineering owner today`);}
+  else if(DATA.p0p1===1){score-=2;findings.push(`<b style="color:#FFC107">1 active P0/P1</b> (${DATA.p0keys[0]})`);actions.push(`Ensure ${DATA.p0keys[0]} has daily updates to customer`);}
+  else{findings.push('<b style="color:#68D391">No active P0/P1 incidents</b>');}
+  if(DATA.open>=8){score-=2;findings.push(`High backlog: <b>${DATA.open} tickets</b> open`);}
+  else if(DATA.open>=5){score-=1;findings.push(`Moderate backlog: <b>${DATA.open} open tickets</b>`);}
+  else{findings.push(`<b style="color:#68D391">Healthy ticket volume</b>: ${DATA.open} open`);}
+  if(DATA.pendingEng>=4){score-=2;findings.push(`<b>${DATA.pendingEng} tickets stuck pending engineering</b>`);actions.push(`Set ETAs on all ${DATA.pendingEng} blocked tickets`);}
+  else if(DATA.pendingEng>=2){score-=1;findings.push(`${DATA.pendingEng} tickets pending engineering`);}
+  if(DATA.features>=5){score-=1;findings.push(`Large feature backlog: <b>${DATA.features} requests</b>`);actions.push('Schedule a feature roadmap call');}
+  if(DATA.resolved===0){score-=1;findings.push('<b style="color:#FFC107">No tickets resolved in 30 days</b>');}
+  else{findings.push(`<b style="color:#68D391">${DATA.resolved} resolved</b> in last 30 days`);}
+  score=Math.max(1,Math.min(10,score));
+  const color=score>=8?'#68D391':score>=6?'#FFC107':'#FC8181';
+  const label=score>=8?'Healthy':score>=6?'Stable':score>=4?'Needs Attention':'At Risk';
+  const badge=document.getElementById('health-badge'),dot=document.getElementById('health-dot');
+  if(badge){badge.textContent=label;badge.style.color=color;}
+  if(dot){dot.style.background=color;}
+  if(badge&&badge.parentElement){badge.parentElement.style.borderColor=color+'4D';badge.parentElement.style.background=color+'1A';}
+  let html=findings.map(f=>`<p style="margin-bottom:6px">• ${f}</p>`).join('');
+  if(actions.length)html+=`<div style="margin-top:8px;padding-top:8px;border-top:.5px solid rgba(255,255,255,0.1)"><p style="font-size:10px;font-weight:700;color:#00C2E0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Recommended Actions</p>${actions.map(a=>`<p style="margin-bottom:4px">→ ${a}</p>`).join('')}</div>`;
+  el.innerHTML=html;sc.textContent=score;sc.style.color=color;
+  document.getElementById('ai-ts').textContent='Assessed: '+DATA.generated;
 }
 """
 
 # ── Customer dashboard builder ─────────────────────────────────────────────────
 def build_customer_html(cust, data):
-    now     = datetime.now(timezone.utc).strftime("%b %d, %Y %H:%M UTC")
-    p0p1    = data["p0p1"]
-    open_t  = data["open"]
-    features= data["features"]
-    resolved= data["resolved"]
-    timeline= build_timeline(data["recent"])
-
+    now      = datetime.now(timezone.utc).strftime("%b %d, %Y %H:%M UTC")
+    p0p1     = data["p0p1"]; open_t = data["open"]
+    features = data["features"]; resolved = data["resolved"]
+    timeline = build_timeline(data["recent"])
     score, health_label, health_color, _, pending = compute_health(p0p1, open_t, features, resolved)
-    p0_keys   = [i["key"] for i in p0p1[:3]]
-    high_keys = [i["key"] for i in open_t
-                 if (i['fields'].get('priority',{}).get('name','') or '').lower()
-                 in ('high','p1','highest')][:3]
+    p0_keys  = [i["key"] for i in p0p1[:3]]
+    high_keys= [i["key"] for i in open_t if (i['fields'].get('priority',{}).get('name','') or '').lower() in ('high','p1','highest')][:3]
 
-    p0_rows = "".join(ticket_row(i) for i in p0p1[:5]) or \
-        '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr>'
-    tk_rows = "".join(ticket_row(i) for i in open_t[:10]) or \
-        '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open tickets</td></tr>'
+    p0_rows = "".join(ticket_row(i) for i in p0p1[:5]) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr>'
+    tk_rows = "".join(ticket_row(i) for i in open_t[:10]) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open tickets</td></tr>'
 
     feat_items = ""
     for i in features[:5]:
-        key  = i["key"]
-        summ = (i["fields"].get("summary") or "")[:65]
-        url  = f"{JIRA_BASE}/browse/{key}"
+        key = i["key"]; summ = (i["fields"].get("summary") or "")[:65]; url = f"{JIRA_BASE}/browse/{key}"
         sc_, sl = status_class(i["fields"].get("status",{}).get("name",""))
         feat_items += (f'<div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div>'
                        f'<div class="fr-content"><div class="fr-title">{summ}</div>'
                        f'<div class="fr-meta"><a class="tlink" href="{url}" target="_blank">{key}</a></div></div>'
                        f'<span class="fr-status {sc_}">{sl}</span></div>')
 
-    # ── Account banner ─────────────────────────────────────────────────────────
-    portal_html = (f'<a href="{cust["portal_url"]}" target="_blank" '
-                   f'style="color:#00C2E0;font-size:11px;text-decoration:none">'
-                   f'{cust["portal_url"]}</a>') if cust.get("portal_url") else "—"
+    portal_html = (f'<a href="{cust["portal_url"]}" target="_blank" style="color:#00C2E0;font-size:11px;text-decoration:none">{cust["portal_url"]}</a>') if cust.get("portal_url") else "—"
     engines_str = " · ".join(cust["engines"])
 
-    acct_banner = f"""
-  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;
-              padding:.85rem 1.5rem;margin-bottom:1rem;
-              display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;align-items:center">
-    <div>
-      <div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;
-                  letter-spacing:.05em;margin-bottom:3px">CSE Owner</div>
-      <div style="font-size:12px;font-weight:700;color:#172B4D">{cust.get('cse_owner','—')}</div>
-    </div>
-    <div>
-      <div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;
-                  letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div>
-      <div style="font-size:12px;font-weight:700;color:#172B4D">{cust.get('tam','—') or '—'}</div>
-    </div>
-    <div>
-      <div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;
-                  letter-spacing:.05em;margin-bottom:3px">Phase</div>
-      <div style="font-size:12px;font-weight:700;color:#172B4D">{cust['phase']}</div>
-    </div>
-    <div>
-      <div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;
-                  letter-spacing:.05em;margin-bottom:3px">Portal</div>
-      <div>{portal_html}</div>
-    </div>
-  </div>"""
-
-    # ── Ticket history timeseries (Chart.js) ───────────────────────────────────
+    # ── People fields ──────────────────────────────────────────────────────────
+    tam_primary   = cust.get("tam_primary", "—")  or "—"
+    tam_secondary = cust.get("tam_secondary", "")
+    exec_sponsor  = cust.get("exec_sponsor", "—") or "—"
+    tam_html = f'<div style="font-size:12px;font-weight:700;color:#172B4D">{tam_primary}</div>'
+    if tam_secondary:
+        tam_html += f'<div style="font-size:10px;color:#5E6C84;margin-top:1px">{tam_secondary} <span style="color:#DFE1E6">·</span> secondary</div>'
     hist = data.get("ticket_history", [])
+
     if hist:
-        chart_labels = json.dumps([h["month"][:6] for h in hist])
-        chart_data   = json.dumps([h["count"] for h in hist])
-        chart_max    = max(h["count"] for h in hist) + 2
-        timeseries_html = f"""
-      <div class="sec" style="flex:1">
-        <div class="sec-head">
-          <span class="sec-title">📈 Ticket Volume Trend</span>
-          <span class="sec-sub">Last {len(hist)} months</span>
-        </div>
-        <div style="padding:.75rem 1rem 1rem">
-          <div style="position:relative;height:130px">
-            <canvas id="trendChart"></canvas>
-          </div>
-        </div>
-      </div>"""
+        chart_labels      = json.dumps([h["month"][:6] for h in hist])
+        chart_data        = json.dumps([h["count"] for h in hist])
+        chart_max         = max(h["count"] for h in hist) + 2
         resolved_by_month = json.dumps([h.get("resolved", 0) for h in hist])
         timeseries_js = f"""
-new Chart(document.getElementById('trendChart'), {{
-  type: 'bar',
-  data: {{
-    labels: {chart_labels},
-    datasets: [
-      {{
-        label: 'Open',
-        data: {chart_data},
-        backgroundColor: 'rgba(26,111,219,0.85)',
-        borderRadius: 3,
-        barPercentage: 0.7,
-        categoryPercentage: 0.6
-      }},
-      {{
-        label: 'Resolved',
-        data: {resolved_by_month},
-        backgroundColor: 'rgba(56,161,105,0.85)',
-        borderRadius: 3,
-        barPercentage: 0.7,
-        categoryPercentage: 0.6
-      }}
-    ]
-  }},
-  options: {{
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {{
-      legend: {{
-        display: true,
-        position: 'top',
-        align: 'end',
-        labels: {{
-          font: {{ size: 9 }},
-          color: 'rgba(255,255,255,0.5)',
-          boxWidth: 8,
-          boxHeight: 8,
-          borderRadius: 2,
-          padding: 8,
-          usePointStyle: false
-        }}
-      }}
-    }},
-    scales: {{
-      x: {{ grid: {{ display: false }}, ticks: {{ font: {{ size: 9 }}, color: 'rgba(255,255,255,0.4)' }}, border: {{ display: false }} }},
-      y: {{ min: 0, max: {chart_max}, grid: {{ color: 'rgba(255,255,255,0.06)' }},
-            ticks: {{ font: {{ size: 9 }}, color: 'rgba(255,255,255,0.4)', stepSize: 2 }},
-            border: {{ display: false }} }}
-    }}
-  }}
-}});"""
+new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{chart_labels},datasets:[
+  {{label:'Open',data:{chart_data},backgroundColor:'rgba(26,111,219,0.85)',borderRadius:3,barPercentage:0.7,categoryPercentage:0.6}},
+  {{label:'Resolved',data:{resolved_by_month},backgroundColor:'rgba(56,161,105,0.85)',borderRadius:3,barPercentage:0.7,categoryPercentage:0.6}}
+]}},options:{{responsive:true,maintainAspectRatio:false,
+  plugins:{{legend:{{display:true,position:'top',align:'end',labels:{{font:{{size:9}},color:'rgba(255,255,255,0.5)',boxWidth:8,padding:8}}}}}},
+  scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:9}},color:'rgba(255,255,255,0.4)'}},border:{{display:false}}}},
+           y:{{min:0,max:{chart_max},grid:{{color:'rgba(255,255,255,0.06)'}},ticks:{{font:{{size:9}},color:'rgba(255,255,255,0.4)',stepSize:2}},border:{{display:false}}}}}}}}}}); """
+        chart_block = f'<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ticket Volume Trend</div><div style="position:relative;height:120px"><canvas id="trendChart"></canvas></div>'
     else:
-        timeseries_html = ""
-        timeseries_js   = ""
+        timeseries_js = ""; chart_block = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>'
 
-    # ── Customer pulse ─────────────────────────────────────────────────────────
-    pulse_colors = {"frustrated":"#E53E3E","concerned":"#DD6B20",
-                    "waiting":"#D69E2E","positive":"#38A169","neutral":"#5E6C84"}
-    pulse_html = ""
-    for p in data.get("pulse", []):
-        col  = pulse_colors.get(p["sentiment"], "#5E6C84")
-        sent = p["sentiment"].capitalize()
-        pulse_html += (
-            f'<div class="pulse-row">'
-            f'<div class="pdot" style="background:{col}"></div>'
-            f'<div class="ptext"><b>{sent}</b> — {p["text"]}</div>'
-            f'</div>'
-        )
-    if not pulse_html:
-        pulse_html = '<div class="pulse-row"><div class="ptext">No pulse data yet.</div></div>'
+    pulse_colors = {"frustrated":"#E53E3E","concerned":"#DD6B20","waiting":"#D69E2E","positive":"#38A169","neutral":"#5E6C84"}
+    pulse_html = "".join(
+        f'<div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px">'
+        f'<div class="pdot" style="background:{pulse_colors.get(p["sentiment"],"#5E6C84")}"></div>'
+        f'<div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"><b style="color:#fff">{p["sentiment"].capitalize()}</b> — {p["text"]}</div></div>'
+        for p in data.get("pulse", [])
+    ) or '<div style="font-size:11px;color:rgba(255,255,255,0.3)">No pulse data yet.</div>'
 
-    def ticket_list_js(issues, limit=20):
-        """Serialize tickets to JS-safe list for the drawer."""
-        out = []
-        for i in issues[:limit]:
-            f   = i["fields"]
-            sre_pc, sre_pl = sre_priority(f)
-            pc, pl = (sre_pc, sre_pl) if sre_pc else priority_class(f.get("priority",{}).get("name",""))
-            sc_, sl = status_class(f.get("status",{}).get("name",""))
-            out.append({
-                "key":   i["key"],
-                "url":   f"{JIRA_BASE}/browse/{i['key']}",
-                "summ":  (f.get("summary") or "")[:80],
-                "pl":    pl,
-                "pc":    pc,
-                "sl":    sl,
-                "sc":    sc_,
-                "age":   age_days(f.get("created",""))
-            })
-        return json.dumps(out)
-
-    # ── FIX 5: define portal_link, bars, ql_jira before HTML template ──────────
-    portal_link = (
-        f'<div class="ir"><span class="ilabel">Portal</span>'
-        f'<span class="ival"><a class="tlink" href="{cust["portal_url"]}" target="_blank">'
-        f'{cust["portal_url"]}</a></span></div>'
-    ) if cust.get("portal_url") else ""
-
+    portal_link = (f'<div class="ir"><span class="ilabel">Portal</span><span class="ival"><a class="tlink" href="{cust["portal_url"]}" target="_blank">{cust["portal_url"]}</a></span></div>') if cust.get("portal_url") else ""
     kw_enc  = cust["jql_keyword"].replace(" ", "+").replace('"', '%22')
     ql_jira = f'{JIRA_BASE}/issues/?jql=text+~+%22{kw_enc}%22+AND+statusCategory+%21%3D+Done'
 
-    bar_max = max((h["count"] for h in hist), default=1)
-    avg     = sum(h["count"] for h in hist) / len(hist) if hist else 0
-    bars    = "".join(
-        f'<div class="bar-row"><span class="blabel">{h["month"][:6]}</span>'
-        f'<div class="btrack"><div class="bfill" style="width:{round(h["count"]/bar_max*100)}%;'
-        f'background:{"#38A169" if h["count"]<=avg else "#DD6B20" if h["count"]<bar_max else "#E53E3E"}"></div></div>'
-        f'<span class="bval {"green" if h["count"]<=avg else "orange" if h["count"]<bar_max else "red"}">{h["count"]}</span></div>'
-        for h in hist
-    ) if hist else ""
+    data_js  = json.dumps({"p0p1":len(p0p1),"open":len(open_t),"features":len(features),"resolved":len(resolved),"pendingEng":pending,"p0keys":p0_keys,"highKeys":high_keys,"generated":now,"score":score,"scoreLabel":health_label,"scoreColor":health_color})
+    mv_col   = "red"    if len(p0p1) > 0   else "green"
+    open_col = "orange" if len(open_t) > 5 else "yellow"
+    nav = NAV_CUSTOMER.format(parent=CONFLUENCE_PARENT)
 
-    # ── FIX 3: data_js — signals removed ──────────────────────────────────────
-    data_js = json.dumps({
-        "p0p1": len(p0p1), "open": len(open_t),
-        "features": len(features), "resolved": len(resolved),
-        "pendingEng": pending, "p0keys": p0_keys,
-        "highKeys": high_keys, "generated": now,
-        "score": score, "scoreLabel": health_label, "scoreColor": health_color
-    })
-    p0p1_js    = ticket_list_js(p0p1)
-    open_js    = ticket_list_js(open_t)
-    feat_js    = ticket_list_js(features)
-    resolved_js= ticket_list_js(resolved)
-
-    mv_col   = "red" if len(p0p1)>0 else "green"
-    open_col = "orange" if len(open_t)>5 else "yellow"
-
-    nav  = NAV_HTML.format(back=f'<a class="nav-back" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/{CONFLUENCE_PARENT}" target="_parent">← All Customers</a>')
-    engines_str = " · ".join(cust["engines"])
-
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+    return f"""<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <title>{cust['name']} — Customer Dashboard</title>
-<style>{SHARED_CSS}</style>
-</head>
-<body>
+<style>{SHARED_CSS}</style></head><body>
 {nav}
 <div style="background:#0B1F45;padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid #122752">
   <div style="display:flex;align-items:center;gap:10px">
     <div style="width:42px;height:42px;background:{cust['logo_bg']};border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:{cust['logo_color']}">{cust['initials']}</div>
-    <div>
-      <div style="font-size:18px;font-weight:700;color:#fff">{cust['name']}</div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">{cust['cloud']} · {cust['region']} · {engines_str} · {cust['phase']}</div>
-    </div>
+    <div><div style="font-size:18px;font-weight:700;color:#fff">{cust['name']}</div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">{cust['cloud']} · {cust['region']} · {engines_str} · {cust['phase']}</div></div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15)" id="health-wrap">
@@ -949,12 +1089,11 @@ new Chart(document.getElementById('trendChart'), {{
   </div>
 </div>
 <div class="body">
-  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;padding:.75rem 1.5rem;margin-bottom:1rem;display:grid;grid-template-columns:repeat(7,1fr);gap:1rem;align-items:center">
+  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;padding:.75rem 1.5rem;margin-bottom:1rem;display:grid;grid-template-columns:repeat(7,1fr);gap:1rem;align-items:start">
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Account</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust['name']}</div></div>
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">CSE Owner</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust.get('cse_owner','—')}</div></div>
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust.get('tam','—') or '—'}</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Exec Sponsor</div><div style="font-size:12px;font-weight:700;color:#172B4D">{exec_sponsor}</div></div>
+    <div style="grid-column:span 2"><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div>{tam_html}</div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cloud</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust['cloud']} · {cust['region']}</div></div>
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Engines</div><div style="font-size:12px;font-weight:700;color:#172B4D">{engines_str}</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust['phase']}</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div>{portal_html}</div></div>
   </div>
@@ -966,91 +1105,41 @@ new Chart(document.getElementById('trendChart'), {{
     <div class="metric" id="m-health" onclick="toggleDrawer('drawer-health','m-health')"><div class="mlabel">Health Score</div><div class="mval" style="color:{health_color}">{score}/10</div><div class="msub">Rule-based</div></div>
   </div>
   <div class="drawer" id="drawer-health">
-    <div class="drawer-head">
-      <span class="drawer-title">🧮 Health Score Breakdown — {score}/10 · <span style="color:{health_color}">{health_label}</span></span>
-      <button class="drawer-close" onclick="toggleDrawer('drawer-health','m-health')">✕</button>
-    </div>
+    <div class="drawer-head"><span class="drawer-title">🧮 Health Score — {score}/10 · <span style="color:{health_color}">{health_label}</span></span><button class="drawer-close" onclick="toggleDrawer('drawer-health','m-health')">✕</button></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:.5px solid #DFE1E6">
-      <div style="padding:1rem 1.25rem;border-right:.5px solid #DFE1E6">
-        <div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">Impacting Factors</div>
-        <div id="health-factors"></div>
-      </div>
-      <div style="padding:1rem 1.25rem">
-        <div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">How to Improve</div>
-        <div id="health-actions"></div>
-      </div>
+      <div style="padding:1rem 1.25rem;border-right:.5px solid #DFE1E6"><div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">Impacting Factors</div><div id="health-factors"></div></div>
+      <div style="padding:1rem 1.25rem"><div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">How to Improve</div><div id="health-actions"></div></div>
     </div>
     <div style="padding:.75rem 1.25rem;background:#FAFBFC;display:flex;align-items:center;gap:6px">
-      <div style="flex:1;height:8px;background:#F4F5F7;border-radius:4px;overflow:hidden">
-        <div id="health-bar" style="height:100%;border-radius:4px;background:{health_color};width:{score * 10}%;transition:width .6s ease"></div>
-      </div>
+      <div style="flex:1;height:8px;background:#F4F5F7;border-radius:4px;overflow:hidden"><div style="height:100%;border-radius:4px;background:{health_color};width:{score*10}%;transition:width .6s ease"></div></div>
       <span style="font-size:11px;font-weight:700;color:{health_color}">{score}/10</span>
-      <span style="font-size:10px;color:#5E6C84">· Max deduction: {10 - score} pts</span>
+      <span style="font-size:10px;color:#5E6C84">· Max deduction: {10-score} pts</span>
     </div>
   </div>
-  <div class="drawer" id="drawer-p0p1">
-    <div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents ({len(p0p1)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div>
-    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in p0p1) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No P0/P1 tickets</td></tr>'}</tbody></table>
-  </div>
-  <div class="drawer" id="drawer-open">
-    <div class="drawer-head"><span class="drawer-title">🎫 All Open Tickets ({len(open_t)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-open','m-open')">✕</button></div>
-    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in open_t) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open tickets</td></tr>'}</tbody></table>
-  </div>
-  <div class="drawer" id="drawer-feat">
-    <div class="drawer-head"><span class="drawer-title">💡 Feature Requests ({len(features)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div>
-    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in features) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr>'}</tbody></table>
-  </div>
-  <div class="drawer" id="drawer-res">
-    <div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days ({len(resolved)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div>
-    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in resolved) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr>'}</tbody></table>
-  </div>
+  <div class="drawer" id="drawer-p0p1"><div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents ({len(p0p1)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{p0_rows}</tbody></table></div>
+  <div class="drawer" id="drawer-open"><div class="drawer-head"><span class="drawer-title">🎫 All Open Tickets ({len(open_t)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-open','m-open')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{tk_rows}</tbody></table></div>
+  <div class="drawer" id="drawer-feat"><div class="drawer-head"><span class="drawer-title">💡 Feature Requests ({len(features)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in features) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr>'}</tbody></table></div>
+  <div class="drawer" id="drawer-res"><div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days ({len(resolved)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in resolved) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr>'}</tbody></table></div>
   <div class="grid2">
     <div>
       <div class="ai-panel">
         <div class="ai-eyebrow">✦ Health Analysis</div>
         <div class="ai-title">Customer Health Assessment</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start">
-          <div>
-            <div class="ai-body" id="ai-body">Calculating...</div>
-            <div class="ai-footer">
-              <div style="display:flex;align-items:baseline;gap:4px">
-                <span class="ai-score-label">Health score</span>
-                <span class="ai-score-val" id="ai-score" style="color:{health_color}">{score}</span>
-                <span class="ai-score-max">/10</span>
-              </div>
-              <span id="ai-ts" class="ai-ts"></span>
-            </div>
+          <div><div class="ai-body" id="ai-body">Calculating...</div>
+            <div class="ai-footer"><div style="display:flex;align-items:baseline;gap:4px"><span class="ai-score-label">Health score</span><span class="ai-score-val" id="ai-score" style="color:{health_color}">{score}</span><span class="ai-score-max">/10</span></div><span id="ai-ts" class="ai-ts"></span></div>
           </div>
-          <div>
-            {f'''<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ticket Volume Trend</div>
-            <div style="position:relative;height:120px"><canvas id="trendChart"></canvas></div>''' if hist else '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>'}
-          </div>
-          <div>
-            <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Customer Pulse</div>
-            {pulse_html.replace('class="pulse-row"', 'style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px"').replace('class="pdot"', 'class="pdot"').replace('class="ptext"', 'style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"').replace('<b>', '<b style="color:#fff">') if pulse_html else '<div style="font-size:11px;color:rgba(255,255,255,0.3)">No pulse data yet.</div>'}
-          </div>
+          <div>{chart_block}</div>
+          <div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Customer Pulse</div>{pulse_html}</div>
         </div>
       </div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">🚨 Active P0 / P1 Incidents</span><span class="badge br">{len(p0p1)} Open</span></div>
-        <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{p0_rows}</tbody></table>
-      </div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">🎫 Open Support Tickets</span><span class="badge bo">{len(open_t)} Open</span></div>
-        <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{tk_rows}</tbody></table>
-      </div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">{len(features)} Active</span></div>
-        {feat_items or '<p style="padding:1rem;font-size:12px;color:#5E6C84">No open feature requests.</p>'}
-      </div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">🚨 Active P0 / P1 Incidents</span><span class="badge br">{len(p0p1)} Open</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{p0_rows}</tbody></table></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">🎫 Open Support Tickets</span><span class="badge bo">{len(open_t)} Open</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{tk_rows}</tbody></table></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">{len(features)} Active</span></div>{feat_items or '<p style="padding:1rem;font-size:12px;color:#5E6C84">No open feature requests.</p>'}</div>
     </div>
     <div>
-      <div class="sb-sec">
-        <div class="sb-head">📅 Recent Activity</div>
-        <div class="tl">{timeline}</div>
-      </div>
-      <div class="sb-sec">
-        <div class="sb-head">🔗 Quick Links</div>
+      <div class="sb-sec"><div class="sb-head">📅 Recent Activity</div><div class="tl">{timeline}</div></div>
+      <div class="sb-sec"><div class="sb-head">🔗 Quick Links</div>
         <div class="ir"><a class="tlink" href="{ql_jira}" target="_blank">All Open Tickets</a></div>
         <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/{CONFLUENCE_PARENT}" target="_blank">Customer Portfolio</a></div>
         {portal_link}
@@ -1061,115 +1150,53 @@ new Chart(document.getElementById('trendChart'), {{
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 {timeseries_js}
-const DATA = {data_js};
+const DATA={data_js};
 {HEALTH_JS}
-window.onload = () => {{
-  runHealth(DATA);
-  buildHealthDrawer(DATA);
-}};
-function toggleDrawer(drawerId, metricId) {{
-  const drawer = document.getElementById(drawerId);
-  const metric = document.getElementById(metricId);
-  const isOpen = drawer.classList.contains('open');
-  document.querySelectorAll('.drawer').forEach(d => d.classList.remove('open'));
-  document.querySelectorAll('.metric').forEach(m => m.classList.remove('active'));
-  if (!isOpen) {{ drawer.classList.add('open'); metric.classList.add('active'); }}
+window.onload=()=>{{runHealth(DATA);buildHealthDrawer(DATA);}};
+function toggleDrawer(dId,mId){{const d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.metric').forEach(x=>x.classList.remove('active'));if(!open){{d.classList.add('open');m.classList.add('active');}}}}
+function buildHealthDrawer(DATA){{
+  const factors=[],actions=[];
+  if(DATA.p0p1>=3){{factors.push(['−4 pts',`${{DATA.p0p1}} active P0 incidents (${{DATA.p0keys.join(', ')}})`, '#E53E3E']);actions.push(['🚨','Escalate to engineering leadership']);}}
+  else if(DATA.p0p1===2){{factors.push(['−3 pts',`2 P0 incidents (${{DATA.p0keys.join(', ')}})`, '#E53E3E']);actions.push(['🚨','Both need engineering owner today']);}}
+  else if(DATA.p0p1===1){{factors.push(['−2 pts',`1 active P0/P1 (${{DATA.p0keys[0]}})`, '#DD6B20']);actions.push(['🚨','Daily updates to customer until resolved']);}}
+  else{{factors.push(['+0 pts','No active P0/P1 incidents','#38A169']);}}
+  if(DATA.open>=8){{factors.push(['−2 pts',`High backlog — ${{DATA.open}} open`,'#DD6B20']);actions.push(['🎫','Close or escalate stale tickets']);}}
+  else if(DATA.open>=5){{factors.push(['−1 pt',`Moderate backlog — ${{DATA.open}} open`,'#D69E2E']);actions.push(['🎫','Target 3 resolutions this sprint']);}}
+  else{{factors.push(['+0 pts',`Healthy volume — ${{DATA.open}} open`,'#38A169']);}}
+  if(DATA.pendingEng>=4){{factors.push(['−2 pts',`${{DATA.pendingEng}} blocked pending eng`,'#DD6B20']);actions.push(['⏳','Set ETAs and communicate to customer']);}}
+  else if(DATA.pendingEng>=2){{factors.push(['−1 pt',`${{DATA.pendingEng}} pending engineering`,'#D69E2E']);actions.push(['⏳','Chase ETAs this week']);}}
+  else{{factors.push(['+0 pts','No tickets blocked on engineering','#38A169']);}}
+  if(DATA.features>=5){{factors.push(['−1 pt',`${{DATA.features}} open feature requests`,'#D69E2E']);actions.push(['💡','Schedule roadmap call']);}}
+  else{{factors.push(['+0 pts',`${{DATA.features}} feature requests`,'#38A169']);}}
+  if(DATA.resolved===0){{factors.push(['−1 pt','No tickets resolved in 30d','#DD6B20']);actions.push(['✅','Close at least one ticket']);}}
+  else{{factors.push(['+0 pts',`${{DATA.resolved}} resolved in 30d`,'#38A169']);}}
+  document.getElementById('health-factors').innerHTML=factors.map(([pts,label,col])=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:${{col}}1A;color:${{col}};flex-shrink:0;min-width:44px;text-align:center">${{pts}}</span><span style="font-size:11px;color:#172B4D;line-height:1.5">${{label}}</span></div>`).join('');
+  const aEl=document.getElementById('health-actions');
+  aEl.innerHTML=actions.length===0?'<p style="font-size:11px;color:#38A169;font-weight:600">✅ Customer is healthy!</p>':actions.map(([icon,text])=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:13px;flex-shrink:0">${{icon}}</span><span style="font-size:11px;color:#172B4D;line-height:1.5">${{text}}</span></div>`).join('');
 }}
-function buildHealthDrawer(DATA) {{
-  const factors = [];
-  const actions = [];
-  if (DATA.p0p1 >= 3) {{
-    factors.push(['−4 pts', `${{DATA.p0p1}} active P0 incidents (${{DATA.p0keys.join(', ')}})`, '#E53E3E']);
-    actions.push(['🚨', `Escalate ${{DATA.p0keys[0]}} to engineering leadership for same-day resolution`]);
-  }} else if (DATA.p0p1 === 2) {{
-    factors.push(['−3 pts', `2 active P0 incidents (${{DATA.p0keys.join(', ')}})`, '#E53E3E']);
-    actions.push(['🚨', `Both P0s need an engineering owner assigned today`]);
-  }} else if (DATA.p0p1 === 1) {{
-    factors.push(['−2 pts', `1 active P0/P1 open (${{DATA.p0keys[0]}})`, '#DD6B20']);
-    actions.push(['🚨', `Ensure ${{DATA.p0keys[0]}} has daily customer updates until resolved`]);
-  }} else {{
-    factors.push(['+0 pts', 'No active P0/P1 incidents', '#38A169']);
-  }}
-  if (DATA.open >= 8) {{
-    factors.push(['−2 pts', `High ticket backlog — ${{DATA.open}} open tickets`, '#DD6B20']);
-    actions.push(['🎫', `Review oldest open tickets and close or escalate stale ones`]);
-  }} else if (DATA.open >= 5) {{
-    factors.push(['−1 pt', `Moderate backlog — ${{DATA.open}} open tickets`, '#D69E2E']);
-    actions.push(['🎫', `Target resolving at least 3 open tickets this sprint`]);
-  }} else {{
-    factors.push(['+0 pts', `Healthy ticket volume — ${{DATA.open}} open`, '#38A169']);
-  }}
-  if (DATA.pendingEng >= 4) {{
-    factors.push(['−2 pts', `${{DATA.pendingEng}} tickets blocked pending engineering`, '#DD6B20']);
-    actions.push(['⏳', `Set ETAs on all ${{DATA.pendingEng}} blocked tickets and communicate to customer`]);
-  }} else if (DATA.pendingEng >= 2) {{
-    factors.push(['−1 pt', `${{DATA.pendingEng}} tickets pending engineering`, '#D69E2E']);
-    actions.push(['⏳', `Chase engineering ETAs on pending tickets this week`]);
-  }} else {{
-    factors.push(['+0 pts', 'No tickets stuck pending engineering', '#38A169']);
-  }}
-  if (DATA.features >= 5) {{
-    factors.push(['−1 pt', `Large feature backlog — ${{DATA.features}} open requests`, '#D69E2E']);
-    actions.push(['💡', `Schedule a roadmap call to set delivery expectations with customer`]);
-  }} else {{
-    factors.push(['+0 pts', `Feature backlog manageable — ${{DATA.features}} requests`, '#38A169']);
-  }}
-  if (DATA.resolved === 0) {{
-    factors.push(['−1 pt', 'No tickets resolved in the last 30 days', '#DD6B20']);
-    actions.push(['✅', `Prioritise closing at least one open ticket to show progress to customer`]);
-  }} else {{
-    factors.push(['+0 pts', `${{DATA.resolved}} tickets resolved in the last 30 days`, '#38A169']);
-  }}
-  const fEl = document.getElementById('health-factors');
-  fEl.innerHTML = factors.map(([pts, label, col]) =>
-    `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
-      <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:${{col}}1A;color:${{col}};flex-shrink:0;min-width:44px;text-align:center">${{pts}}</span>
-      <span style="font-size:11px;color:#172B4D;line-height:1.5">${{label}}</span>
-    </div>`
-  ).join('');
-  const aEl = document.getElementById('health-actions');
-  if (actions.length === 0) {{
-    aEl.innerHTML = '<p style="font-size:11px;color:#38A169;font-weight:600">✅ No actions needed — customer is healthy!</p>';
-  }} else {{
-    aEl.innerHTML = actions.map(([icon, text]) =>
-      `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
-        <span style="font-size:13px;flex-shrink:0">${{icon}}</span>
-        <span style="font-size:11px;color:#172B4D;line-height:1.5">${{text}}</span>
-      </div>`
-    ).join('');
-  }}
-}}
-</script>
-</body>
-</html>"""
+</script></body></html>"""
+
 
 # ── Master dashboard builder ───────────────────────────────────────────────────
 def build_master_html(customer_results):
-    now       = datetime.now(timezone.utc).strftime("%b %d, %Y %H:%M UTC")
-    real      = [c for c in customer_results if c["config"].get("name")]
-    total     = len(real)
-    at_risk   = sum(1 for c in real if c["health_key"] == "atrisk")
-    attention = sum(1 for c in real if c["health_key"] == "attention")
-    healthy   = sum(1 for c in real if c["health_key"] in ("healthy","stable"))
-    total_p0  = sum(c["p0_count"] for c in real)
+    now    = datetime.now(timezone.utc).strftime("%b %d, %Y %H:%M UTC")
+    real   = [c for c in customer_results if c["config"].get("name")]
+    total  = len(real)
+    at_risk= sum(1 for c in real if c["health_key"]=="atrisk")
+    healthy= sum(1 for c in real if c["health_key"] in ("healthy","stable"))
+    total_p0 = sum(c["p0_count"] for c in real)
 
-    # ── Customer cards (for the "All Customers" section at bottom) ─────────────
     cards = ""
     for cr in customer_results:
         cust = cr["config"]
-        if not cust.get("name"):
-            continue
-        hk    = cr["health_key"]
-        hl    = cr["health_label"]
-        hcol  = cr["health_color"]
-        p0col = "red"    if cr["p0_count"] > 0     else "green"
-        tkcol = "orange" if cr["open_count"] > 5   else "gray" if cr["open_count"] > 2 else "green"
-        tags  = "".join(f'<span class="tag">{e}</span>' for e in cust["engines"]) + \
-                f'<span class="tag">{cust["cloud"]}</span>'
+        if not cust.get("name"): continue
+        hk,hl,hcol = cr["health_key"],cr["health_label"],cr["health_color"]
+        p0col = "red"    if cr["p0_count"]>0   else "green"
+        tkcol = "orange" if cr["open_count"]>5 else "gray" if cr["open_count"]>2 else "green"
+        tags  = "".join(f'<span class="tag">{e}</span>' for e in cust["engines"]) + f'<span class="tag">{cust["cloud"]}</span>'
         url   = cr.get("dashboard_url","#")
-        phase_emoji = {"Onboarding":"🔵","Implementation":"🟡","Stabilisation":"🟠",
-                       "Production":"🟢","Steady State":"⚫"}.get(cust["phase"],"")
-        cards += f"""<a class="cust-card" data-health="{hk}" data-name="{cust['name'].lower()}" href="{url}" target="_parent" style="text-decoration:none">
+        phase_emoji = {"Onboarding":"🔵","Implementation":"🟡","Stabilisation":"🟠","Production":"🟢","Steady State":"⚫"}.get(cust["phase"],"")
+        cards += f"""<a class="cust-card" data-health="{hk}" data-name="{cust['name'].lower()}" href="{url}" target="_parent" style="text-decoration:none;color:inherit">
   <div class="card-header">
     <div class="card-logo" style="background:{cust['logo_bg']};color:{cust['logo_color']}">{cust['initials']}</div>
     <div><div class="card-name">{cust['name']}</div><div class="card-meta">{cust['region']} · CSE: {cust.get('cse_owner','—')}</div></div>
@@ -1186,148 +1213,90 @@ def build_master_html(customer_results):
   </div>
 </a>"""
 
-    # ── Action required items — top 3 by severity ─────────────────────────────
     action_items = []
-    for cr in sorted(customer_results, key=lambda x: x["p0_count"], reverse=True)[:3]:
-        c = cr["config"]
-        if cr["p0_count"] > 0:
-            sev, sev_cls = "Critical", "sev-critical"
+    for cr in sorted(customer_results, key=lambda x:x["p0_count"], reverse=True)[:3]:
+        c   = cr["config"]
+        url = cr.get("dashboard_url","#")
+        if cr["p0_count"]>0:
+            sev,sev_cls = "Critical","sev-critical"
             title = f"{c['name']} — {cr['p0_count']} P0{'s' if cr['p0_count']>1 else ''} open"
             desc  = f"{cr['open_count']} total open tickets. Immediate engineering escalation required."
-        elif cr["open_count"] > 5:
-            sev, sev_cls = "High", "sev-high"
+        elif cr["open_count"]>5:
+            sev,sev_cls = "High","sev-high"
             title = f"{c['name']} — {cr['open_count']} open tickets"
-            desc  = f"{cr['feat_count']} feature requests pending. Review backlog priority with engineering."
+            desc  = f"{cr['feat_count']} feature requests pending."
         else:
-            sev, sev_cls = "Watch", "sev-watch"
+            sev,sev_cls = "Watch","sev-watch"
             title = f"{c['name']} — monitor closely"
-            desc  = f"Phase: {c['phase']}. {cr['open_count']} open tickets, {cr['feat_count']} feature requests."
-        url = cr.get("dashboard_url","#")
-        action_items.append(
-            f'<div class="action-item">'
-            f'<span class="ai-severity {sev_cls}">{sev}</span>'
-            f'<div class="ai-title">{title}</div>'
-            f'<div class="ai-desc">{desc}</div>'
-            f'<a class="ai-link" href="{url}" target="_parent">→ View Dashboard</a>'
-            f'</div>'
-        )
-    # pad to 3
-    while len(action_items) < 3:
-        action_items.append('<div class="action-item"><span class="ai-severity sev-watch">Watch</span><div class="ai-title">No further escalations</div><div class="ai-desc">Remaining customers are healthy or in early implementation.</div></div>')
+            desc  = f"Phase: {c['phase']}. {cr['open_count']} open tickets."
+        action_items.append(f'<div class="action-item"><span class="ai-severity {sev_cls}">{sev}</span><div class="ai-title">{title}</div><div class="ai-desc">{desc}</div><a class="ai-link" href="{url}" target="_parent">→ View Dashboard</a></div>')
+    while len(action_items)<3:
+        action_items.append('<div class="action-item"><span class="ai-severity sev-watch">Watch</span><div class="ai-title">No further escalations</div><div class="ai-desc">Remaining customers are healthy.</div></div>')
 
-    # ── Pipeline counts ────────────────────────────────────────────────────────
     phase_counts = {"Onboarding":0,"Implementation":0,"Stabilisation":0,"Production":0,"Steady State":0}
     for cr in customer_results:
         p = cr["config"].get("phase","")
-        if p in phase_counts: phase_counts[p] += 1
+        if p in phase_counts: phase_counts[p]+=1
     pipe_max = max(phase_counts.values()) or 1
-
-    def pipe_row(label, count, color, text_color):
-        pct = round(count / pipe_max * 100)
-        return (f'<div class="phase-row">'
-                f'<span class="phase-label">{label}</span>'
+    def pipe_row(label,count,color,text_color):
+        pct=round(count/pipe_max*100)
+        return (f'<div class="phase-row"><span class="phase-label">{label}</span>'
                 f'<div class="phase-track"><div class="phase-fill" style="width:{max(pct,8)}%;background:{color};color:{text_color}">{count if pct>15 else ""}</div></div>'
-                f'<span class="phase-count" style="color:{color}">{count}</span>'
-                f'</div>')
+                f'<span class="phase-count" style="color:{color}">{count}</span></div>')
+    pipeline_html = (pipe_row("Onboarding",phase_counts["Onboarding"],"#378ADD","#E6F1FB")+
+                     pipe_row("Implementation",phase_counts["Implementation"],"#BA7517","#FAEEDA")+
+                     pipe_row("Stabilisation",phase_counts["Stabilisation"],"#E24B4A","#FCEBEB")+
+                     pipe_row("Production",phase_counts["Production"],"#1D9E75","#E1F5EE")+
+                     pipe_row("Steady State",phase_counts["Steady State"],"#5F5E5A","#F1EFE8"))
 
-    pipeline_html = (
-        pipe_row("Onboarding",    phase_counts["Onboarding"],    "#378ADD","#E6F1FB") +
-        pipe_row("Implementation",phase_counts["Implementation"],"#BA7517","#FAEEDA") +
-        pipe_row("Stabilisation", phase_counts["Stabilisation"], "#E24B4A","#FCEBEB") +
-        pipe_row("Production",    phase_counts["Production"],    "#1D9E75","#E1F5EE") +
-        pipe_row("Steady State",  phase_counts["Steady State"],  "#5F5E5A","#F1EFE8")
-    )
-
-    # ── Health heatmap cells ───────────────────────────────────────────────────
     heatmap_cells = ""
     for cr in customer_results:
         c   = cr["config"]
-        hk  = cr["health_key"]
-        cls = {"atrisk":"hm-risk","attention":"hm-warn","stable":"hm-stable","healthy":"hm-good"}.get(hk,"hm-stable")
-        stat = f"{cr['p0_count']} P0s · {cr['open_count']} open" if cr["p0_count"] > 0 else f"{cr['open_count']} open · {c['phase'][:12]}"
-        url  = cr.get("dashboard_url","#")
-        heatmap_cells += (
-            f'<a class="hm-cell {cls}" href="{url}" target="_parent" style="text-decoration:none">'
-            f'<div class="hm-name">{c["name"][:18]}</div>'
-            f'<div class="hm-stat">{stat}</div>'
-            f'</a>'
-        )
+        cls = {"atrisk":"hm-risk","attention":"hm-warn","stable":"hm-stable","healthy":"hm-good"}.get(cr["health_key"],"hm-stable")
+        stat= f"{cr['p0_count']} P0s · {cr['open_count']} open" if cr["p0_count"]>0 else f"{cr['open_count']} open · {c['phase'][:12]}"
+        url = cr.get("dashboard_url","#")
+        heatmap_cells += f'<a class="hm-cell {cls}" href="{url}" target="_parent"><div class="hm-name">{c["name"][:18]}</div><div class="hm-stat">{stat}</div></a>'
 
-    # ── Owner summary ──────────────────────────────────────────────────────────
     owner_map = {}
     for cr in customer_results:
-        owner = cr["config"].get("cse_owner","—") or "—"
-        if owner not in owner_map:
-            owner_map[owner] = {"p0":0,"open":0,"customers":[]}
-        owner_map[owner]["p0"]   += cr["p0_count"]
-        owner_map[owner]["open"] += cr["open_count"]
+        owner = cr["config"].get("exec_sponsor","—") or "—"
+        if owner not in owner_map: owner_map[owner]={"p0":0,"open":0,"customers":[]}
+        owner_map[owner]["p0"]+=cr["p0_count"]; owner_map[owner]["open"]+=cr["open_count"]
         owner_map[owner]["customers"].append(cr["config"]["name"].split()[0])
+    avatar_colors=[{"bg":"#E6F1FB","col":"#0C447C"},{"bg":"#EEEDFE","col":"#3C3489"},{"bg":"#EAF3DE","col":"#27500A"},{"bg":"#FAEEDA","col":"#633806"},{"bg":"#FBEAF0","col":"#72243E"},{"bg":"#E1F5EE","col":"#085041"}]
+    owner_rows=""
+    for idx,(owner,d) in enumerate(sorted(owner_map.items(),key=lambda x:-x[1]["p0"])[:5]):
+        ac=avatar_colors[idx%len(avatar_colors)]; parts=owner.split()
+        initials=(parts[0][0]+(parts[1][0] if len(parts)>1 else parts[0][-1])).upper() if parts else "—"
+        custs=", ".join(d["customers"][:3])+("…" if len(d["customers"])>3 else "")
+        p0col="#E53E3E" if d["p0"]>0 else "#D69E2E"; tkcol="#DD6B20" if d["open"]>5 else "#D69E2E" if d["open"]>2 else "#38A169"
+        owner_rows+=(f'<div class="owner-row"><div class="owner-info"><div class="owner-avatar" style="background:{ac["bg"]};color:{ac["col"]}">{initials}</div>'
+                     f'<div><div class="owner-name">{owner}</div><div class="owner-meta">{custs}</div></div></div>'
+                     f'<div class="owner-counts"><div class="oc"><div class="oc-val" style="color:{p0col}">{d["p0"]}</div><div class="oc-label">P0s</div></div>'
+                     f'<div class="oc"><div class="oc-val" style="color:{tkcol}">{d["open"]}</div><div class="oc-label">Open</div></div></div></div>')
 
-    avatar_colors = [
-        {"bg":"#E6F1FB","col":"#0C447C"},{"bg":"#EEEDFE","col":"#3C3489"},
-        {"bg":"#EAF3DE","col":"#27500A"},{"bg":"#FAEEDA","col":"#633806"},
-        {"bg":"#FBEAF0","col":"#72243E"},{"bg":"#E1F5EE","col":"#085041"},
-    ]
-    owner_rows = ""
-    for idx,(owner,data) in enumerate(sorted(owner_map.items(), key=lambda x:-x[1]["p0"])[:5]):
-        ac    = avatar_colors[idx % len(avatar_colors)]
-        parts = owner.split()
-        initials = (parts[0][0]+(parts[1][0] if len(parts)>1 else parts[0][-1])).upper() if parts else "—"
-        custs = ", ".join(data["customers"][:3]) + ("…" if len(data["customers"])>3 else "")
-        p0col = "#E53E3E" if data["p0"]>0 else "#D69E2E"
-        tkcol = "#DD6B20" if data["open"]>5 else "#D69E2E" if data["open"]>2 else "#38A169"
-        owner_rows += (
-            f'<div class="owner-row">'
-            f'<div class="owner-info">'
-            f'<div class="owner-avatar" style="background:{ac["bg"]};color:{ac["col"]}">{initials}</div>'
-            f'<div><div class="owner-name">{owner}</div><div class="owner-meta">{custs}</div></div>'
-            f'</div>'
-            f'<div class="owner-counts">'
-            f'<div class="oc"><div class="oc-val" style="color:{p0col}">{data["p0"]}</div><div class="oc-label">P0s</div></div>'
-            f'<div class="oc"><div class="oc-val" style="color:{tkcol}">{data["open"]}</div><div class="oc-label">Open</div></div>'
-            f'</div></div>'
-        )
+    top5 = sorted([cr for cr in customer_results if cr["open_count"]>0],key=lambda x:-x["open_count"])[:5]
+    trend_max = top5[0]["open_count"] if top5 else 1
+    trend_rows="".join(
+        f'<div class="trend-row"><span class="trend-label">{cr["config"]["name"].split()[0][:10]}</span>'
+        f'<div class="trend-bar-wrap"><div class="trend-bar" style="width:{round(cr["open_count"]/trend_max*100)}%;background:{"#E53E3E" if cr["p0_count"]>0 else "#DD6B20" if cr["open_count"]>5 else "#38A169"}"></div></div>'
+        f'<span class="trend-val" style="color:{"#E53E3E" if cr["p0_count"]>0 else "#DD6B20" if cr["open_count"]>5 else "#38A169"}">{cr["open_count"]}</span></div>'
+        for cr in top5)
 
-    # ── Resolution trend bars ──────────────────────────────────────────────────
-    top_by_tickets = sorted([cr for cr in customer_results if cr["open_count"]>0],
-                             key=lambda x:-x["open_count"])[:5]
-    trend_max = top_by_tickets[0]["open_count"] if top_by_tickets else 1
-    trend_rows = ""
-    for cr in top_by_tickets:
-        pct  = round(cr["open_count"] / trend_max * 100)
-        col  = "#E53E3E" if cr["p0_count"]>0 else "#DD6B20" if cr["open_count"]>5 else "#38A169"
-        name = cr["config"]["name"].split()[0][:10]
-        trend_rows += (
-            f'<div class="trend-row">'
-            f'<span class="trend-label">{name}</span>'
-            f'<div class="trend-bar-wrap"><div class="trend-bar" style="width:{pct}%;background:{col}"></div></div>'
-            f'<span class="trend-val" style="color:{col}">{cr["open_count"]}</span>'
-            f'</div>'
-        )
+    highlights=[]
+    crit=[cr for cr in customer_results if cr["p0_count"]>0]
+    if crit: highlights.append(f'🚨 <span style="color:#172B4D;font-weight:600">{sum(c["p0_count"] for c in crit)} P0/P1s open</span> — {", ".join(c["config"]["name"].split()[0] for c in crit[:2])} need immediate attention')
+    new_impl=[cr for cr in customer_results if cr["config"].get("phase") in ("Onboarding","Implementation")]
+    if new_impl: highlights.append(f'🔄 <span style="color:#172B4D;font-weight:600">{len(new_impl)} customers</span> actively in implementation')
+    prod=[cr for cr in customer_results if cr["config"].get("phase")=="Production"]
+    if prod: highlights.append(f'✅ <span style="color:#172B4D;font-weight:600">{len(prod)} customers</span> in Production phase')
+    highlights.append(f'📋 <span style="color:#172B4D;font-weight:600">{total} total customers</span> — {healthy} healthy, {at_risk} at risk')
+    highlights_html="".join(f'<div style="font-size:11px;color:#5E6C84;line-height:1.7;border-bottom:.5px solid #F4F5F7;padding-bottom:.6rem;margin-bottom:.6rem">{h}</div>' for h in highlights[:4])
 
-    # ── This week highlights ───────────────────────────────────────────────────
-    highlights = []
-    crit = [cr for cr in customer_results if cr["p0_count"]>0]
-    if crit:
-        names = ", ".join(c["config"]["name"].split()[0] for c in crit[:2])
-        highlights.append(f'🚨 <span style="color:#172B4D;font-weight:600">{sum(c["p0_count"] for c in crit)} P0/P1s open</span> — {names} need immediate attention')
-    new_impl = [cr for cr in customer_results if cr["config"].get("phase") in ("Onboarding","Implementation")]
-    if new_impl:
-        highlights.append(f'🔄 <span style="color:#172B4D;font-weight:600">{len(new_impl)} customers</span> actively in implementation — review velocity in sprint planning')
-    prod = [cr for cr in customer_results if cr["config"].get("phase") == "Production"]
-    if prod:
-        highlights.append(f'✅ <span style="color:#172B4D;font-weight:600">{len(prod)} customers</span> in Production phase')
-    highlights.append(f'📋 <span style="color:#172B4D;font-weight:600">{total} total customers</span> tracked across CSE — {healthy} healthy, {at_risk} at risk')
-    highlights_html = "".join(
-        f'<div style="font-size:11px;color:#5E6C84;line-height:1.7;border-bottom:0.5px solid #F4F5F7;padding-bottom:.6rem;margin-bottom:.6rem">{h}</div>'
-        for h in highlights[:4]
-    )
-
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+    return f"""<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <title>CSE — Customer Portfolio</title>
 <style>
 {SHARED_CSS}
@@ -1349,9 +1318,7 @@ def build_master_html(customer_results):
 .action-item{{padding:.9rem 1.25rem;border-right:.5px solid #F4F5F7}}
 .action-item:last-child{{border-right:none}}
 .ai-severity{{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:6px}}
-.sev-critical{{background:#FFF5F5;color:#A32D2D}}
-.sev-high{{background:#FFFAF0;color:#854F0B}}
-.sev-watch{{background:#E6F1FB;color:#0C447C}}
+.sev-critical{{background:#FFF5F5;color:#A32D2D}}.sev-high{{background:#FFFAF0;color:#854F0B}}.sev-watch{{background:#E6F1FB;color:#0C447C}}
 .ai-title{{font-size:12px;font-weight:700;color:#172B4D;margin-bottom:3px;line-height:1.35}}
 .ai-desc{{font-size:11px;color:#5E6C84;line-height:1.5}}
 .ai-link{{font-size:11px;font-weight:600;color:#1A6FDB;margin-top:5px;display:block;text-decoration:none}}
@@ -1363,31 +1330,24 @@ def build_master_html(customer_results):
 .phase-track{{flex:1;height:20px;background:#F4F5F7;border-radius:4px;overflow:hidden}}
 .phase-fill{{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:700;min-width:8px}}
 .phase-count{{font-size:11px;font-weight:700;width:20px;text-align:right;flex-shrink:0}}
-.heatmap{{padding:.9rem 1.1rem;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}}
-.hm-cell{{border-radius:6px;padding:7px 8px;cursor:pointer;transition:filter .15s;text-decoration:none;display:block}}
+.heatmap{{padding:.9rem 1.1rem;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}}
+.hm-cell{{border-radius:6px;padding:7px 8px;display:block;text-decoration:none;transition:filter .15s}}
 .hm-cell:hover{{filter:brightness(0.93)}}
 .hm-name{{font-size:10px;font-weight:600;line-height:1.3;margin-bottom:2px}}
 .hm-stat{{font-size:10px;opacity:.75}}
-.hm-risk{{background:#FFF5F5;border:.5px solid #F09595}}
-.hm-risk .hm-name,.hm-risk .hm-stat{{color:#A32D2D}}
-.hm-warn{{background:#FFFAF0;border:.5px solid #EF9F27}}
-.hm-warn .hm-name,.hm-warn .hm-stat{{color:#854F0B}}
-.hm-stable{{background:#E6F1FB;border:.5px solid #85B7EB}}
-.hm-stable .hm-name,.hm-stable .hm-stat{{color:#0C447C}}
-.hm-good{{background:#EAF3DE;border:.5px solid #97C459}}
-.hm-good .hm-name,.hm-good .hm-stat{{color:#27500A}}
+.hm-risk{{background:#FFF5F5;border:.5px solid #F09595}}.hm-risk .hm-name,.hm-risk .hm-stat{{color:#A32D2D}}
+.hm-warn{{background:#FFFAF0;border:.5px solid #EF9F27}}.hm-warn .hm-name,.hm-warn .hm-stat{{color:#854F0B}}
+.hm-stable{{background:#E6F1FB;border:.5px solid #85B7EB}}.hm-stable .hm-name,.hm-stable .hm-stat{{color:#0C447C}}
+.hm-good{{background:#EAF3DE;border:.5px solid #97C459}}.hm-good .hm-name,.hm-good .hm-stat{{color:#27500A}}
 .sb-sec{{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.1rem}}
 .sb-head{{padding:.7rem 1rem;border-bottom:.5px solid #DFE1E6;font-size:12px;font-weight:700;color:#172B4D}}
 .owner-row{{display:flex;align-items:center;justify-content:space-between;padding:7px 1rem;border-bottom:.5px solid #DFE1E6}}
 .owner-row:last-child{{border-bottom:none}}
 .owner-info{{display:flex;align-items:center;gap:8px}}
 .owner-avatar{{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}}
-.owner-name{{font-size:12px;font-weight:600;color:#172B4D}}
-.owner-meta{{font-size:10px;color:#5E6C84}}
-.owner-counts{{display:flex;gap:8px}}
-.oc{{text-align:center}}
-.oc-val{{font-size:13px;font-weight:700}}
-.oc-label{{font-size:9px;color:#5E6C84}}
+.owner-name{{font-size:12px;font-weight:600;color:#172B4D}}.owner-meta{{font-size:10px;color:#5E6C84}}
+.owner-counts{{display:flex;gap:8px}}.oc{{text-align:center}}
+.oc-val{{font-size:13px;font-weight:700}}.oc-label{{font-size:9px;color:#5E6C84}}
 .trend-row{{display:flex;align-items:center;gap:8px;padding:6px 1rem;border-bottom:.5px solid #DFE1E6}}
 .trend-row:last-child{{border-bottom:none}}
 .trend-label{{font-size:11px;color:#5E6C84;width:60px;flex-shrink:0}}
@@ -1395,43 +1355,34 @@ def build_master_html(customer_results):
 .trend-bar{{height:100%;border-radius:3px}}
 .trend-val{{font-size:11px;font-weight:700;width:20px;text-align:right;flex-shrink:0}}
 .cards-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:1.1rem}}
-.cust-card{{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;cursor:pointer;transition:transform .15s}}
+.cust-card{{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;transition:transform .15s;display:block}}
 .cust-card:hover{{transform:translateY(-2px)}}
 .card-header{{padding:.9rem 1rem .75rem;border-bottom:.5px solid #F4F5F7;display:flex;align-items:center;gap:10px}}
 .card-logo{{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}}
-.card-name{{font-size:12px;font-weight:700;color:#172B4D;margin-bottom:1px}}
-.card-meta{{font-size:10px;color:#5E6C84}}
+.card-name{{font-size:12px;font-weight:700;color:#172B4D;margin-bottom:1px}}.card-meta{{font-size:10px;color:#5E6C84}}
 .health-pill{{margin-left:auto;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px;flex-shrink:0}}
 .hp-dot{{width:6px;height:6px;border-radius:50%}}
 .card-body{{padding:.75rem 1rem}}
 .card-stats{{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:.7rem}}
-.cs{{text-align:center}}
-.cs-val{{font-size:17px;font-weight:700;line-height:1}}
-.cs-label{{font-size:10px;color:#5E6C84;margin-top:2px}}
+.cs{{text-align:center}}.cs-val{{font-size:17px;font-weight:700;line-height:1}}.cs-label{{font-size:10px;color:#5E6C84;margin-top:2px}}
 .card-tags{{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.7rem}}
 .tag{{font-size:10px;padding:2px 6px;border-radius:4px;background:#F4F5F7;color:#5E6C84;font-weight:500}}
 .card-footer{{display:flex;align-items:center;justify-content:space-between;padding-top:.6rem;border-top:.5px solid #F4F5F7}}
-.phase-lbl{{font-size:10px;font-weight:600;color:#5E6C84}}
-.drill-btn{{font-size:11px;font-weight:600;color:#1A6FDB}}
+.phase-lbl{{font-size:10px;font-weight:600;color:#5E6C84}}.drill-btn{{font-size:11px;font-weight:600;color:#1A6FDB}}
 .sec-divider{{font-size:13px;font-weight:700;color:#172B4D;margin:1.25rem 0 .75rem;display:flex;align-items:center;gap:8px}}
-.sec-divider::after{{content:'';flex:1;height:0.5px;background:#DFE1E6}}
+.sec-divider::after{{content:'';flex:1;height:.5px;background:#DFE1E6}}
 .filter-bar{{display:flex;align-items:center;gap:8px;flex-wrap:wrap}}
 .filter-btn{{font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:.5px solid #DFE1E6;background:#fff;color:#5E6C84;cursor:pointer}}
 .filter-btn.active{{background:#0B1F45;color:#fff;border-color:#0B1F45}}
 .search-input{{flex:1;max-width:220px;padding:5px 12px;border-radius:20px;border:.5px solid #DFE1E6;font-size:12px;outline:none;background:#fff;color:#172B4D}}
-</style>
-</head>
-<body>
-{NAV_HTML.format(back=f'<span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: {now}</span>')}
-
+</style></head><body>
+{NAV_MASTER}
 <div class="hero">
   <div class="hero-top">
     <div style="display:flex;align-items:center;gap:10px">
       <div class="wordmark-bar"></div>
-      <div>
-        <div style="font-size:20px;font-weight:700;color:#fff">Customer Success Portfolio</div>
-        <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">Executive overview · Tessell CSE · Auto-refreshed from Jira every 30 minutes</div>
-      </div>
+      <div><div style="font-size:20px;font-weight:700;color:#fff">Customer Success Portfolio</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">Executive overview · Tessell CSE · Auto-refreshed from Jira every 30 minutes</div></div>
     </div>
     <div style="text-align:right">
       <div style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.55)">{datetime.now(timezone.utc).strftime("%B %d, %Y")}</div>
@@ -1446,205 +1397,191 @@ def build_master_html(customer_results):
     <div class="kpi"><div class="kpi-accent" style="background:#68D391"></div><div class="kpi-label">Healthy</div><div class="kpi-val" style="color:#68D391">{healthy}</div><div class="kpi-sub" style="color:rgba(255,255,255,0.4)">Stable, no escalations</div></div>
   </div>
 </div>
-
 <div class="body">
-
   <div class="action-strip">
     <div class="action-head">
-      <div class="action-head-title">
-        <span style="font-size:14px">🔴</span> Action Required
+      <div class="action-head-title"><span style="font-size:14px">🔴</span> Action Required
         <span class="action-head-badge">{min(3,len([cr for cr in customer_results if cr['p0_count']>0 or cr['open_count']>5]))} items</span>
       </div>
       <span class="action-head-ts">Auto-generated · {now}</span>
     </div>
     <div class="action-items">{''.join(action_items)}</div>
   </div>
-
   <div class="main-grid">
     <div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">Implementation pipeline</span><span class="sec-sub">{total} total customers</span></div>
-        <div class="pipeline">{pipeline_html}</div>
-      </div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">Open ticket load by customer</span><span class="sec-sub">Top 5</span></div>
-        <div style="padding:6px 0 4px">{trend_rows}</div>
-      </div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">Implementation pipeline</span><span style="font-size:10px;color:#5E6C84">{total} total</span></div><div class="pipeline">{pipeline_html}</div></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">Open ticket load by customer</span><span style="font-size:10px;color:#5E6C84">Top 5</span></div><div style="padding:6px 0 4px">{trend_rows}</div></div>
     </div>
+    <div><div class="sec"><div class="sec-head"><span class="sec-title">Customer health heatmap</span><span style="font-size:10px;color:#5E6C84">Click any cell to drill in</span></div><div class="heatmap">{heatmap_cells}</div></div></div>
     <div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">Customer health heatmap</span><span class="sec-sub">Click any cell to drill in</span></div>
-        <div class="heatmap">{heatmap_cells}</div>
-      </div>
-    </div>
-    <div>
-      <div class="sb-sec">
-        <div class="sb-head">CSE ownership summary</div>
-        {owner_rows}
-      </div>
-      <div class="sb-sec">
-        <div class="sb-head">This week's highlights</div>
-        <div style="padding:.75rem 1rem">{highlights_html}</div>
-      </div>
+      <div class="sb-sec"><div class="sb-head">CSE ownership summary</div>{owner_rows}</div>
+      <div class="sb-sec"><div class="sb-head">This week's highlights</div><div style="padding:.75rem 1rem">{highlights_html}</div></div>
     </div>
   </div>
-
-  <div class="sec-divider">All Customers <div class="filter-bar" style="margin:0"><button class="filter-btn active" onclick="filterCards('all',this)">All</button><button class="filter-btn" onclick="filterCards('atrisk',this)">At Risk</button><button class="filter-btn" onclick="filterCards('attention',this)">Needs Attention</button><button class="filter-btn" onclick="filterCards('healthy',this)">Healthy</button><button class="filter-btn" onclick="filterCards('stable',this)">Stable</button><input class="search-input" type="text" placeholder="Search..." oninput="searchCards(this.value)"/></div></div>
-
+  <div class="sec-divider">All Customers
+    <div class="filter-bar" style="margin:0">
+      <button class="filter-btn active" onclick="filterCards('all',this)">All</button>
+      <button class="filter-btn" onclick="filterCards('atrisk',this)">At Risk</button>
+      <button class="filter-btn" onclick="filterCards('attention',this)">Needs Attention</button>
+      <button class="filter-btn" onclick="filterCards('healthy',this)">Healthy</button>
+      <button class="filter-btn" onclick="filterCards('stable',this)">Stable</button>
+      <input class="search-input" type="text" placeholder="Search..." oninput="searchCards(this.value)"/>
+    </div>
+  </div>
   <div class="cards-grid">{cards}</div>
-
 </div>
 <script>
-function filterCards(h,btn){{document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.cust-card,[data-health]').forEach(el=>{{el.style.display=h==='all'||el.dataset.health===h?'':'none';}});}}
+function filterCards(h,btn){{document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.cust-card').forEach(el=>{{el.style.display=h==='all'||el.dataset.health===h?'':'none';}});}}
 function searchCards(q){{q=q.toLowerCase();document.querySelectorAll('.cust-card').forEach(el=>{{el.style.display=(el.dataset.name||'').includes(q)?'':'none';}});}}
-</script>
-</body>
-</html>"""
+</script></body></html>"""
 
-# ── Confluence page manager ────────────────────────────────────────────────────
+
+# ── Confluence helpers ─────────────────────────────────────────────────────────
 def get_confluence_page_version(page_id):
-    """Fetch the current version number for a Confluence page — required for PUT updates."""
-    r = requests.get(
-        f"{CONFLUENCE_BASE}/wiki/api/v2/pages/{page_id}",
-        auth=conf_auth, headers={"Accept": "application/json"}
-    )
-    if r.status_code == 200:
-        return r.json().get("version", {}).get("number", 1)
-    return 1
+    r = requests.get(f"{CONFLUENCE_BASE}/wiki/api/v2/pages/{page_id}",
+                     auth=conf_auth, headers={"Accept":"application/json"})
+    return r.json().get("version",{}).get("number",1) if r.status_code==200 else 1
+
+def confluence_page_url(page_id):
+    """Canonical Confluence page URL — the ONLY link ever shown to users."""
+    if not page_id:
+        return "#"
+    return f"https://tessell.atlassian.net/wiki/spaces/CSE/pages/{page_id}"
 
 def ensure_confluence_page(cust, dashboard_url):
-    """Create or update the Confluence iframe page, return the page ID."""
-    page_id = cust.get("confluence_page_id","").strip()
-    iframe_body = json.dumps({
-        "version": 1, "type": "doc",
-        "content": [{"type":"extension","attrs":{
-            "extensionType":"com.atlassian.confluence.macro.core",
-            "extensionKey":"iframe",
-            "parameters":{"macroParams":{
-                "src":{"value": dashboard_url},
-                "width":{"value":"100%"},
-                "height":{"value":"900px"},
-                "frameborder":{"value":"0"},
-                "scrolling":{"value":"yes"}
-            }},
-            "layout":"full-width"
-        }}]
-    })
-
+    page_id    = cust.get("confluence_page_id","").strip()
+    busted_url = f"{dashboard_url}?v={CACHE_BUST}"  # GitHub URL only used as iframe src, never as a nav link
+    iframe_body = json.dumps({"version":1,"type":"doc","content":[{"type":"extension","attrs":{
+        "extensionType":"com.atlassian.confluence.macro.core","extensionKey":"iframe",
+        "parameters":{"macroParams":{"src":{"value":busted_url},"width":{"value":"100%"},"height":{"value":"900px"},"frameborder":{"value":"0"},"scrolling":{"value":"yes"}}},
+        "layout":"full-width"}}]})
     if page_id:
-        # Fetch current version first — Confluence API v2 requires version.number + 1 on PUT
-        current_version = get_confluence_page_version(page_id)
-        r = requests.put(
-            f"{CONFLUENCE_BASE}/wiki/api/v2/pages/{page_id}",
-            auth=conf_auth, headers=conf_headers,
-            json={
-                "id": page_id,
-                "status": "current",
-                "title": f"{cust['name']} — Customer Dashboard",
-                "version": {"number": current_version + 1},
-                "body": {"representation":"atlas_doc_format","value": iframe_body}
-            }
-        )
-        if r.status_code in (200, 204):
-            print(f"  ✅ Updated Confluence page {page_id} for {cust['name']} (v{current_version + 1})")
-        else:
-            print(f"  ⚠️  Could not update page {page_id}: {r.status_code} {r.text[:120]}")
+        ver = get_confluence_page_version(page_id)
+        r   = requests.put(f"{CONFLUENCE_BASE}/wiki/api/v2/pages/{page_id}",
+                           auth=conf_auth, headers=conf_headers,
+                           json={"id":page_id,"status":"current","title":f"{cust['name']} — Customer Dashboard",
+                                 "version":{"number":ver+1},"body":{"representation":"atlas_doc_format","value":iframe_body}})
+        if r.status_code in (200,204): print(f"  ✅ Updated Confluence page {page_id} (v{ver+1})")
+        else: print(f"  ⚠️  Could not update {page_id}: {r.status_code} {r.text[:120]}")
         return page_id
     else:
-        # Create new page
-        r = requests.post(
-            f"{CONFLUENCE_BASE}/wiki/api/v2/pages",
-            auth=conf_auth, headers=conf_headers,
-            json={
-                "spaceId": CONFLUENCE_SPACE,
-                "parentId": CONFLUENCE_PARENT,
-                "status": "current",
-                "title": f"{cust['name']} — Customer Dashboard",
-                "body": {"representation":"atlas_doc_format","value": iframe_body}
-            }
-        )
-        if r.status_code == 200:
-            new_id = r.json()["id"]
-            print(f"  ✅ Created Confluence page {new_id} for {cust['name']}")
-            # Write back to customers.json
-            cust["confluence_page_id"] = new_id
-            return new_id
+        r = requests.post(f"{CONFLUENCE_BASE}/wiki/api/v2/pages",
+                          auth=conf_auth, headers=conf_headers,
+                          json={"spaceId":CONFLUENCE_SPACE,"parentId":CONFLUENCE_PARENT,"status":"current",
+                                "title":f"{cust['name']} — Customer Dashboard",
+                                "body":{"representation":"atlas_doc_format","value":iframe_body}})
+        if r.status_code==200:
+            new_id=r.json()["id"]; cust["confluence_page_id"]=new_id
+            print(f"  ✅ Created Confluence page {new_id} for {cust['name']}"); return new_id
         else:
-            print(f"  ⚠️  Could not create page for {cust['name']}: {r.status_code} {r.text[:200]}")
-            return ""
+            print(f"  ⚠️  Could not create page for {cust['name']}: {r.status_code} {r.text[:200]}"); return ""
 
-def save_customers_json():
-    with open("customers.json","w") as f:
-        json.dump(CUSTOMERS, f, indent=2)
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # ── Auto-generate customer list from CSO Jira epics ───────────────────────
-    CUSTOMERS = fetch_active_customers()
+    build_state = load_build_state()
+    print(f"  Build state loaded — {len(build_state)} customers have prior fingerprints")
+    if FORCE_REBUILD:
+        print("  ⚠️  FORCE_REBUILD=1 — all customer pages will be rebuilt")
 
-    # Save snapshot of what was generated for debugging / audit trail
-    with open("customers.json", "w") as f:
-        json.dump(CUSTOMERS, f, indent=2)
+    CUSTOMERS = fetch_active_customers()
+    with open("customers.json","w") as f: json.dump(CUSTOMERS,f,indent=2)
     print(f"  Saved {len(CUSTOMERS)} customers to customers.json")
 
     customer_results = []
     pages_updated    = False
+    rebuilt          = []
+    skipped          = []
 
     for cust in CUSTOMERS:
-        print(f"\n── {cust['name']} ({cust['cso_epic']} · {cust['cso_status']}) ──")
-        print(f"  Fetching Jira support data (keyword: {cust['jql_keyword']})...")
-        try:
-            data = fetch_customer_data(cust["jql_keyword"])
-        except Exception as e:
-            print(f"  ⚠️  Jira fetch failed: {e}")
+        cust_id = cust["id"]
+        keyword = cust["jql_keyword"]
+
+        # ── Check for existing HTML (need summary stats even for skipped customers) ─
+        filename = f"{cust_id}_dashboard.html"
+        gh_url   = f"https://vinod-tessell.github.io/cse-confluence/{filename}"
+        conf_url = confluence_page_url(cust.get("confluence_page_id",""))
+
+        # ── Skipped customers: resolve conf_url from stored page_id ──────────────
+        conf_url = confluence_page_url(cust.get("confluence_page_id",""))
+        if not is_dirty(cust_id, keyword, build_state) and os.path.exists(filename):
+            # ── SKIP: load lightweight summary from existing build_state metadata ──
+            cached = build_state.get(f"{cust_id}__meta", {})
+            print(f"  ⏭  {cust['name']} — unchanged, skipping rebuild")
+            skipped.append(cust["name"])
             customer_results.append({
-                "config": cust, "health_key": "stable", "health_label": "Unknown",
-                "health_color": "#5E6C84", "p0_count": 0, "open_count": 0,
-                "feat_count": 0, "dashboard_url": "#"
+                "config":      cust,
+                "health_key":  cached.get("health_key","stable"),
+                "health_label":cached.get("health_label","Stable"),
+                "health_color":cached.get("health_color","#FFC107"),
+                "p0_count":    cached.get("p0_count",0),
+                "open_count":  cached.get("open_count",0),
+                "feat_count":  cached.get("feat_count",0),
+                "dashboard_url": conf_url,
             })
             continue
 
-        print(f"  P0/P1:{len(data['p0p1'])}  Open:{len(data['open'])}  "
-              f"Features:{len(data['features'])}  Resolved(30d):{len(data['resolved'])}")
+        # ── DIRTY: full rebuild ────────────────────────────────────────────────
+        print(f"\n── {cust['name']} ({cust['cso_epic']} · {cust['cso_status']}) ──")
+        print(f"  Fetching Jira data (keyword: {keyword})...")
+        try:
+            data = fetch_customer_data(keyword)
+        except Exception as e:
+            print(f"  ⚠️  Jira fetch failed: {e}")
+            customer_results.append({
+                "config":cust,"health_key":"stable","health_label":"Unknown",
+                "health_color":"#5E6C84","p0_count":0,"open_count":0,
+                "feat_count":0,"dashboard_url":conf_url
+            })
+            continue
 
-        # ── FIX 4: correct unpack — 5 values only ─────────────────────────────
-        score, label, color, hk, pending = compute_health(
-            data["p0p1"], data["open"], data["features"], data["resolved"]
-        )
+        print(f"  P0/P1:{len(data['p0p1'])}  Open:{len(data['open'])}  Features:{len(data['features'])}  Resolved(30d):{len(data['resolved'])}")
+        score, label, color, hk, pending = compute_health(data["p0p1"],data["open"],data["features"],data["resolved"])
 
-        # Build HTML file
-        html     = build_customer_html(cust, data)
-        filename = f"{cust['id']}_dashboard.html"
-        with open(filename, "w") as f:
-            f.write(html)
+        html = build_customer_html(cust, data)
+        with open(filename,"w") as f: f.write(html)
         print(f"  ✅ Written {filename}")
 
-        gh_url  = f"https://vinod-tessell.github.io/cse-confluence/{filename}"
         page_id = ensure_confluence_page(cust, gh_url)
-        if page_id and page_id != cust.get("confluence_page_id", ""):
-            cust["confluence_page_id"] = page_id
-            pages_updated = True
+        if page_id and page_id != cust.get("confluence_page_id",""):
+            cust["confluence_page_id"] = page_id; pages_updated = True
 
-        conf_url = (f"https://tessell.atlassian.net/wiki/spaces/CSE/pages/{page_id}"
-                    if page_id else "#")
+        # ── All nav links point to Confluence only — GitHub URL is iframe-internal ──
+        conf_url = confluence_page_url(cust.get("confluence_page_id",""))
 
-        customer_results.append({
-            "config": cust, "health_key": hk, "health_label": label,
-            "health_color": color, "p0_count": len(data["p0p1"]),
-            "open_count": len(data["open"]), "feat_count": len(data["features"]),
-            "dashboard_url": conf_url
-        })
+        result = {
+            "config":cust,"health_key":hk,"health_label":label,"health_color":color,
+            "p0_count":len(data["p0p1"]),"open_count":len(data["open"]),
+            "feat_count":len(data["features"]),"dashboard_url":conf_url,
+        }
+        customer_results.append(result)
+        rebuilt.append(cust["name"])
 
-    # Save updated confluence_page_ids back
+        # ── Persist fingerprint + lightweight meta for next run ────────────────
+        mark_clean(cust_id, keyword, build_state)
+        build_state[f"{cust_id}__meta"] = {
+            "health_key":hk,"health_label":label,"health_color":color,
+            "p0_count":len(data["p0p1"]),"open_count":len(data["open"]),"feat_count":len(data["features"])
+        }
+        save_build_state(build_state)   # save incrementally — crash-safe
+
     if pages_updated:
-        with open("customers.json", "w") as f:
-            json.dump(CUSTOMERS, f, indent=2)
+        with open("customers.json","w") as f: json.dump(CUSTOMERS,f,indent=2)
         print("\n✅ customers.json updated with new Confluence page IDs")
 
-    # Build master dashboard
-    print("\n── Master Dashboard ────────────────────────────")
+    print(f"\n── Build summary: {len(rebuilt)} rebuilt, {len(skipped)} skipped ──")
+    if rebuilt: print(f"  Rebuilt:  {', '.join(rebuilt)}")
+    if skipped: print(f"  Skipped:  {', '.join(skipped)}")
+
+    # ── Master dashboard — always rebuilt (fast, no Jira calls) ───────────────
+    print("\n── Master Dashboard (always rebuilt) ───────────────────────────")
     master = build_master_html(customer_results)
-    with open("master_dashboard.html", "w") as f:
-        f.write(master)
+    with open("master_dashboard.html","w") as f: f.write(master)
     print("✅ master_dashboard.html written")
+
+    master_page_id = os.environ.get("MASTER_CONFLUENCE_PAGE_ID","").strip()
+    if master_page_id:
+        master_gh_url = f"https://vinod-tessell.github.io/cse-confluence/master_dashboard.html"
+        ensure_confluence_page({"name":"CSE Portfolio","confluence_page_id":master_page_id}, master_gh_url)
+
     print("\nAll done!")
