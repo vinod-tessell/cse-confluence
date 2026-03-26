@@ -341,54 +341,8 @@
     "confluence_page_id": "2164948993",
     "jql_keyword": "Citizens",
     "active": true,
-    "ticket_history": [
-      {
-        "month": "Oct 2025",
-        "count": 3
-      },
-      {
-        "month": "Nov 2025",
-        "count": 5
-      },
-      {
-        "month": "Dec 2025",
-        "count": 7
-      },
-      {
-        "month": "Jan 2026",
-        "count": 6
-      },
-      {
-        "month": "Feb 2026",
-        "count": 6
-      },
-      {
-        "month": "Mar 2026",
-        "count": 8
-      }
-    ],
-    "pulse": [
-      {
-        "sentiment": "frustrated",
-        "text": "Clone to QA blocked 4+ days"
-      },
-      {
-        "sentiment": "concerned",
-        "text": "Perf Insights dark since Nov 2025"
-      },
-      {
-        "sentiment": "concerned",
-        "text": "MySQL ZZ6 HA recurring, no permanent fix"
-      },
-      {
-        "sentiment": "waiting",
-        "text": "Billing download pending engineering"
-      },
-      {
-        "sentiment": "positive",
-        "text": "DB upgrade to 7.64.1 completed smoothly"
-      }
-    ],
+    "ticket_history": [],
+    "pulse": [],
     "cso_epic": "CSO-496",
     "cso_status": "In Maintenance"
   },
