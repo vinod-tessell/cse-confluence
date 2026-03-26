@@ -774,6 +774,15 @@ new Chart(document.getElementById('trendChart'), {{
   </div>
 </div>
 <div class="body">
+  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;padding:.75rem 1.5rem;margin-bottom:1rem;display:grid;grid-template-columns:repeat(7,1fr);gap:1rem;align-items:center">
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Account</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust['name']}</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">CSE Owner</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust.get('cse_owner','—')}</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust.get('tam','—') or '—'}</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cloud</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust['cloud']} · {cust['region']}</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Engines</div><div style="font-size:12px;font-weight:700;color:#172B4D">{engines_str}</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust['phase']}</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div>{portal_html}</div></div>
+  </div>
   <div class="metrics">
     <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval {mv_col}">{len(p0p1)}</div><div class="msub">Active critical issues</div></div>
     <div class="metric" id="m-open" onclick="toggleDrawer('drawer-open','m-open')"><div class="mlabel">Open Tickets</div><div class="mval {open_col}">{len(open_t)}</div><div class="msub">Across all priorities</div></div>
@@ -802,14 +811,22 @@ new Chart(document.getElementById('trendChart'), {{
       <div class="ai-panel">
         <div class="ai-eyebrow">✦ Health Analysis</div>
         <div class="ai-title">Customer Health Assessment</div>
-        <div class="ai-body" id="ai-body">Calculating...</div>
-        <div class="ai-footer">
-          <div style="display:flex;align-items:baseline;gap:4px">
-            <span class="ai-score-label">Health score</span>
-            <span class="ai-score-val" id="ai-score" style="color:{health_color}">{score}</span>
-            <span class="ai-score-max">/10</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start">
+          <div>
+            <div class="ai-body" id="ai-body">Calculating...</div>
+            <div class="ai-footer">
+              <div style="display:flex;align-items:baseline;gap:4px">
+                <span class="ai-score-label">Health score</span>
+                <span class="ai-score-val" id="ai-score" style="color:{health_color}">{score}</span>
+                <span class="ai-score-max">/10</span>
+              </div>
+              <span id="ai-ts" class="ai-ts"></span>
+            </div>
           </div>
-          <span id="ai-ts" class="ai-ts"></span>
+          <div>
+            {f'''<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ticket Volume Trend</div>
+            <div style="position:relative;height:120px"><canvas id="trendChart"></canvas></div>''' if hist else '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>'}
+          </div>
         </div>
       </div>
       <div class="sec">
@@ -824,26 +841,15 @@ new Chart(document.getElementById('trendChart'), {{
         <div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">{len(features)} Active</span></div>
         {feat_items or '<p style="padding:1rem;font-size:12px;color:#5E6C84">No open feature requests.</p>'}
       </div>
-      <div class="sec">
-        <div class="sec-head"><span class="sec-title">📅 Recent Activity</span><span class="badge bg">Live</span></div>
-        <div class="tl">{timeline}</div>
-      </div>
     </div>
     <div>
       <div class="sb-sec">
-        <div class="sb-head">🏢 Account Details</div>
-        <div class="ir"><span class="ilabel">Account</span><span class="ival">{cust['name']}</span></div>
-        <div class="ir"><span class="ilabel">CSE Owner</span><span class="ival">{cust.get('cse_owner','—')}</span></div>
-        <div class="ir"><span class="ilabel">TAM / TPM</span><span class="ival">{cust.get('tam','—')}</span></div>
-        <div class="ir"><span class="ilabel">Cloud</span><span class="ival">{cust['cloud']} · {cust['region']}</span></div>
-        <div class="ir"><span class="ilabel">Engines</span><span class="ival">{engines_str}</span></div>
-        <div class="ir"><span class="ilabel">Phase</span><span class="ival">{cust['phase']}</span></div>
-        {portal_link}
-      </div>
-      {'<div class="sb-sec"><div class="sb-head">📊 Ticket Volume</div><div style="padding:8px 0 4px">' + bars + '</div></div>' if bars else ''}
-      <div class="sb-sec">
         <div class="sb-head">💬 Customer Pulse</div>
         {pulse_html}
+      </div>
+      <div class="sb-sec">
+        <div class="sb-head">📅 Recent Activity</div>
+        <div class="tl">{timeline}</div>
       </div>
       <div class="sb-sec">
         <div class="sb-head">🔗 Quick Links</div>
