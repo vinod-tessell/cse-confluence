@@ -1237,8 +1237,18 @@ function searchCards(q){{q=q.toLowerCase();document.querySelectorAll('.cust-card
 </html>"""
 
 # ── Confluence page manager ────────────────────────────────────────────────────
+def get_confluence_page_version(page_id):
+    """Fetch the current version number for a Confluence page — required for PUT updates."""
+    r = requests.get(
+        f"{CONFLUENCE_BASE}/wiki/api/v2/pages/{page_id}",
+        auth=conf_auth, headers={"Accept": "application/json"}
+    )
+    if r.status_code == 200:
+        return r.json().get("version", {}).get("number", 1)
+    return 1
+
 def ensure_confluence_page(cust, dashboard_url):
-    """Create the Confluence page if it doesn't exist yet, return the page ID."""
+    """Create or update the Confluence iframe page, return the page ID."""
     page_id = cust.get("confluence_page_id","").strip()
     iframe_body = json.dumps({
         "version": 1, "type": "doc",
@@ -1257,7 +1267,8 @@ def ensure_confluence_page(cust, dashboard_url):
     })
 
     if page_id:
-        # Update existing page to bump cache
+        # Fetch current version first — Confluence API v2 requires version.number + 1 on PUT
+        current_version = get_confluence_page_version(page_id)
         r = requests.put(
             f"{CONFLUENCE_BASE}/wiki/api/v2/pages/{page_id}",
             auth=conf_auth, headers=conf_headers,
@@ -1265,13 +1276,14 @@ def ensure_confluence_page(cust, dashboard_url):
                 "id": page_id,
                 "status": "current",
                 "title": f"{cust['name']} — Customer Dashboard",
+                "version": {"number": current_version + 1},
                 "body": {"representation":"atlas_doc_format","value": iframe_body}
             }
         )
         if r.status_code in (200, 204):
-            print(f"  ✅ Updated Confluence page {page_id} for {cust['name']}")
+            print(f"  ✅ Updated Confluence page {page_id} for {cust['name']} (v{current_version + 1})")
         else:
-            print(f"  ⚠️  Could not update page {page_id}: {r.status_code}")
+            print(f"  ⚠️  Could not update page {page_id}: {r.status_code} {r.text[:120]}")
         return page_id
     else:
         # Create new page
