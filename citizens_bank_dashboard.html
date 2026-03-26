@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Citizens Bank — Customer Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:#F4F5F7}
+.nav{background:#0B1F45;padding:0 1.5rem;height:42px;display:flex;align-items:center;justify-content:space-between}
+.nav-links{display:flex;gap:1.5rem}
+.nl{font-size:12px;font-weight:500;color:rgba(255,255,255,0.45);text-decoration:none;padding-bottom:2px;border-bottom:2px solid transparent}
+.nl.active{color:#fff;border-color:#00C2E0}
+.nav-back{font-size:11px;color:#00C2E0;text-decoration:none}
+.hero{background:#0B1F45;padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid #122752}
+.hero-left{display:flex;align-items:center;gap:10px}
+.logo{width:42px;height:42px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#0B1F45}
+.hero-name{font-size:18px;font-weight:700;color:#fff}
+.hero-meta{font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px}
+.hbadge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15)}
+.hdot{width:7px;height:7px;border-radius:50%}
+.body{padding:1.25rem 1.5rem}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:1.25rem}
+.metric{background:#fff;border-radius:8px;padding:.9rem 1rem;border:.5px solid #DFE1E6}
+.mlabel{font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.mval{font-size:24px;font-weight:700;line-height:1;margin-bottom:3px}
+.msub{font-size:10px;color:#5E6C84}
+.red{color:#E53E3E}.orange{color:#DD6B20}.yellow{color:#D69E2E}.green{color:#38A169}.blue{color:#1A6FDB}
+.grid2{display:grid;grid-template-columns:1fr 280px;gap:1rem;align-items:start}
+.sec{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1rem}
+.sec-head{padding:.7rem 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;gap:8px}
+.sec-title{font-size:12px;font-weight:700;color:#172B4D}
+.badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600}
+.br{background:#FFF5F5;color:#A32D2D}.bo{background:#FFFAF0;color:#854F0B}.bb{background:#E6F1FB;color:#0C447C}.bg{background:#EAF3DE;color:#27500A}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{font-size:10px;font-weight:600;color:#5E6C84;padding:6px 1.1rem;text-align:left;background:#FAFBFC;border-bottom:.5px solid #DFE1E6;text-transform:uppercase;letter-spacing:.04em}
+td{padding:7px 1.1rem;border-bottom:.5px solid #DFE1E6;color:#172B4D;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.tlink{color:#1A6FDB;text-decoration:none;font-weight:700;font-size:11px}
+.pb{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px}
+.pc{background:#E53E3E;color:#fff}.ph{background:#FFF5F5;color:#A32D2D}.pm{background:#FFFAF0;color:#854F0B}.pl{background:#F4F5F7;color:#5E6C84}
+.sp{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px}
+.so{background:#FFF5F5;color:#A32D2D}.si{background:#E6F1FB;color:#0C447C}.spe{background:#FFFAF0;color:#854F0B}.sc{background:#EAF3DE;color:#27500A}
+.ai-panel{background:#0B1F45;border-radius:10px;padding:1.1rem;margin-bottom:1rem}
+.ai-eyebrow{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#00C2E0;margin-bottom:3px}
+.ai-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:8px}
+.ai-body{font-size:11px;color:rgba(255,255,255,0.75);line-height:1.7}
+.ai-footer{margin-top:8px;padding-top:8px;border-top:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between}
+.ai-score-label{font-size:10px;color:rgba(255,255,255,0.4)}
+.ai-score-val{font-size:22px;font-weight:800}
+.ai-score-max{font-size:11px;color:rgba(255,255,255,0.3)}
+.ai-ts{font-size:10px;color:rgba(255,255,255,0.3)}
+.sb-sec{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1rem}
+.sb-head{padding:.7rem 1rem;border-bottom:.5px solid #DFE1E6;font-size:12px;font-weight:700;color:#172B4D}
+.ir{display:flex;align-items:center;justify-content:space-between;padding:7px 1rem;border-bottom:.5px solid #DFE1E6}
+.ir:last-child{border-bottom:none}
+.ilabel{font-size:11px;color:#5E6C84}.ival{font-size:11px;font-weight:600;color:#172B4D}
+.bar-row{display:flex;align-items:center;gap:6px;padding:4px 1rem}
+.blabel{font-size:10px;color:#5E6C84;width:60px;flex-shrink:0}
+.btrack{flex:1;height:7px;background:#F4F5F7;border-radius:4px;overflow:hidden}
+.bfill{height:100%;border-radius:4px}
+.bval{font-size:10px;font-weight:700;width:16px;text-align:right}
+.pulse-row{padding:7px 1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:flex-start;gap:7px}
+.pulse-row:last-child{border-bottom:none}
+.pdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.ptext{font-size:11px;color:#5E6C84;line-height:1.4}
+.ptext b{color:#172B4D}
+.fr-item{padding:9px 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:flex-start;gap:8px}
+.fr-item:last-child{border-bottom:none}
+.fr-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:1px}
+.fr-content{flex:1}
+.fr-title{font-size:12px;font-weight:600;color:#172B4D;margin-bottom:2px}
+.fr-meta{font-size:11px;color:#5E6C84}
+.fr-status{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0;margin-top:2px}
+.tl{padding:1rem 1.1rem}
+.tl-item{display:flex;gap:10px;padding-bottom:1rem;position:relative}
+.tl-item::before{content:'';position:absolute;left:13px;top:26px;bottom:0;width:1px;background:#DFE1E6}
+.tl-item:last-child::before{display:none}
+.tl-ic{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;z-index:1}
+.tl-content{flex:1}
+.tl-t{font-size:11px;font-weight:700;color:#172B4D;margin-bottom:2px}
+.tl-d{font-size:10px;color:#5E6C84;line-height:1.5}
+.tl-dt{font-size:10px;color:#A0AEC0;margin-top:2px}
+</style>
+</head>
+<body>
+<div class="nav">
+  <div class="nav-links">
+    <a class="nl" href="https://tessell.atlassian.net/wiki/spaces/CSE/overview" target="_parent">Home</a>
+    <span class="nl">Runbooks</span>
+    <span class="nl active">Customers</span>
+    <span class="nl">Incidents</span>
+    <span class="nl">Onboarding</span>
+  </div>
+  <a class="nav-back" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/1990557712/Customer+Portfolio" target="_parent">← All Customers</a>
+</div>
+<div class="hero">
+  <div class="hero-left">
+    <div class="logo">CB</div>
+    <div>
+      <div class="hero-name">Citizens Bank, N.A.</div>
+      <div class="hero-meta">AWS · us-east-1 · Oracle &amp; MySQL &amp; PostgreSQL · Production</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="hbadge"><div class="hdot" id="health-dot" style="background:#FC8181"></div><span id="health-badge" style="color:#FC8181">At Risk</span></div>
+    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 26, 2026 15:42 UTC</span>
+  </div>
+</div>
+<div class="body">
+  <div class="metrics">
+    <div class="metric"><div class="mlabel">Open P0/P1</div><div class="mval red">10</div><div class="msub">Active critical issues</div></div>
+    <div class="metric"><div class="mlabel">Open Tickets</div><div class="mval orange">20</div><div class="msub">Across all priorities</div></div>
+    <div class="metric"><div class="mlabel">Feature Requests</div><div class="mval blue">10</div><div class="msub">Pending delivery</div></div>
+    <div class="metric"><div class="mlabel">Resolved (30d)</div><div class="mval green">35</div><div class="msub">Last 30 days</div></div>
+    <div class="metric"><div class="mlabel">Health Score</div><div class="mval" id="m-score" style="color:#FC8181">2/10</div><div class="msub">Rule-based</div></div>
+  </div>
+  <div class="grid2">
+    <div>
+      <div class="ai-panel">
+        <div class="ai-eyebrow">✦ Health Analysis</div>
+        <div class="ai-title">Customer Health Assessment</div>
+        <div class="ai-body" id="ai-body">Calculating...</div>
+        <div class="ai-footer">
+          <div style="display:flex;align-items:baseline;gap:4px">
+            <span class="ai-score-label">Health score</span>
+            <span class="ai-score-val" id="ai-score" style="color:#FC8181">2</span>
+            <span class="ai-score-max">/10</span>
+          </div>
+          <span id="ai-ts" class="ai-ts"></span>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><span class="sec-title">🚨 Active P0 / P1 Incidents</span><span class="badge br">10 Open</span></div>
+        <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38439" target="_blank">TS-38439</a></td><td>[Citizens] - Performance Insights Query Filtering Bug - Application User</td><td><span class="pb pc">P0</span></td><td><span class="sp spe">Pending Eng</span></td><td>today</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38390" target="_blank">TS-38390</a></td><td>Mismatch in instance count vs actual instances in parameter profile view</td><td><span class="pb pc">P0</span></td><td><span class="sp si">In Progress</span></td><td>1d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8449" target="_blank">SR-8449</a></td><td>Instance is running on degraded mode</td><td><span class="pb pc">P0</span></td><td><span class="sp spe">Pending Eng</span></td><td>5d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38149" target="_blank">TS-38149</a></td><td>Citizens Oracle - Replication Snapshot Copy - Failure when Tessell resou</td><td><span class="pb pc">P0</span></td><td><span class="sp si">In Progress</span></td><td>12d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38148" target="_blank">TS-38148</a></td><td>Citizens Oracle - Native Backup Creation - Governance API returns false </td><td><span class="pb pc">P0</span></td><td><span class="sp so">Under triage</span></td><td>13d</td></tr></tbody></table>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><span class="sec-title">🎫 Open Support Tickets</span><span class="badge bo">20 Open</span></div>
+        <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-30529" target="_blank">TS-30529</a></td><td>Increase the storage space when using high performance instance</td><td><span class="pb pl">Low</span></td><td><span class="sp so">To do</span></td><td>239d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-28561" target="_blank">TS-28561</a></td><td>Unused account cleanup</td><td><span class="pb pl">Low</span></td><td><span class="sp si">In Progress</span></td><td>321d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38437" target="_blank">TS-38437</a></td><td>Performance Insights dashboard not showing active queries for Citizen cu</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>today</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38325" target="_blank">TS-38325</a></td><td>Citizens clone from snapshot failure due to wallet not found - CCM1OV3Q</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">To do</span></td><td>4d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38322" target="_blank">TS-38322</a></td><td>[Citizens Oracle] - Oracle Patching UI Issue - Patch Version 19.29 Not A</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>5d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38309" target="_blank">TS-38309</a></td><td>TS-38308 : PRD - Product Requirement Document Enable per-database cost &</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">To do</span></td><td>5d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38308" target="_blank">TS-38308</a></td><td>Enable per-database cost & usage reporting for Citizens</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Requirements gathering</span></td><td>5d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38007" target="_blank">TS-38007</a></td><td>Enhancement Request – Handling of timezone and cron.database_name Parame</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Requirements gathering</span></td><td>15d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37715" target="_blank">TS-37715</a></td><td>PrivateLink Enhancement – Move NLB Health Check to Dedicated TCP Port to</td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Ready for prioritisation</span></td><td>23d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37662" target="_blank">TS-37662</a></td><td>[Citizens] - Library Upgrade Failure - Missing '-r' Flag in Pip Install </td><td><span class="pb pm">Medium</span></td><td><span class="sp so">Fixed</span></td><td>27d</td></tr></tbody></table>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">10 Active</span></div>
+        <div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">TS-38308 : PRD - Product Requirement Document Enable per-database</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38309" target="_blank">TS-38309</a></div></div><span class="fr-status so">To do</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">Enable per-database cost & usage reporting for Citizens</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38308" target="_blank">TS-38308</a></div></div><span class="fr-status so">Requirements gathering</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">Enhancement Request – Handling of timezone and cron.database_name</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38007" target="_blank">TS-38007</a></div></div><span class="fr-status so">Requirements gathering</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">PrivateLink Enhancement – Move NLB Health Check to Dedicated TCP </div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37715" target="_blank">TS-37715</a></div></div><span class="fr-status so">Ready for prioritisation</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div><div class="fr-content"><div class="fr-title">Release Minor Version of PostgreSQL 16.9 on Centos</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37389" target="_blank">TS-37389</a></div></div><span class="fr-status si">In Progress</span></div>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><span class="sec-title">📅 Recent Activity</span><span class="badge bg">Live</span></div>
+        <div class="tl"><div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8516" target="_blank">SR-8516</a> — Update on SR-8516</div><div class="tl-d">This message is sent by Srinivas Neelam< srinivas.neelam@citizensbank.com > I'm migrating all the stored functions from  — Tessell Support</div><div class="tl-dt">Mar 26, 2026</div></div></div>
+<div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8516" target="_blank">SR-8516</a> — Update on SR-8516</div><div class="tl-d">Hi Srinivas,
+
+Acknowledged. I will compare both DB service configurations and check why stored functions are not getting — Sivapriya Jeganathan</div><div class="tl-dt">Mar 26, 2026</div></div></div>
+<div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🔄</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8516" target="_blank">SR-8516</a> — SR-8516 status → SRE in Action</div><div class="tl-d">Need parameter value update on MySQL Dev - log_bin_trust_function_crea — Sivapriya Jeganathan</div><div class="tl-dt">Mar 26, 2026</div></div></div>
+<div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8512" target="_blank">SR-8512</a> — Update on SR-8512</div><div class="tl-d">RCA Type: Customer Request – Resiliency (HA) Test Execution RCA Summary: The ticket was raised based on the customer’s r — Deepak Pandey</div><div class="tl-dt">Mar 26, 2026</div></div></div>
+<div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🔄</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8512" target="_blank">SR-8512</a> — SR-8512 status → Waiting for customer</div><div class="tl-d">High Availability Test/Resiliency Test Postgres Tessell Prod. — Deepak Pandey</div><div class="tl-dt">Mar 26, 2026</div></div></div>
+<div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8512" target="_blank">SR-8512</a> — Update on SR-8512</div><div class="tl-d">Hi Srinivas, Thank you for your confirmation and for your time during the call. As discussed, the resiliency test was co — Deepak Pandey</div><div class="tl-dt">Mar 26, 2026</div></div></div>
+<div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🔄</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8516" target="_blank">SR-8516</a> — SR-8516 status → Waiting for support</div><div class="tl-d">Need parameter value update on MySQL Dev - log_bin_trust_function_crea — Automation for Jira</div><div class="tl-dt">Mar 26, 2026</div></div></div>
+<div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🔄</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8512" target="_blank">SR-8512</a> — SR-8512 status → Waiting for support</div><div class="tl-d">High Availability Test/Resiliency Test Postgres Tessell Prod. — Automation for Jira</div><div class="tl-dt">Mar 26, 2026</div></div></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="sb-sec">
+        <div class="sb-head">🏢 Account Details</div>
+        <div class="ir"><span class="ilabel">Account</span><span class="ival">Citizens Bank, N.A.</span></div>
+        <div class="ir"><span class="ilabel">CSE Owner</span><span class="ival">Vinod</span></div>
+        <div class="ir"><span class="ilabel">TAM / TPM</span><span class="ival">Kamal</span></div>
+        <div class="ir"><span class="ilabel">Cloud</span><span class="ival">AWS us-east-1</span></div>
+        <div class="ir"><span class="ilabel">Engines</span><span class="ival">Oracle · MySQL · PG</span></div>
+        <div class="ir"><span class="ilabel">Phase</span><span class="ival">🟠 Stabilisation</span></div>
+        <div class="ir"><span class="ilabel">Portal</span><span class="ival"><a class="tlink" href="https://citizens.tessell.com" target="_blank">citizens.tessell.com</a></span></div>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-head">📊 Ticket Volume (6 months)</div>
+        <div style="padding:8px 0 4px">
+          <div class="bar-row"><span class="blabel">Oct 2025</span><div class="btrack"><div class="bfill" style="width:38%;background:#38A169"></div></div><span class="bval green">3</span></div>
+          <div class="bar-row"><span class="blabel">Nov 2025</span><div class="btrack"><div class="bfill" style="width:63%;background:#D69E2E"></div></div><span class="bval yellow">5</span></div>
+          <div class="bar-row"><span class="blabel">Dec 2025</span><div class="btrack"><div class="bfill" style="width:88%;background:#DD6B20"></div></div><span class="bval orange">7</span></div>
+          <div class="bar-row"><span class="blabel">Jan 2026</span><div class="btrack"><div class="bfill" style="width:75%;background:#DD6B20"></div></div><span class="bval orange">6</span></div>
+          <div class="bar-row"><span class="blabel">Feb 2026</span><div class="btrack"><div class="bfill" style="width:75%;background:#DD6B20"></div></div><span class="bval orange">6</span></div>
+          <div class="bar-row"><span class="blabel">Mar 2026</span><div class="btrack"><div class="bfill" style="width:100%;background:#E53E3E"></div></div><span class="bval red">8</span></div>
+        </div>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-head">💬 Customer Pulse</div>
+        <div class="pulse-row"><div class="pdot" style="background:#E53E3E"></div><div class="ptext"><b>Frustrated</b> — clone to QA blocked</div></div>
+        <div class="pulse-row"><div class="pdot" style="background:#DD6B20"></div><div class="ptext"><b>Concerned</b> — Perf Insights dark since Nov 2025</div></div>
+        <div class="pulse-row"><div class="pdot" style="background:#DD6B20"></div><div class="ptext"><b>Concerned</b> — MySQL ZZ6 HA recurring</div></div>
+        <div class="pulse-row"><div class="pdot" style="background:#D69E2E"></div><div class="ptext"><b>Waiting</b> — billing download pending eng</div></div>
+        <div class="pulse-row"><div class="pdot" style="background:#38A169"></div><div class="ptext"><b>Positive</b> — DB upgrade to 7.64.1 smooth</div></div>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-head">🔗 Quick Links</div>
+        <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/issues/?jql=text+~+%22Citizens%22+AND+statusCategory+!%3D+Done" target="_blank">All Open Citizens Tickets</a></div>
+        <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/1990557712" target="_blank">Customer Portfolio</a></div>
+        <div class="ir"><a class="tlink" href="https://citizens.tessell.com" target="_blank">Citizens Tessell Portal</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const DATA = {"p0p1": 10, "open": 20, "features": 10, "resolved": 35, "pendingEng": 3, "p0keys": ["TS-38439", "TS-38390", "SR-8449"], "highKeys": [], "generated": "Mar 26, 2026 15:42 UTC"};
+function runHealth() {
+  const el = document.getElementById('ai-body');
+  const sc = document.getElementById('ai-score');
+  let score = 10, findings = [], actions = [];
+  if (DATA.p0p1 >= 3)      { score-=4; findings.push(`<b style="color:#FC8181">${DATA.p0p1} active P0 incidents</b> (${DATA.p0keys.join(', ')})`); actions.push(`Escalate ${DATA.p0keys[0]} to engineering leadership for same-day resolution`); }
+  else if (DATA.p0p1 === 2) { score-=3; findings.push(`<b style="color:#FC8181">2 active P0 incidents</b> blocking operations (${DATA.p0keys.join(', ')})`); actions.push(`Escalate ${DATA.p0keys[0]} and ${DATA.p0keys[1]} — both need engineering owner today`); }
+  else if (DATA.p0p1 === 1) { score-=2; findings.push(`<b style="color:#FFC107">1 active P0/P1</b> open (${DATA.p0keys[0]})`); actions.push(`Ensure ${DATA.p0keys[0]} has daily updates to customer`); }
+  else                       { findings.push('<b style="color:#68D391">No active P0/P1 incidents</b>'); }
+  if (DATA.open >= 8)        { score-=2; findings.push(`High backlog: <b>${DATA.open} tickets</b> open`); }
+  else if (DATA.open >= 5)   { score-=1; findings.push(`Moderate backlog: <b>${DATA.open} open tickets</b>`); }
+  else                       { findings.push(`<b style="color:#68D391">Healthy ticket volume</b>: ${DATA.open} open`); }
+  if (DATA.pendingEng >= 4)  { score-=2; findings.push(`<b>${DATA.pendingEng} tickets stuck pending engineering</b>`); actions.push(`Review ${DATA.pendingEng} blocked tickets and set ETAs for customer`); }
+  else if (DATA.pendingEng >= 2) { score-=1; findings.push(`${DATA.pendingEng} tickets pending engineering`); }
+  if (DATA.features >= 5)    { score-=1; findings.push(`Large feature backlog: <b>${DATA.features} requests</b>`); actions.push('Schedule a feature roadmap call to set delivery expectations'); }
+  if (DATA.resolved === 0)   { score-=1; findings.push('<b style="color:#FFC107">No tickets resolved in 30 days</b>'); }
+  else                       { findings.push(`<b style="color:#68D391">${DATA.resolved} resolved</b> in last 30 days`); }
+  score = Math.max(1, Math.min(10, score));
+  const color = score>=8?'#68D391':score>=6?'#FFC107':'#FC8181';
+  const label = score>=8?'Healthy':score>=6?'Stable':score>=4?'Needs Attention':'At Risk';
+  document.getElementById('health-badge').textContent = label;
+  document.getElementById('health-badge').style.color = color;
+  document.getElementById('health-dot').style.background = color;
+  let html = findings.map(f=>`<p style="margin-bottom:6px">• ${f}</p>`).join('');
+  if (actions.length) html += `<div style="margin-top:8px;padding-top:8px;border-top:.5px solid rgba(255,255,255,0.1)"><p style="font-size:10px;font-weight:700;color:#00C2E0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Recommended Actions</p>${actions.map(a=>`<p style="margin-bottom:4px">→ ${a}</p>`).join('')}</div>`;
+  el.innerHTML = html;
+  sc.textContent = score;
+  sc.style.color = color;
+  document.getElementById('ai-ts').textContent = 'Assessed: ' + DATA.generated;
+}
+window.onload = runHealth;
+</script>
+</body>
+</html>
