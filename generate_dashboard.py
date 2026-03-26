@@ -235,7 +235,8 @@ def make_jqls(keyword):
         ),
         "features": (
             f'project in (TS, SR) AND text ~ "{keyword}" '
-            f'AND issuetype in (Feature, "Feature Request", Story) '
+            f'AND (issuetype in (Feature, "Feature Request", Story) '
+            f'OR labels in ("FeatureRequest", "Feature-Request")) '
             f'AND statusCategory != Done ORDER BY created DESC'
         ),
         "resolved": (
@@ -586,40 +587,138 @@ def build_customer_html(cust, data):
                        f'<div class="fr-meta"><a class="tlink" href="{url}" target="_blank">{key}</a></div></div>'
                        f'<span class="fr-status {sc_}">{sl}</span></div>')
 
-    # Ticket history bars
-    bar_max   = max((h["count"] for h in cust.get("ticket_history",[])), default=1)
-    bar_colors= ["#38A169","#38A169","#D69E2E","#DD6B20","#DD6B20","#E53E3E"]
-    bars = ""
-    for idx, h in enumerate(cust.get("ticket_history", [])[-6:]):
-        pct   = round(h["count"] / bar_max * 100)
-        col   = bar_colors[min(idx, len(bar_colors)-1)]
-        month = h["month"].split()[0][:3] + " " + h["month"].split()[-1][-2:]
-        bars += (f'<div class="bar-row"><span class="blabel">{month}</span>'
-                 f'<div class="btrack"><div class="bfill" style="width:{pct}%;background:{col}"></div></div>'
-                 f'<span class="bval" style="color:{col}">{h["count"]}</span></div>')
+    # ── Account banner ─────────────────────────────────────────────────────────
+    portal_html = (f'<a href="{cust["portal_url"]}" target="_blank" '
+                   f'style="color:#00C2E0;font-size:11px;text-decoration:none">'
+                   f'{cust["portal_url"]}</a>') if cust.get("portal_url") else "—"
+    engines_str = " · ".join(cust["engines"])
 
-    # Pulse
-    pulse_colors = {"frustrated":"#E53E3E","concerned":"#DD6B20","waiting":"#D69E2E","positive":"#38A169","neutral":"#5E6C84"}
+    acct_banner = f"""
+  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;
+              padding:.85rem 1.5rem;margin-bottom:1rem;
+              display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;align-items:center">
+    <div>
+      <div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;
+                  letter-spacing:.05em;margin-bottom:3px">CSE Owner</div>
+      <div style="font-size:12px;font-weight:700;color:#172B4D">{cust.get('cse_owner','—')}</div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;
+                  letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div>
+      <div style="font-size:12px;font-weight:700;color:#172B4D">{cust.get('tam','—') or '—'}</div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;
+                  letter-spacing:.05em;margin-bottom:3px">Phase</div>
+      <div style="font-size:12px;font-weight:700;color:#172B4D">{cust['phase']}</div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;
+                  letter-spacing:.05em;margin-bottom:3px">Portal</div>
+      <div>{portal_html}</div>
+    </div>
+  </div>"""
+
+    # ── Ticket history timeseries (Chart.js) ───────────────────────────────────
+    hist = cust.get("ticket_history", [])
+    if hist:
+        chart_labels = json.dumps([h["month"][:6] for h in hist])
+        chart_data   = json.dumps([h["count"] for h in hist])
+        chart_max    = max(h["count"] for h in hist) + 2
+        timeseries_html = f"""
+      <div class="sec" style="flex:1">
+        <div class="sec-head">
+          <span class="sec-title">📈 Ticket Volume Trend</span>
+          <span class="sec-sub">Last {len(hist)} months</span>
+        </div>
+        <div style="padding:.75rem 1rem 1rem">
+          <div style="position:relative;height:130px">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+      </div>"""
+        timeseries_js = f"""
+new Chart(document.getElementById('trendChart'), {{
+  type: 'line',
+  data: {{
+    labels: {chart_labels},
+    datasets: [{{
+      label: 'Tickets',
+      data: {chart_data},
+      borderColor: '#1A6FDB',
+      backgroundColor: 'rgba(26,111,219,0.08)',
+      borderWidth: 2,
+      pointBackgroundColor: '#1A6FDB',
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      fill: true,
+      tension: 0.35
+    }}]
+  }},
+  options: {{
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {{ legend: {{ display: false }} }},
+    scales: {{
+      x: {{ grid: {{ display: false }}, ticks: {{ font: {{ size: 10 }}, color: '#5E6C84' }}, border: {{ display: false }} }},
+      y: {{ min: 0, max: {chart_max}, grid: {{ color: '#F4F5F7' }},
+            ticks: {{ font: {{ size: 10 }}, color: '#5E6C84', stepSize: 2 }},
+            border: {{ display: false }} }}
+    }}
+  }}
+}});"""
+    else:
+        timeseries_html = ""
+        timeseries_js   = ""
+
+    # ── Customer pulse ─────────────────────────────────────────────────────────
+    pulse_colors = {"frustrated":"#E53E3E","concerned":"#DD6B20",
+                    "waiting":"#D69E2E","positive":"#38A169","neutral":"#5E6C84"}
     pulse_html = ""
     for p in cust.get("pulse", []):
         col  = pulse_colors.get(p["sentiment"], "#5E6C84")
         sent = p["sentiment"].capitalize()
-        pulse_html += (f'<div class="pulse-row"><div class="pdot" style="background:{col}"></div>'
-                       f'<div class="ptext"><b>{sent}</b> — {p["text"]}</div></div>')
+        pulse_html += (
+            f'<div class="pulse-row">'
+            f'<div class="pdot" style="background:{col}"></div>'
+            f'<div class="ptext"><b>{sent}</b> — {p["text"]}</div>'
+            f'</div>'
+        )
     if not pulse_html:
         pulse_html = '<div class="pulse-row"><div class="ptext">No pulse data yet.</div></div>'
 
-    # Quick links
-    ql_jira = f'{JIRA_BASE}/issues/?jql=text+~+%22{cust["jql_keyword"].replace(" ","+")}.%22+AND+statusCategory+!%3D+Done'
-    portal  = cust.get("portal_url","")
-    portal_link = f'<div class="ir"><a class="tlink" href="{portal}" target="_blank">{portal}</a></div>' if portal else ""
+    def ticket_list_js(issues, limit=20):
+        """Serialize tickets to JS-safe list for the drawer."""
+        out = []
+        for i in issues[:limit]:
+            f   = i["fields"]
+            sre_pc, sre_pl = sre_priority(f)
+            pc, pl = (sre_pc, sre_pl) if sre_pc else priority_class(f.get("priority",{}).get("name",""))
+            sc_, sl = status_class(f.get("status",{}).get("name",""))
+            out.append({
+                "key":   i["key"],
+                "url":   f"{JIRA_BASE}/browse/{i['key']}",
+                "summ":  (f.get("summary") or "")[:80],
+                "pl":    pl,
+                "pc":    pc,
+                "sl":    sl,
+                "sc":    sc_,
+                "age":   age_days(f.get("created",""))
+            })
+        return json.dumps(out)
 
     data_js = json.dumps({
         "p0p1": len(p0p1), "open": len(open_t),
         "features": len(features), "resolved": len(resolved),
         "pendingEng": pending, "p0keys": p0_keys,
-        "highKeys": high_keys, "generated": now
+        "highKeys": high_keys, "generated": now,
+        "score": score, "scoreLabel": health_label, "scoreColor": health_color,
+        "signals": [{"deduction": s[0], "label": s[1], "suggestion": s[2]} for s in signals]
     })
+    p0p1_js    = ticket_list_js(p0p1)
+    open_js    = ticket_list_js(open_t)
+    feat_js    = ticket_list_js(features)
+    resolved_js= ticket_list_js(resolved)
 
     mv_col   = "red" if len(p0p1)>0 else "green"
     open_col = "orange" if len(open_t)>5 else "yellow"
@@ -718,7 +817,9 @@ def build_customer_html(cust, data):
     </div>
   </div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
+{timeseries_js}
 const DATA = {data_js};
 {HEALTH_JS}
 window.onload = () => runHealth(DATA);
@@ -1178,7 +1279,7 @@ if __name__ == "__main__":
         print(f"  P0/P1:{len(data['p0p1'])}  Open:{len(data['open'])}  "
               f"Features:{len(data['features'])}  Resolved(30d):{len(data['resolved'])}")
 
-        score, label, color, hk, _ = compute_health(
+        score, label, color, hk, _, _signals = compute_health(
             data["p0p1"], data["open"], data["features"], data["resolved"]
         )
 
