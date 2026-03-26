@@ -714,11 +714,11 @@ def build_master_html(customer_results):
     healthy   = sum(1 for c in real if c["health_key"] in ("healthy","stable"))
     total_p0  = sum(c["p0_count"] for c in real)
 
+    # ── Customer cards (for the "All Customers" section at bottom) ─────────────
     cards = ""
     for cr in customer_results:
         cust = cr["config"]
         if not cust.get("name"):
-            cards += '<div class="placeholder-card" data-health="placeholder"><div class="placeholder-icon">🏢</div><div>Customer page coming soon</div></div>'
             continue
         hk    = cr["health_key"]
         hl    = cr["health_label"]
@@ -743,14 +743,146 @@ def build_master_html(customer_results):
       <div class="cs"><div class="cs-val blue">{cr['feat_count']}</div><div class="cs-label">Features</div></div>
     </div>
     <div class="card-tags">{tags}</div>
-    <div class="card-footer"><span class="phase-label">{phase_emoji} {cust['phase']}</span><span class="drill-btn">View Dashboard →</span></div>
+    <div class="card-footer"><span class="phase-lbl">{phase_emoji} {cust['phase']}</span><span class="drill-btn">View Dashboard →</span></div>
   </div>
 </a>"""
 
-    # Pad with placeholders to fill the grid
-    placeholders_needed = (3 - (len(real) % 3)) % 3
-    for _ in range(placeholders_needed):
-        cards += '<div class="placeholder-card" data-health="placeholder"><div class="placeholder-icon">🏢</div><div>Customer page coming soon</div></div>'
+    # ── Action required items — top 3 by severity ─────────────────────────────
+    action_items = []
+    for cr in sorted(customer_results, key=lambda x: x["p0_count"], reverse=True)[:3]:
+        c = cr["config"]
+        if cr["p0_count"] > 0:
+            sev, sev_cls = "Critical", "sev-critical"
+            title = f"{c['name']} — {cr['p0_count']} P0{'s' if cr['p0_count']>1 else ''} open"
+            desc  = f"{cr['open_count']} total open tickets. Immediate engineering escalation required."
+        elif cr["open_count"] > 5:
+            sev, sev_cls = "High", "sev-high"
+            title = f"{c['name']} — {cr['open_count']} open tickets"
+            desc  = f"{cr['feat_count']} feature requests pending. Review backlog priority with engineering."
+        else:
+            sev, sev_cls = "Watch", "sev-watch"
+            title = f"{c['name']} — monitor closely"
+            desc  = f"Phase: {c['phase']}. {cr['open_count']} open tickets, {cr['feat_count']} feature requests."
+        url = cr.get("dashboard_url","#")
+        action_items.append(
+            f'<div class="action-item">'
+            f'<span class="ai-severity {sev_cls}">{sev}</span>'
+            f'<div class="ai-title">{title}</div>'
+            f'<div class="ai-desc">{desc}</div>'
+            f'<a class="ai-link" href="{url}" target="_parent">→ View Dashboard</a>'
+            f'</div>'
+        )
+    # pad to 3
+    while len(action_items) < 3:
+        action_items.append('<div class="action-item"><span class="ai-severity sev-watch">Watch</span><div class="ai-title">No further escalations</div><div class="ai-desc">Remaining customers are healthy or in early implementation.</div></div>')
+
+    # ── Pipeline counts ────────────────────────────────────────────────────────
+    phase_counts = {"Onboarding":0,"Implementation":0,"Stabilisation":0,"Production":0,"Steady State":0}
+    for cr in customer_results:
+        p = cr["config"].get("phase","")
+        if p in phase_counts: phase_counts[p] += 1
+    pipe_max = max(phase_counts.values()) or 1
+
+    def pipe_row(label, count, color, text_color):
+        pct = round(count / pipe_max * 100)
+        return (f'<div class="phase-row">'
+                f'<span class="phase-label">{label}</span>'
+                f'<div class="phase-track"><div class="phase-fill" style="width:{max(pct,8)}%;background:{color};color:{text_color}">{count if pct>15 else ""}</div></div>'
+                f'<span class="phase-count" style="color:{color}">{count}</span>'
+                f'</div>')
+
+    pipeline_html = (
+        pipe_row("Onboarding",    phase_counts["Onboarding"],    "#378ADD","#E6F1FB") +
+        pipe_row("Implementation",phase_counts["Implementation"],"#BA7517","#FAEEDA") +
+        pipe_row("Stabilisation", phase_counts["Stabilisation"], "#E24B4A","#FCEBEB") +
+        pipe_row("Production",    phase_counts["Production"],    "#1D9E75","#E1F5EE") +
+        pipe_row("Steady State",  phase_counts["Steady State"],  "#5F5E5A","#F1EFE8")
+    )
+
+    # ── Health heatmap cells ───────────────────────────────────────────────────
+    heatmap_cells = ""
+    for cr in customer_results:
+        c   = cr["config"]
+        hk  = cr["health_key"]
+        cls = {"atrisk":"hm-risk","attention":"hm-warn","stable":"hm-stable","healthy":"hm-good"}.get(hk,"hm-stable")
+        stat = f"{cr['p0_count']} P0s · {cr['open_count']} open" if cr["p0_count"] > 0 else f"{cr['open_count']} open · {c['phase'][:12]}"
+        url  = cr.get("dashboard_url","#")
+        heatmap_cells += (
+            f'<a class="hm-cell {cls}" href="{url}" target="_parent" style="text-decoration:none">'
+            f'<div class="hm-name">{c["name"][:18]}</div>'
+            f'<div class="hm-stat">{stat}</div>'
+            f'</a>'
+        )
+
+    # ── Owner summary ──────────────────────────────────────────────────────────
+    owner_map = {}
+    for cr in customer_results:
+        owner = cr["config"].get("cse_owner","—") or "—"
+        if owner not in owner_map:
+            owner_map[owner] = {"p0":0,"open":0,"customers":[]}
+        owner_map[owner]["p0"]   += cr["p0_count"]
+        owner_map[owner]["open"] += cr["open_count"]
+        owner_map[owner]["customers"].append(cr["config"]["name"].split()[0])
+
+    avatar_colors = [
+        {"bg":"#E6F1FB","col":"#0C447C"},{"bg":"#EEEDFE","col":"#3C3489"},
+        {"bg":"#EAF3DE","col":"#27500A"},{"bg":"#FAEEDA","col":"#633806"},
+        {"bg":"#FBEAF0","col":"#72243E"},{"bg":"#E1F5EE","col":"#085041"},
+    ]
+    owner_rows = ""
+    for idx,(owner,data) in enumerate(sorted(owner_map.items(), key=lambda x:-x[1]["p0"])[:5]):
+        ac    = avatar_colors[idx % len(avatar_colors)]
+        parts = owner.split()
+        initials = (parts[0][0]+(parts[1][0] if len(parts)>1 else parts[0][-1])).upper() if parts else "—"
+        custs = ", ".join(data["customers"][:3]) + ("…" if len(data["customers"])>3 else "")
+        p0col = "#E53E3E" if data["p0"]>0 else "#D69E2E"
+        tkcol = "#DD6B20" if data["open"]>5 else "#D69E2E" if data["open"]>2 else "#38A169"
+        owner_rows += (
+            f'<div class="owner-row">'
+            f'<div class="owner-info">'
+            f'<div class="owner-avatar" style="background:{ac["bg"]};color:{ac["col"]}">{initials}</div>'
+            f'<div><div class="owner-name">{owner}</div><div class="owner-meta">{custs}</div></div>'
+            f'</div>'
+            f'<div class="owner-counts">'
+            f'<div class="oc"><div class="oc-val" style="color:{p0col}">{data["p0"]}</div><div class="oc-label">P0s</div></div>'
+            f'<div class="oc"><div class="oc-val" style="color:{tkcol}">{data["open"]}</div><div class="oc-label">Open</div></div>'
+            f'</div></div>'
+        )
+
+    # ── Resolution trend bars ──────────────────────────────────────────────────
+    top_by_tickets = sorted([cr for cr in customer_results if cr["open_count"]>0],
+                             key=lambda x:-x["open_count"])[:5]
+    trend_max = top_by_tickets[0]["open_count"] if top_by_tickets else 1
+    trend_rows = ""
+    for cr in top_by_tickets:
+        pct  = round(cr["open_count"] / trend_max * 100)
+        col  = "#E53E3E" if cr["p0_count"]>0 else "#DD6B20" if cr["open_count"]>5 else "#38A169"
+        name = cr["config"]["name"].split()[0][:10]
+        trend_rows += (
+            f'<div class="trend-row">'
+            f'<span class="trend-label">{name}</span>'
+            f'<div class="trend-bar-wrap"><div class="trend-bar" style="width:{pct}%;background:{col}"></div></div>'
+            f'<span class="trend-val" style="color:{col}">{cr["open_count"]}</span>'
+            f'</div>'
+        )
+
+    # ── This week highlights ───────────────────────────────────────────────────
+    highlights = []
+    crit = [cr for cr in customer_results if cr["p0_count"]>0]
+    if crit:
+        names = ", ".join(c["config"]["name"].split()[0] for c in crit[:2])
+        highlights.append(f'🚨 <span style="color:#172B4D;font-weight:600">{sum(c["p0_count"] for c in crit)} P0/P1s open</span> — {names} need immediate attention')
+    new_impl = [cr for cr in customer_results if cr["config"].get("phase") in ("Onboarding","Implementation")]
+    if new_impl:
+        highlights.append(f'🔄 <span style="color:#172B4D;font-weight:600">{len(new_impl)} customers</span> actively in implementation — review velocity in sprint planning')
+    prod = [cr for cr in customer_results if cr["config"].get("phase") == "Production"]
+    if prod:
+        highlights.append(f'✅ <span style="color:#172B4D;font-weight:600">{len(prod)} customers</span> in Production phase')
+    highlights.append(f'📋 <span style="color:#172B4D;font-weight:600">{total} total customers</span> tracked across CSE — {healthy} healthy, {at_risk} at risk')
+    highlights_html = "".join(
+        f'<div style="font-size:11px;color:#5E6C84;line-height:1.7;border-bottom:0.5px solid #F4F5F7;padding-bottom:.6rem;margin-bottom:.6rem">{h}</div>'
+        for h in highlights[:4]
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -760,69 +892,168 @@ def build_master_html(customer_results):
 <title>CSE — Customer Portfolio</title>
 <style>
 {SHARED_CSS}
-.status-badge{{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:#7DDBA3;background:rgba(125,219,163,0.12);padding:3px 9px;border-radius:20px;border:.5px solid rgba(125,219,163,0.25)}}
-.sdot{{width:6px;height:6px;border-radius:50%;background:#7DDBA3}}
-.hero{{background:#0B1F45;padding:1.25rem 1.5rem 1.5rem;border-bottom:1px solid #122752}}
-.hero-top{{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}}
-.hero-title{{font-size:20px;font-weight:700;color:#fff}}
-.hero-sub{{font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px}}
-.port-metrics{{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}}
-.pm{{background:rgba(255,255,255,0.05);border:.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:.8rem 1rem}}
-.pm-label{{font-size:10px;color:rgba(255,255,255,0.4);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}}
-.pm-val{{font-size:22px;font-weight:700;color:#fff;line-height:1}}
-.pm-sub{{font-size:10px;margin-top:3px}}
-.filter-bar{{display:flex;align-items:center;gap:8px;margin-bottom:1.1rem;flex-wrap:wrap}}
-.filter-btn{{font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:.5px solid #DFE1E6;background:#fff;color:#5E6C84;cursor:pointer}}
-.filter-btn.active{{background:#0B1F45;color:#fff;border-color:#0B1F45}}
-.search-input{{flex:1;max-width:240px;padding:5px 12px;border-radius:20px;border:.5px solid #DFE1E6;font-size:12px;outline:none;background:#fff;color:#172B4D}}
-.cards-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}}
+.wordmark-bar{{width:3px;height:36px;background:#00C2E0;border-radius:2px;flex-shrink:0}}
+.hero{{background:#0B1F45;padding:1.5rem 1.5rem 1.75rem}}
+.hero-top{{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}}
+.kpi-strip{{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}}
+.kpi{{background:rgba(255,255,255,0.06);border:.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:1rem 1.1rem;position:relative;overflow:hidden}}
+.kpi-label{{font-size:10px;font-weight:500;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}}
+.kpi-val{{font-size:28px;font-weight:700;color:#fff;line-height:1}}
+.kpi-sub{{font-size:10px;margin-top:4px}}
+.kpi-accent{{position:absolute;top:0;left:0;width:3px;height:100%}}
+.action-strip{{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;margin-bottom:1.25rem;overflow:hidden}}
+.action-head{{background:#0B1F45;padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between}}
+.action-head-title{{font-size:12px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}}
+.action-head-badge{{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(252,129,129,0.2);color:#FC8181;border:.5px solid rgba(252,129,129,0.3)}}
+.action-head-ts{{font-size:10px;color:rgba(255,255,255,0.3)}}
+.action-items{{display:grid;grid-template-columns:repeat(3,1fr)}}
+.action-item{{padding:.9rem 1.25rem;border-right:.5px solid #F4F5F7}}
+.action-item:last-child{{border-right:none}}
+.ai-severity{{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:6px}}
+.sev-critical{{background:#FFF5F5;color:#A32D2D}}
+.sev-high{{background:#FFFAF0;color:#854F0B}}
+.sev-watch{{background:#E6F1FB;color:#0C447C}}
+.ai-title{{font-size:12px;font-weight:700;color:#172B4D;margin-bottom:3px;line-height:1.35}}
+.ai-desc{{font-size:11px;color:#5E6C84;line-height:1.5}}
+.ai-link{{font-size:11px;font-weight:600;color:#1A6FDB;margin-top:5px;display:block;text-decoration:none}}
+.main-grid{{display:grid;grid-template-columns:1fr 1fr 300px;gap:1.1rem;align-items:start}}
+.pipeline{{padding:.9rem 1.1rem}}
+.phase-row{{display:flex;align-items:center;gap:10px;margin-bottom:8px}}
+.phase-row:last-child{{margin-bottom:0}}
+.phase-label{{font-size:11px;color:#5E6C84;width:110px;flex-shrink:0}}
+.phase-track{{flex:1;height:20px;background:#F4F5F7;border-radius:4px;overflow:hidden}}
+.phase-fill{{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:700;min-width:8px}}
+.phase-count{{font-size:11px;font-weight:700;width:20px;text-align:right;flex-shrink:0}}
+.heatmap{{padding:.9rem 1.1rem;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}}
+.hm-cell{{border-radius:6px;padding:7px 8px;cursor:pointer;transition:filter .15s;text-decoration:none;display:block}}
+.hm-cell:hover{{filter:brightness(0.93)}}
+.hm-name{{font-size:10px;font-weight:600;line-height:1.3;margin-bottom:2px}}
+.hm-stat{{font-size:10px;opacity:.75}}
+.hm-risk{{background:#FFF5F5;border:.5px solid #F09595}}
+.hm-risk .hm-name,.hm-risk .hm-stat{{color:#A32D2D}}
+.hm-warn{{background:#FFFAF0;border:.5px solid #EF9F27}}
+.hm-warn .hm-name,.hm-warn .hm-stat{{color:#854F0B}}
+.hm-stable{{background:#E6F1FB;border:.5px solid #85B7EB}}
+.hm-stable .hm-name,.hm-stable .hm-stat{{color:#0C447C}}
+.hm-good{{background:#EAF3DE;border:.5px solid #97C459}}
+.hm-good .hm-name,.hm-good .hm-stat{{color:#27500A}}
+.sb-sec{{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.1rem}}
+.sb-head{{padding:.7rem 1rem;border-bottom:.5px solid #DFE1E6;font-size:12px;font-weight:700;color:#172B4D}}
+.owner-row{{display:flex;align-items:center;justify-content:space-between;padding:7px 1rem;border-bottom:.5px solid #DFE1E6}}
+.owner-row:last-child{{border-bottom:none}}
+.owner-info{{display:flex;align-items:center;gap:8px}}
+.owner-avatar{{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}}
+.owner-name{{font-size:12px;font-weight:600;color:#172B4D}}
+.owner-meta{{font-size:10px;color:#5E6C84}}
+.owner-counts{{display:flex;gap:8px}}
+.oc{{text-align:center}}
+.oc-val{{font-size:13px;font-weight:700}}
+.oc-label{{font-size:9px;color:#5E6C84}}
+.trend-row{{display:flex;align-items:center;gap:8px;padding:6px 1rem;border-bottom:.5px solid #DFE1E6}}
+.trend-row:last-child{{border-bottom:none}}
+.trend-label{{font-size:11px;color:#5E6C84;width:60px;flex-shrink:0}}
+.trend-bar-wrap{{flex:1;height:6px;background:#F4F5F7;border-radius:3px;overflow:hidden}}
+.trend-bar{{height:100%;border-radius:3px}}
+.trend-val{{font-size:11px;font-weight:700;width:20px;text-align:right;flex-shrink:0}}
+.cards-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:1.1rem}}
 .cust-card{{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;cursor:pointer;transition:transform .15s}}
 .cust-card:hover{{transform:translateY(-2px)}}
-.card-header{{padding:1rem 1.1rem .8rem;border-bottom:.5px solid #F4F5F7;display:flex;align-items:center;gap:10px}}
-.card-logo{{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0}}
-.card-name{{font-size:13px;font-weight:700;color:#172B4D;margin-bottom:1px}}
+.card-header{{padding:.9rem 1rem .75rem;border-bottom:.5px solid #F4F5F7;display:flex;align-items:center;gap:10px}}
+.card-logo{{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}}
+.card-name{{font-size:12px;font-weight:700;color:#172B4D;margin-bottom:1px}}
 .card-meta{{font-size:10px;color:#5E6C84}}
-.health-pill{{margin-left:auto;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px;flex-shrink:0}}
+.health-pill{{margin-left:auto;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px;flex-shrink:0}}
 .hp-dot{{width:6px;height:6px;border-radius:50%}}
-.card-body{{padding:.8rem 1.1rem}}
-.card-stats{{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:.8rem}}
+.card-body{{padding:.75rem 1rem}}
+.card-stats{{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:.7rem}}
 .cs{{text-align:center}}
-.cs-val{{font-size:18px;font-weight:700;line-height:1}}
+.cs-val{{font-size:17px;font-weight:700;line-height:1}}
 .cs-label{{font-size:10px;color:#5E6C84;margin-top:2px}}
-.card-tags{{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.8rem}}
-.tag{{font-size:10px;padding:2px 7px;border-radius:4px;background:#F4F5F7;color:#5E6C84;font-weight:500}}
-.card-footer{{display:flex;align-items:center;justify-content:space-between;padding-top:.7rem;border-top:.5px solid #F4F5F7}}
-.phase-label{{font-size:10px;font-weight:600;color:#5E6C84}}
+.card-tags{{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.7rem}}
+.tag{{font-size:10px;padding:2px 6px;border-radius:4px;background:#F4F5F7;color:#5E6C84;font-weight:500}}
+.card-footer{{display:flex;align-items:center;justify-content:space-between;padding-top:.6rem;border-top:.5px solid #F4F5F7}}
+.phase-lbl{{font-size:10px;font-weight:600;color:#5E6C84}}
 .drill-btn{{font-size:11px;font-weight:600;color:#1A6FDB}}
-.placeholder-card{{background:#FAFBFC;border:.5px dashed #DFE1E6;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:180px;color:#A0AEC0;font-size:12px;gap:6px}}
-.placeholder-icon{{font-size:24px;opacity:.4}}
+.sec-divider{{font-size:13px;font-weight:700;color:#172B4D;margin:1.25rem 0 .75rem;display:flex;align-items:center;gap:8px}}
+.sec-divider::after{{content:'';flex:1;height:0.5px;background:#DFE1E6}}
+.filter-bar{{display:flex;align-items:center;gap:8px;flex-wrap:wrap}}
+.filter-btn{{font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:.5px solid #DFE1E6;background:#fff;color:#5E6C84;cursor:pointer}}
+.filter-btn.active{{background:#0B1F45;color:#fff;border-color:#0B1F45}}
+.search-input{{flex:1;max-width:220px;padding:5px 12px;border-radius:20px;border:.5px solid #DFE1E6;font-size:12px;outline:none;background:#fff;color:#172B4D}}
 </style>
 </head>
 <body>
-{NAV_HTML.format(back='<div class="status-badge"><div class="sdot"></div>All systems operational</div>')}
+{NAV_HTML.format(back=f'<span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: {now}</span>')}
+
 <div class="hero">
   <div class="hero-top">
-    <div><div class="hero-title">Customer Portfolio</div><div class="hero-sub">CSE · Active customer health &amp; implementation status</div></div>
-    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: {now}</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="wordmark-bar"></div>
+      <div>
+        <div style="font-size:20px;font-weight:700;color:#fff">Customer Success Portfolio</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">Executive overview · Tessell CSE · Auto-refreshed from Jira every 30 minutes</div>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.55)">{datetime.now(timezone.utc).strftime("%B %d, %Y")}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px">{now}</div>
+    </div>
   </div>
-  <div class="port-metrics">
-    <div class="pm"><div class="pm-label">Total Customers</div><div class="pm-val">{total}</div><div class="pm-sub" style="color:rgba(255,255,255,0.4)">Active accounts</div></div>
-    <div class="pm"><div class="pm-label">At Risk</div><div class="pm-val" style="color:#FC8181">{at_risk}</div><div class="pm-sub" style="color:#FC8181">Needs immediate action</div></div>
-    <div class="pm"><div class="pm-label">Open P0/P1</div><div class="pm-val" style="color:#FC8181">{total_p0}</div><div class="pm-sub" style="color:rgba(255,255,255,0.4)">Critical incidents</div></div>
-    <div class="pm"><div class="pm-label">Needs Attention</div><div class="pm-val" style="color:#FFC107">{attention}</div><div class="pm-sub" style="color:rgba(255,255,255,0.4)">Monitoring required</div></div>
-    <div class="pm"><div class="pm-label">Healthy</div><div class="pm-val" style="color:#68D391">{healthy}</div><div class="pm-sub" style="color:rgba(255,255,255,0.4)">Stable accounts</div></div>
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-accent" style="background:#00C2E0"></div><div class="kpi-label">Total customers</div><div class="kpi-val">{total}</div><div class="kpi-sub" style="color:rgba(255,255,255,0.4)">Active accounts</div></div>
+    <div class="kpi"><div class="kpi-accent" style="background:#FC8181"></div><div class="kpi-label">At risk</div><div class="kpi-val" style="color:#FC8181">{at_risk}</div><div class="kpi-sub" style="color:#FC8181">Needs immediate action</div></div>
+    <div class="kpi"><div class="kpi-accent" style="background:#FC8181"></div><div class="kpi-label">Open P0 / P1</div><div class="kpi-val" style="color:#FC8181">{total_p0}</div><div class="kpi-sub" style="color:rgba(255,255,255,0.4)">Across all customers</div></div>
+    <div class="kpi"><div class="kpi-accent" style="background:#FFC107"></div><div class="kpi-label">In implementation</div><div class="kpi-val" style="color:#FFC107">{phase_counts['Onboarding']+phase_counts['Implementation']}</div><div class="kpi-sub" style="color:rgba(255,255,255,0.4)">Active onboarding</div></div>
+    <div class="kpi"><div class="kpi-accent" style="background:#68D391"></div><div class="kpi-label">Healthy</div><div class="kpi-val" style="color:#68D391">{healthy}</div><div class="kpi-sub" style="color:rgba(255,255,255,0.4)">Stable, no escalations</div></div>
   </div>
 </div>
+
 <div class="body">
-  <div class="filter-bar">
-    <button class="filter-btn active" onclick="filterCards('all',this)">All</button>
-    <button class="filter-btn" onclick="filterCards('atrisk',this)">At Risk</button>
-    <button class="filter-btn" onclick="filterCards('attention',this)">Needs Attention</button>
-    <button class="filter-btn" onclick="filterCards('healthy',this)">Healthy</button>
-    <button class="filter-btn" onclick="filterCards('stable',this)">Stable</button>
-    <input class="search-input" type="text" placeholder="Search customers..." oninput="searchCards(this.value)"/>
+
+  <div class="action-strip">
+    <div class="action-head">
+      <div class="action-head-title">
+        <span style="font-size:14px">🔴</span> Action Required
+        <span class="action-head-badge">{min(3,len([cr for cr in customer_results if cr['p0_count']>0 or cr['open_count']>5]))} items</span>
+      </div>
+      <span class="action-head-ts">Auto-generated · {now}</span>
+    </div>
+    <div class="action-items">{''.join(action_items)}</div>
   </div>
+
+  <div class="main-grid">
+    <div>
+      <div class="sec">
+        <div class="sec-head"><span class="sec-title">Implementation pipeline</span><span class="sec-sub">{total} total customers</span></div>
+        <div class="pipeline">{pipeline_html}</div>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><span class="sec-title">Open ticket load by customer</span><span class="sec-sub">Top 5</span></div>
+        <div style="padding:6px 0 4px">{trend_rows}</div>
+      </div>
+    </div>
+    <div>
+      <div class="sec">
+        <div class="sec-head"><span class="sec-title">Customer health heatmap</span><span class="sec-sub">Click any cell to drill in</span></div>
+        <div class="heatmap">{heatmap_cells}</div>
+      </div>
+    </div>
+    <div>
+      <div class="sb-sec">
+        <div class="sb-head">CSE ownership summary</div>
+        {owner_rows}
+      </div>
+      <div class="sb-sec">
+        <div class="sb-head">This week's highlights</div>
+        <div style="padding:.75rem 1rem">{highlights_html}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-divider">All Customers <div class="filter-bar" style="margin:0"><button class="filter-btn active" onclick="filterCards('all',this)">All</button><button class="filter-btn" onclick="filterCards('atrisk',this)">At Risk</button><button class="filter-btn" onclick="filterCards('attention',this)">Needs Attention</button><button class="filter-btn" onclick="filterCards('healthy',this)">Healthy</button><button class="filter-btn" onclick="filterCards('stable',this)">Stable</button><input class="search-input" type="text" placeholder="Search..." oninput="searchCards(this.value)"/></div></div>
+
   <div class="cards-grid">{cards}</div>
+
 </div>
 <script>
 function filterCards(h,btn){{document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.cust-card,[data-health]').forEach(el=>{{el.style.display=h==='all'||el.dataset.health===h?'':'none';}});}}
