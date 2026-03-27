@@ -1015,7 +1015,7 @@ def build_customer_html(cust, data):
         key = i["key"]; summ = (i["fields"].get("summary") or "")[:65]; url = f"{JIRA_BASE}/browse/{key}"
         sc_, sl = status_class(i["fields"].get("status",{}).get("name",""))
         feat_items += (f'<div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡</div>'
-                       f'<div class="fr-content"><div class="fr-title">{summ}</div>'
+                       f'<div class="fr-content"><div class="fr-title">{queries["features"]}</div>'
                        f'<div class="fr-meta"><a class="tlink" href="{url}" target="_blank">{key}</a></div></div>'
                        f'<span class="fr-status {sc_}">{sl}</span></div>')
 
