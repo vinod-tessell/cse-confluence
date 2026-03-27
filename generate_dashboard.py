@@ -1083,7 +1083,7 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
       <div style="width:7px;height:7px;border-radius:50%;background:{health_color}" id="health-dot"></div>
       <span id="health-badge" style="color:{health_color}">{health_label}</span>
     </div>
-    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: {now}</span>
+    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: {now}</div>
   </div>
 </div>
 <div class="body">
