@@ -76,6 +76,17 @@ tr:last-child td{border-bottom:none}
 .drawer-head{padding:.7rem 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;justify-content:space-between}
 .drawer-title{font-size:12px;font-weight:700;color:#172B4D}
 .drawer-close{font-size:14px;color:#5E6C84;cursor:pointer;background:none;border:none;padding:0 4px;line-height:1}
+.jql-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:1rem 1.25rem}
+.jql-block{background:#F8F9FA;border:.5px solid #DFE1E6;border-radius:8px;overflow:hidden}
+.jql-block-head{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:#F4F5F7;border-bottom:.5px solid #DFE1E6}
+.jql-label{font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:5px}
+.jql-label-dot{width:6px;height:6px;border-radius:50%}
+.jql-copy{font-size:10px;font-weight:600;color:#1A6FDB;background:none;border:none;cursor:pointer;padding:0;line-height:1}
+.jql-copy:hover{text-decoration:underline}
+.jql-code{font-family:'SF Mono',ui-monospace,Menlo,Monaco,monospace;font-size:10.5px;color:#172B4D;line-height:1.65;padding:10px;word-break:break-word;white-space:pre-wrap}
+.jql-open-link{display:inline-block;margin:0 10px 10px;font-size:10px;font-weight:600;color:#1A6FDB;text-decoration:none}
+.jql-open-link:hover{text-decoration:underline}
+.jql-footer{padding:.6rem 1.25rem;background:#FAFBFC;border-top:.5px solid #DFE1E6;font-size:10px;color:#5E6C84;display:flex;align-items:center;gap:5px}
 </style></head><body>
 <div class="nav">
   <div class="nav-links">
@@ -96,7 +107,7 @@ tr:last-child td{border-bottom:none}
       <div style="width:7px;height:7px;border-radius:50%;background:#68D391" id="health-dot"></div>
       <span id="health-badge" style="color:#68D391">Healthy</span>
     </div>
-    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 27, 2026 16:13 EST</div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 27, 2026 16:29 EST</div>
   </div>
 </div>
 <div class="body">
@@ -108,12 +119,13 @@ tr:last-child td{border-bottom:none}
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">Onboarding</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div><a href="https://atlasair.tessell.com/" target="_blank" style="color:#00C2E0;font-size:11px;text-decoration:none">https://atlasair.tessell.com/</a></div></div>
   </div>
-  <div class="metrics">
+  <div class="metrics" style="grid-template-columns:repeat(6,1fr)">
     <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval green">0</div><div class="msub">Active critical issues</div></div>
     <div class="metric" id="m-open" onclick="toggleDrawer('drawer-open','m-open')"><div class="mlabel">Open Tickets</div><div class="mval yellow">1</div><div class="msub">Across all priorities</div></div>
     <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">0</div><div class="msub">Pending delivery</div></div>
     <div class="metric" id="m-res" onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">0</div><div class="msub">Last 30 days</div></div>
     <div class="metric" id="m-health" onclick="toggleDrawer('drawer-health','m-health')"><div class="mlabel">Health Score (WIP)</div><div class="mval" style="color:#68D391">9/10</div><div class="msub">Rule-based</div></div>
+    <div class="metric" id="m-jql" onclick="toggleDrawer('drawer-jql','m-jql')" style="border-left:2px solid #E6F1FB"><div class="mlabel">JQL Queries</div><div class="mval" style="font-size:16px;padding-top:3px">🔍</div><div class="msub">Show / hide</div></div>
   </div>
   <div class="drawer" id="drawer-health">
     <div class="drawer-head"><span class="drawer-title">🧮 Health Score — 9/10 · <span style="color:#68D391">Healthy</span></span><button class="drawer-close" onclick="toggleDrawer('drawer-health','m-health')">✕</button></div>
@@ -131,6 +143,49 @@ tr:last-child td{border-bottom:none}
   <div class="drawer" id="drawer-open"><div class="drawer-head"><span class="drawer-title">🎫 All Open Tickets (1)</span><button class="drawer-close" onclick="toggleDrawer('drawer-open','m-open')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38183" target="_blank">TS-38183</a></td><td>Atlasair - PITR Recovery - Online redo log sequence mismatch blocked rec</td><td><span class="pb pc">Highest</span></td><td><span class="sp so">To do</span></td><td>11d</td></tr></tbody></table></div>
   <div class="drawer" id="drawer-feat"><div class="drawer-head"><span class="drawer-title">💡 Feature Requests (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr></tbody></table></div>
   <div class="drawer" id="drawer-res"><div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr></tbody></table></div>
+  <div class="drawer" id="drawer-jql">
+    <div class="drawer-head">
+      <span class="drawer-title">🔍 JQL Queries — <span style="font-weight:400;color:#5E6C84">queries executed for Atlas Airlines</span></span>
+      <button class="drawer-close" onclick="toggleDrawer('drawer-jql','m-jql')">✕</button>
+    </div>
+    <div class="jql-grid"><div class="jql-block">
+  <div class="jql-block-head">
+    <span class="jql-label"><span class="jql-label-dot" style="background:#E53E3E"></span>🚨 Open P0 / P1</span>
+    <button class="jql-copy" onclick="copyJql(this,'p0p1')">Copy</button>
+  </div>
+  <div class="jql-code" id="jql-p0p1">project in (TS, SR) AND text ~ "Atlas Air" AND (labels = P0 OR labels = P1) AND statusCategory != Done ORDER BY created DESC</div>
+  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+in+(TS,+SR)+AND+text+~+%22Atlas+Air%22+AND+(labels+=+P0+OR+labels+=+P1)+AND+statusCategory+!=+Done+ORDER+BY+created+DESC" target="_blank">↗ Run in Jira</a>
+</div><div class="jql-block">
+  <div class="jql-block-head">
+    <span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 All Open Tickets</span>
+    <button class="jql-copy" onclick="copyJql(this,'open')">Copy</button>
+  </div>
+  <div class="jql-code" id="jql-open">project in (TS, SR) AND text ~ "Atlas Air" AND statusCategory != Done ORDER BY created DESC</div>
+  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+in+(TS,+SR)+AND+text+~+%22Atlas+Air%22+AND+statusCategory+!=+Done+ORDER+BY+created+DESC" target="_blank">↗ Run in Jira</a>
+</div><div class="jql-block">
+  <div class="jql-block-head">
+    <span class="jql-label"><span class="jql-label-dot" style="background:#1A6FDB"></span>💡 Feature Requests</span>
+    <button class="jql-copy" onclick="copyJql(this,'features')">Copy</button>
+  </div>
+  <div class="jql-code" id="jql-features">project in (TS, SR) AND ("Customers[Labels]" IN ("Atlas Air") or text ~ "Atlas Air") AND (issuetype in (Feature, Story) OR labels in ("FeatureRequest")) AND statusCategory != Done ORDER BY created DESC</div>
+  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+in+(TS,+SR)+AND+(%22Customers[Labels]%22+IN+(%22Atlas+Air%22)+or+text+~+%22Atlas+Air%22)+AND+(issuetype+in+(Feature,+Story)+OR+labels+in+(%22FeatureRequest%22))+AND+statusCategory+!=+Done+ORDER+BY+created+DESC" target="_blank">↗ Run in Jira</a>
+</div><div class="jql-block">
+  <div class="jql-block-head">
+    <span class="jql-label"><span class="jql-label-dot" style="background:#38A169"></span>✅ Resolved (30d)</span>
+    <button class="jql-copy" onclick="copyJql(this,'resolved')">Copy</button>
+  </div>
+  <div class="jql-code" id="jql-resolved">project in (TS, SR) AND text ~ "Atlas Air" AND statusCategory = Done AND resolutiondate >= -30d ORDER BY resolutiondate DESC</div>
+  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+in+(TS,+SR)+AND+text+~+%22Atlas+Air%22+AND+statusCategory+=+Done+AND+resolutiondate+>=+-30d+ORDER+BY+resolutiondate+DESC" target="_blank">↗ Run in Jira</a>
+</div><div class="jql-block">
+  <div class="jql-block-head">
+    <span class="jql-label"><span class="jql-label-dot" style="background:#5E6C84"></span>🕐 Recent Activity</span>
+    <button class="jql-copy" onclick="copyJql(this,'recent')">Copy</button>
+  </div>
+  <div class="jql-code" id="jql-recent">project in (TS, SR) AND text ~ "Atlas Air" AND updated >= -30d ORDER BY updated DESC</div>
+  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+in+(TS,+SR)+AND+text+~+%22Atlas+Air%22+AND+updated+>=+-30d+ORDER+BY+updated+DESC" target="_blank">↗ Run in Jira</a>
+</div></div>
+    <div class="jql-footer">💡 Keyword used: <b style="color:#172B4D;margin-left:3px">Atlas Air</b> &nbsp;·&nbsp; Click "Run in Jira" to open results live &nbsp;·&nbsp; "Copy" copies the raw JQL to clipboard</div>
+  </div>
   <div class="grid2">
     <div>
       <div class="ai-panel">
@@ -174,7 +229,7 @@ new Chart(document.getElementById('trendChart'),{type:'bar',data:{labels:["Oct 2
   plugins:{legend:{display:true,position:'top',align:'end',labels:{font:{size:9},color:'rgba(255,255,255,0.5)',boxWidth:8,padding:8}}},
   scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)'},border:{display:false}},
            y:{min:0,max:2,grid:{color:'rgba(255,255,255,0.06)'},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)',stepSize:2},border:{display:false}}}}}); 
-const DATA={"p0p1": 0, "open": 1, "features": 0, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": ["TS-38183"], "generated": "Mar 27, 2026 16:13 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+const DATA={"p0p1": 0, "open": 1, "features": 0, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": ["TS-38183"], "generated": "Mar 27, 2026 16:29 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const el=document.getElementById('ai-body'),sc=document.getElementById('ai-score');
@@ -205,6 +260,7 @@ function runHealth(DATA) {
 
 window.onload=()=>{runHealth(DATA);buildHealthDrawer(DATA);};
 function toggleDrawer(dId,mId){const d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.metric').forEach(x=>x.classList.remove('active'));if(!open){d.classList.add('open');m.classList.add('active');}}
+function copyJql(btn,key){const el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(()=>{const orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(()=>{btn.textContent=orig;btn.style.color='';} ,1500);}).catch(()=>{btn.textContent='Failed';setTimeout(()=>btn.textContent='Copy',1500);});}
 function buildHealthDrawer(DATA){
   const factors=[],actions=[];
   if(DATA.p0p1>=3){factors.push(['−4 pts',`${DATA.p0p1} active P0 incidents (${DATA.p0keys.join(', ')})`, '#E53E3E']);actions.push(['🚨','Escalate to engineering leadership']);}
