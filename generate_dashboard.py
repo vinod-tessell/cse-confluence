@@ -642,10 +642,10 @@ def make_jqls(keyword):
 def fetch_customer_data(keyword):
     queries = make_jqls(keyword)
     return {
-        "p0p1":           jql(queries["p0p1"],     max=10),
-        "open":           jql(queries["open"],     max=20),
-        "features":       jql(queries["features"], max=10),
-        "resolved":       jql(queries["resolved"], max=50),
+        "p0p1":           jql(queries["p0p1"],     max=100),
+        "open":           jql(queries["open"],     max=200),
+        "features":       jql(queries["features"], max=100),
+        "resolved":       jql(queries["resolved"], max=500),
         "recent":         jql(queries["recent"],   max=12),
         "ticket_history": fetch_monthly_buckets(keyword),
         "pulse":          fetch_pulse_from_comments(keyword),
