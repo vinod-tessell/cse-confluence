@@ -96,17 +96,19 @@ tr:last-child td{border-bottom:none}
       <div style="width:7px;height:7px;border-radius:50%;background:#68D391" id="health-dot"></div>
       <span id="health-badge" style="color:#68D391">Healthy</span>
     </div>
-    <span style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 27, 2026 00:08 UTC</span>
+    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 27, 2026 00:41 UTC</div>
   </div>
 </div>
 <div class="body">
   <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;padding:.75rem 1.5rem;margin-bottom:1rem;display:grid;grid-template-columns:repeat(7,1fr);gap:1rem;align-items:start">
+    
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Account</div><div style="font-size:12px;font-weight:700;color:#172B4D">Atlas Airlines</div></div>
+    
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Exec Sponsor</div><div style="font-size:12px;font-weight:700;color:#172B4D">Bala</div></div>
     <div style="grid-column:span 2"><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div><div style="font-size:12px;font-weight:700;color:#172B4D">Vinod</div><div style="font-size:10px;color:#5E6C84;margin-top:1px">Uday <span style="color:#DFE1E6">·</span> secondary</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cloud</div><div style="font-size:12px;font-weight:700;color:#172B4D">AWS · us-east-1</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">Onboarding</div></div>
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div>—</div></div>
+    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div><a href="https://atlasair.tessell.com/" target="_blank" style="color:#00C2E0;font-size:11px;text-decoration:none">https://atlasair.tessell.com/</a></div></div>
   </div>
   <div class="metrics">
     <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval green">0</div><div class="msub">Active critical issues</div></div>
@@ -159,7 +161,7 @@ By:  — maneesh.rawat</div><div class="tl-dt">Mar 24, 2026</div></div></div>
       <div class="sb-sec"><div class="sb-head">🔗 Quick Links</div>
         <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/issues/?jql=text+~+%22Atlas+Air%22+AND+statusCategory+%21%3D+Done" target="_blank">All Open Tickets</a></div>
         <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/1990557712" target="_blank">Customer Portfolio</a></div>
-        
+        <div class="ir"><span class="ilabel">Portal</span><span class="ival"><a class="tlink" href="https://atlasair.tessell.com/" target="_blank">https://atlasair.tessell.com/</a></span></div>
       </div>
     </div>
   </div>
@@ -174,7 +176,7 @@ new Chart(document.getElementById('trendChart'),{type:'bar',data:{labels:["Oct 2
   plugins:{legend:{display:true,position:'top',align:'end',labels:{font:{size:9},color:'rgba(255,255,255,0.5)',boxWidth:8,padding:8}}},
   scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)'},border:{display:false}},
            y:{min:0,max:2,grid:{color:'rgba(255,255,255,0.06)'},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)',stepSize:2},border:{display:false}}}}}); 
-const DATA={"p0p1": 0, "open": 1, "features": 0, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": ["TS-38183"], "generated": "Mar 27, 2026 00:08 UTC", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+const DATA={"p0p1": 0, "open": 1, "features": 0, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": ["TS-38183"], "generated": "Mar 27, 2026 00:41 UTC", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const el=document.getElementById('ai-body'),sc=document.getElementById('ai-score');
