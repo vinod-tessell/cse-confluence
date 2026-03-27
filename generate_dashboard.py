@@ -634,7 +634,7 @@ def make_jqls(keyword):
     return {
         "p0p1":     (f'project in (TS, SR) AND text ~ "{keyword}" AND (labels = P0 OR labels = P1) AND statusCategory != Done ORDER BY created DESC'),
         "open":     (f'project in (TS, SR) AND text ~ "{keyword}" AND statusCategory != Done ORDER BY created DESC'),
-        "features": (f'project in (TS, SR) AND ("Customers[Labels]" IN ("{keyword}") or text ~ "{keyword}") AND (issuetype in (Feature, "Feature Request", Story) OR labels in ("FeatureRequest", "Feature-Request")) AND statusCategory != Done ORDER BY created DESC'),
+        "features": (f'project in (TS, SR) AND ("Customers[Labels]" IN ("{keyword}") or text ~ "{keyword}") AND (issuetype in (Feature, Story) OR labels in ("FeatureRequest")) AND statusCategory != Done ORDER BY created DESC'),
         "resolved": (f'project in (TS, SR) AND text ~ "{keyword}" AND statusCategory = Done AND resolutiondate >= -30d ORDER BY resolutiondate DESC'),
         "recent":   (f'project in (TS, SR) AND text ~ "{keyword}" AND updated >= -30d ORDER BY updated DESC'),
     }
