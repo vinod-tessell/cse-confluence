@@ -1,5 +1,5 @@
 import os, json, re, requests, hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from requests.auth import HTTPBasicAuth
 
 JIRA_BASE  = os.environ["JIRA_BASE_URL"]
@@ -12,6 +12,9 @@ CONFLUENCE_TOKEN = os.environ.get("CONFLUENCE_API_TOKEN", JIRA_TOKEN)
 CONFLUENCE_SPACE = os.environ.get("CONFLUENCE_SPACE_ID", "1225719811")
 CONFLUENCE_PARENT= os.environ.get("CONFLUENCE_PARENT_ID", "1990557712")
 
+# ── Timezone constant — all timestamps in EST ──────────────────────────────────
+EST = timezone(timedelta(hours=-5), 'EST')
+
 # ── Force-rebuild flag: set env var FORCE_REBUILD=1 to ignore build state ─────
 FORCE_REBUILD = os.environ.get("FORCE_REBUILD", "0") == "1"
 
@@ -23,7 +26,7 @@ conf_auth    = HTTPBasicAuth(CONFLUENCE_EMAIL, CONFLUENCE_TOKEN)
 headers      = {"Accept": "application/json"}
 conf_headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
-CACHE_BUST = int(datetime.now(timezone.utc).timestamp())
+CACHE_BUST = int(datetime.now(EST).timestamp())
 
 # ── Customer reference data — sourced from Confluence page ────────────────────
 # Maintained at: https://tessell.atlassian.net/wiki/spaces/CSE/pages/2166030367
@@ -115,154 +118,154 @@ STATIC_OVERRIDES = {
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle", "MySQL", "PostgreSQL"],
         "portal_url": "https://citizens.tessell.com",
-        "confluence_page_id": "2164948993"         # Citizens — Customer Dashboard
+        "confluence_page_id": "2164948993"
     },
     "atlas": {
         "id": "atlas-airlines", "jql_keyword": "Atlas Air",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://atlasair.tessell.com/",
-        "confluence_page_id": "2165178370"         # Atlas Airlines — Customer Dashboard
+        "confluence_page_id": "2165178370"
     },
     "aon": {
         "id": "aon", "jql_keyword": "Aon",
         "cloud": "Azure", "region": "eastus",
         "engines": ["Oracle"],
         "portal_url": "https://aon.tessell.com/",
-        "confluence_page_id": "2165407755"         # AON — Customer Dashboard
+        "confluence_page_id": "2165407755"
     },
     "usda": {
         "id": "usda-exadata", "jql_keyword": "USDA",
         "cloud": "Azure", "region": "eastus",
         "engines": ["Oracle"],
         "portal_url": "",
-        "confluence_page_id": "2165243927"         # USDA Exadata & Solaris/AIX — Customer Dashboard
+        "confluence_page_id": "2165243927"
     },
     "duncan": {
         "id": "duncan-solutions", "jql_keyword": "Duncan",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://duncansolutions.tessell.com/",
-        "confluence_page_id": "2165866507"         # Duncan Solutions - Phase 2 — Customer Dashboard
+        "confluence_page_id": "2165866507"
     },
     "att": {
         "id": "att", "jql_keyword": "ATT",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "",
-        "confluence_page_id": "2165243947"         # ATT — Customer Dashboard
+        "confluence_page_id": "2165243947"
     },
     "boost": {
         "id": "boost-mobile", "jql_keyword": "Boost Mobile",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "",
-        "confluence_page_id": "2165800962"         # Boost Mobile — Customer Dashboard
+        "confluence_page_id": "2165800962"
     },
     "smfg": {
         "id": "smfg", "jql_keyword": "SMFG",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://smfg.tessell.com",
-        "confluence_page_id": "2165538818"         # SMFG — Customer Dashboard
+        "confluence_page_id": "2165538818"
     },
     "pwc": {
         "id": "pwc-services", "jql_keyword": "PWC",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "",
-        "confluence_page_id": "2165604374"         # PWC - Services — Customer Dashboard
+        "confluence_page_id": "2165604374"
     },
     "advizex": {
         "id": "advizex-solutions", "jql_keyword": "Advizex",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://advizex.tessell.com/",
-        "confluence_page_id": "2165899266"         # Advizex Solutions — Customer Dashboard
+        "confluence_page_id": "2165899266"
     },
     "levis": {
         "id": "levis-phase-1", "jql_keyword": "Levis",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://levis.tessell.com/",
-        "confluence_page_id": "2164916227"         # Levis Phase-1 — Customer Dashboard
+        "confluence_page_id": "2164916227"
     },
     "williams": {
         "id": "williams", "jql_keyword": "Williams",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://williams.tessell.com/",
-        "confluence_page_id": "2165243907"         # Williams — Customer Dashboard
+        "confluence_page_id": "2165243907"
     },
     "equinor": {
         "id": "equinor", "jql_keyword": "Equinor",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://equinor.tessell.com",
-        "confluence_page_id": "2165604354"         # Equinor — Customer Dashboard
+        "confluence_page_id": "2165604354"
     },
     "brocacef": {
         "id": "brocacef-nl", "jql_keyword": "Brocacef",
         "cloud": "Azure", "region": "westeurope",
         "engines": ["Oracle"],
         "portal_url": "https://brocacef.tessell.com/",
-        "confluence_page_id": "2165309452"         # Brocacef-NL — Customer Dashboard
+        "confluence_page_id": "2165309452"
     },
     "magaya": {
         "id": "magaya", "jql_keyword": "Magaya",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://magaya.tessell.com/",
-        "confluence_page_id": "2164719623"         # Magaya — Customer Dashboard
+        "confluence_page_id": "2164719623"
     },
     "darlingii": {
         "id": "darlingii", "jql_keyword": "Darlingii",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://darlingii.tessell.com/",
-        "confluence_page_id": "2165932033"         # Darlingii — Customer Dashboard
+        "confluence_page_id": "2165932033"
     },
     "onity": {
         "id": "onity-group", "jql_keyword": "Onity",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://onitygroup.tessell.com",
-        "confluence_page_id": "2165800982"         # Onity Group - Phase 1 — Customer Dashboard
+        "confluence_page_id": "2165800982"
     },
     "bhfl": {
         "id": "bhfl", "jql_keyword": "BHFL",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://bhfl.tessell.com/",
-        "confluence_page_id": "2165964801"         # BHFL — Customer Dashboard
+        "confluence_page_id": "2165964801"
     },
     "collectors": {
         "id": "collectors", "jql_keyword": "Collectors",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://collectors.tessell.com/",
-        "confluence_page_id": "2165702658"         # Collectors — Customer Dashboard
+        "confluence_page_id": "2165702658"
     },
     "usss": {
         "id": "usss", "jql_keyword": "USSS",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "",
-        "confluence_page_id": "2165997569"         # USSS — Customer Dashboard
+        "confluence_page_id": "2165997569"
     },
     "landis": {
         "id": "landisgyr", "jql_keyword": "LandisGyr",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://landisgyr.tessell.com",
-        "confluence_page_id": "2165768194"         # LandisGyr — Customer Dashboard
+        "confluence_page_id": "2165768194"
     },
     "sallie": {
         "id": "sallie-mae", "jql_keyword": "Sallie Mae",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
         "portal_url": "https://salliemae.tessell.com",
-        "confluence_page_id": "2165080066"         # Sallie Mae — Customer Dashboard
+        "confluence_page_id": "2165080066"
     },
 }
 
@@ -275,7 +278,6 @@ def find_override(name):
     return {}
 
 # ── Normalise raw Jira displayNames to human-readable equivalents ──────────────
-# Some accounts use username format (e.g. "siva.pradeep") instead of full names.
 DISPLAY_NAME_MAP = {
     "siva.pradeep":        "Pradeep",
     "srivasram.devarajan": "Srivasram",
@@ -289,17 +291,10 @@ DISPLAY_NAME_MAP = {
 }
 
 def first_name(name):
-    """
-    Return first name only, Title Cased.
-    Handles compound values like 'Kamal & Maneesh' by preserving the
-    full string but capitalising each word — those are intentional combos.
-    """
     if not name:
         return name
-    # Compound names (contain &) — capitalise each word, keep full string
     if "&" in name:
         return " ".join(w.capitalize() for w in name.split())
-    # Normal name — return first word only, Title Cased
     return name.split()[0].capitalize()
 
 def normalise_display_name(raw):
@@ -308,16 +303,11 @@ def normalise_display_name(raw):
         return "—"
     mapped = DISPLAY_NAME_MAP.get(raw, raw)
     return first_name(mapped)
+
 # Populated once at startup by fetch_confluence_page_map()
-_CONFLUENCE_PAGE_MAP = {}   # normalised customer name fragment → page_id
+_CONFLUENCE_PAGE_MAP = {}
 
 def fetch_confluence_page_map():
-    """
-    Fetch all child pages of CONFLUENCE_PARENT once per run.
-    Builds a map of normalised title fragment → page_id so new customers
-    get their Confluence page ID automatically without touching STATIC_OVERRIDES.
-    e.g. "Citizens — Customer Dashboard" → key "citizens" → "2164948993"
-    """
     global _CONFLUENCE_PAGE_MAP
     try:
         r = requests.get(
@@ -333,9 +323,7 @@ def fetch_confluence_page_map():
         for p in pages:
             title = p.get("title", "")
             page_id = p.get("id", "")
-            # Strip " — Customer Dashboard" suffix, lowercase, strip spaces
             name_part = title.replace("— Customer Dashboard", "").replace("- Customer Dashboard", "").strip().lower()
-            # Store under the first word and full normalised name for flexible matching
             _CONFLUENCE_PAGE_MAP[name_part] = page_id
             first_word = name_part.split()[0] if name_part.split() else name_part
             _CONFLUENCE_PAGE_MAP[first_word] = page_id
@@ -344,42 +332,28 @@ def fetch_confluence_page_map():
         print(f"  ⚠️  Confluence page map fetch failed: {e}")
 
 def lookup_confluence_page_id(customer_name):
-    """
-    Look up an existing Confluence page ID for a customer by name.
-    Checks STATIC_OVERRIDES first, then falls back to the live page map.
-    Returns "" if not found (script will then create a new page).
-    """
-    # 1. Static overrides win
     override = find_override(customer_name)
     if override.get("confluence_page_id"):
         return override["confluence_page_id"]
-    # 2. Live Confluence page map
     nl = customer_name.lower()
-    # Try progressively shorter matches
     for key, page_id in _CONFLUENCE_PAGE_MAP.items():
         if key and key in nl:
             return page_id
     return ""
 
-# ── Description parser — extract cloud/region/engines/portal from epic text ───
+# ── Description parser ────────────────────────────────────────────────────────
 def parse_epic_description(description):
-    """
-    Extract cloud, region, engines, and portal URL from free-text epic description.
-    Falls back to sensible defaults when signals are absent.
-    """
     if not description:
         return {}
     text = description.lower()
 
-    # Cloud
     if "azure" in text:
         cloud = "Azure"
-        region = "eastus"   # default Azure region
+        region = "eastus"
     else:
         cloud = "AWS"
-        region = "us-east-1"   # default AWS region
+        region = "us-east-1"
 
-    # Region hints — look for explicit region strings
     region_hints = {
         "us-east-1": "us-east-1", "us-east-2": "us-east-2",
         "us-west-1": "us-west-1", "us-west-2": "us-west-2",
@@ -393,24 +367,21 @@ def parse_epic_description(description):
             region = val
             break
 
-    # Engines — scan for known engine names
     engines = []
     engine_map = [
-        (["oracle"],                          "Oracle"),
-        (["mysql"],                           "MySQL"),
-        (["postgresql", "postgres"],          "PostgreSQL"),
-        (["sql server", "mssql", "sqlserver"],"SQL Server"),
+        (["oracle"],                           "Oracle"),
+        (["mysql"],                            "MySQL"),
+        (["postgresql", "postgres"],           "PostgreSQL"),
+        (["sql server", "mssql", "sqlserver"], "SQL Server"),
     ]
     for keywords, label in engine_map:
         if any(k in text for k in keywords):
             engines.append(label)
     if not engines:
-        engines = ["Oracle"]   # default
+        engines = ["Oracle"]
 
-    # Portal URL — look for tessell.com domain patterns
     portal_url = ""
-    import re as _re
-    portal_match = _re.search(r'https?://[\w.-]+\.tessell\.com[^\s\)\"\']*', description)
+    portal_match = re.search(r'https?://[\w.-]+\.tessell\.com[^\s\)\"\']*', description)
     if portal_match:
         portal_url = portal_match.group(0).rstrip(".,;")
 
@@ -430,14 +401,6 @@ def make_initials(name):
     return name[:2].upper()
 
 def build_customer_entry(idx, name, status, owner, epic_key, description="", phase_override=None, ref_data=None):
-    """
-    Priority order for people fields:
-      tam_primary   → CSO epic assignee.displayName (normalised)  [PRIMARY]
-                    → ref tam_secondary from customer_reference.json  [FALLBACK if no assignee]
-      tam_secondary → customer_reference.json only
-      exec_sponsor  → customer_reference.json only
-    SRE contact is intentionally excluded from all dashboard views.
-    """
     ref_data     = ref_data or {}
     phase        = phase_override or status_to_phase(status)
     palette      = LOGO_PALETTE[idx % len(LOGO_PALETTE)]
@@ -447,13 +410,10 @@ def build_customer_entry(idx, name, status, owner, epic_key, description="", pha
     slug         = override.get("id") or re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
     conf_page_id = override.get("confluence_page_id") or lookup_confluence_page_id(name)
 
-    # tam_primary: CSO assignee (normalised) is always primary;
-    # fall back to ref tam_secondary only if epic has no assignee
     tam_primary   = normalise_display_name(owner) if owner else (ref.get("tam_secondary") or "—")
     tam_secondary = first_name(ref.get("tam_secondary", "") or "")
     exec_sponsor  = first_name(ref.get("exec_sponsor",  "") or "")
 
-    # Avoid showing same name in both primary and secondary
     if tam_secondary and tam_secondary == tam_primary:
         tam_secondary = ""
 
@@ -482,7 +442,6 @@ def build_customer_entry(idx, name, status, owner, epic_key, description="", pha
 
 # ── Build state helpers ────────────────────────────────────────────────────────
 def load_build_state():
-    """Load persisted per-customer fingerprints from last run."""
     if os.path.exists(BUILD_STATE_FILE):
         try:
             with open(BUILD_STATE_FILE) as f:
@@ -496,11 +455,6 @@ def save_build_state(state):
         json.dump(state, f, indent=2)
 
 def customer_fingerprint(keyword):
-    """
-    Lightweight dirtiness check — fetch only the 3 most-recently-updated
-    SR/TS ticket keys + their updated timestamps for this customer.
-    Returns a short hash string. Cost: 1 Jira API call per customer.
-    """
     try:
         r = requests.get(
             f"{JIRA_BASE}/rest/api/3/search/jql",
@@ -513,9 +467,8 @@ def customer_fingerprint(keyword):
             }
         )
         if r.status_code != 200:
-            return None   # can't determine — treat as dirty
+            return None
         issues = r.json().get("issues", [])
-        # fingerprint = hash of (key, updated, status, priority) tuples
         sig = "|".join(
             f"{i['key']}:{i['fields'].get('updated','')}:"
             f"{i['fields'].get('status',{}).get('name','')}:"
@@ -524,25 +477,26 @@ def customer_fingerprint(keyword):
         )
         return hashlib.md5(sig.encode()).hexdigest()
     except Exception:
-        return None   # network error → treat as dirty
+        return None
 
 def is_dirty(cust_id, keyword, build_state):
-    """Return True if this customer needs a rebuild."""
+    """Return True if this customer needs a rebuild. Caches fingerprint to avoid double API call."""
     if FORCE_REBUILD:
         return True
     fp = customer_fingerprint(keyword)
+    build_state[f"{cust_id}__fp_cache"] = fp  # stash for mark_clean to reuse
     if fp is None:
-        return True   # unknown → rebuild to be safe
+        return True
     return build_state.get(cust_id) != fp
 
 def mark_clean(cust_id, keyword, build_state):
-    fp = customer_fingerprint(keyword)
+    """Reuse cached fingerprint from is_dirty — avoids a second Jira API call."""
+    fp = build_state.pop(f"{cust_id}__fp_cache", None) or customer_fingerprint(keyword)
     if fp:
         build_state[cust_id] = fp
 
 # ── Jira helpers ───────────────────────────────────────────────────────────────
 def fetch_active_customers():
-    # ── Load reference data and Confluence page map once ──────────────────────
     ref_data = load_customer_reference()
     print(f"  📋 Customer reference loaded — {len(ref_data)} entries")
     fetch_confluence_page_map()
@@ -641,7 +595,7 @@ def make_jqls(keyword):
 
 def fetch_customer_data(keyword):
     queries = make_jqls(keyword)
-    print(f"  queries["features"]"); 
+    print(f"  Features query: {queries['features']}")
     return {
         "p0p1":           jql(queries["p0p1"],     max=100),
         "open":           jql(queries["open"],     max=200),
@@ -731,7 +685,7 @@ def fmt_date(iso):
 def age_days(iso):
     if not iso: return "—"
     try:
-        d = (datetime.now(timezone.utc) - datetime.fromisoformat(iso[:19]).replace(tzinfo=timezone.utc)).days
+        d = (datetime.now(EST) - datetime.fromisoformat(iso[:19]).replace(tzinfo=EST)).days
         return f"{d}d" if d > 0 else "today"
     except: return "—"
 
@@ -1000,7 +954,7 @@ function runHealth(DATA) {
 
 # ── Customer dashboard builder ─────────────────────────────────────────────────
 def build_customer_html(cust, data):
-    now      = datetime.now(timezone.utc).strftime("%b %d, %Y %H:%M UTC")
+    now      = datetime.now(EST).strftime("%b %d, %Y %H:%M EST")
     p0p1     = data["p0p1"]; open_t = data["open"]
     features = data["features"]; resolved = data["resolved"]
     timeline = build_timeline(data["recent"])
@@ -1023,7 +977,6 @@ def build_customer_html(cust, data):
     portal_html = (f'<a href="{cust["portal_url"]}" target="_blank" style="color:#00C2E0;font-size:11px;text-decoration:none">{cust["portal_url"]}</a>') if cust.get("portal_url") else "—"
     engines_str = " · ".join(cust["engines"])
 
-    # ── People fields ──────────────────────────────────────────────────────────
     tam_primary   = cust.get("tam_primary", "—")  or "—"
     tam_secondary = cust.get("tam_secondary", "")
     exec_sponsor  = cust.get("exec_sponsor", "—") or "—"
@@ -1084,14 +1037,12 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
       <div style="width:7px;height:7px;border-radius:50%;background:{health_color}" id="health-dot"></div>
       <span id="health-badge" style="color:{health_color}">{health_label}</span>
     </div>
-    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: {datetime.now(timezone(timedelta(hours=-5), 'EST'))}</div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: {now}</div>
   </div>
 </div>
 <div class="body">
   <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;padding:.75rem 1.5rem;margin-bottom:1rem;display:grid;grid-template-columns:repeat(7,1fr);gap:1rem;align-items:start">
-    
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Account</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust['name']}</div></div>
-    
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Exec Sponsor</div><div style="font-size:12px;font-weight:700;color:#172B4D">{exec_sponsor}</div></div>
     <div style="grid-column:span 2"><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div>{tam_html}</div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cloud</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust['cloud']} · {cust['region']}</div></div>
@@ -1180,7 +1131,7 @@ function buildHealthDrawer(DATA){{
 
 # ── Master dashboard builder ───────────────────────────────────────────────────
 def build_master_html(customer_results):
-    now    = datetime.now(timezone.utc).strftime("%b %d, %Y %H:%M UTC")
+    now    = datetime.now(EST).strftime("%b %d, %Y %H:%M EST")
     real   = [c for c in customer_results if c["config"].get("name")]
     total  = len(real)
     at_risk= sum(1 for c in real if c["health_key"]=="atrisk")
@@ -1386,7 +1337,7 @@ def build_master_html(customer_results):
       <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">Executive overview · Tessell CSE · Auto-refreshed from Jira every 30 minutes</div></div>
     </div>
     <div style="text-align:right">
-      <div style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.55)">{datetime.now(timezone.utc).strftime("%B %d, %Y")}</div>
+      <div style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.55)">{datetime.now(EST).strftime("%B %d, %Y")}</div>
       <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px">{now}</div>
     </div>
   </div>
@@ -1443,14 +1394,13 @@ def get_confluence_page_version(page_id):
     return r.json().get("version",{}).get("number",1) if r.status_code==200 else 1
 
 def confluence_page_url(page_id):
-    """Canonical Confluence page URL — the ONLY link ever shown to users."""
     if not page_id:
         return "#"
     return f"https://tessell.atlassian.net/wiki/spaces/CSE/pages/{page_id}"
 
 def ensure_confluence_page(cust, dashboard_url):
     page_id    = cust.get("confluence_page_id","").strip()
-    busted_url = f"{dashboard_url}?v={CACHE_BUST}"  # GitHub URL only used as iframe src, never as a nav link
+    busted_url = f"{dashboard_url}?v={CACHE_BUST}"
     iframe_body = json.dumps({"version":1,"type":"doc","content":[{"type":"extension","attrs":{
         "extensionType":"com.atlassian.confluence.macro.core","extensionKey":"iframe",
         "parameters":{"macroParams":{"src":{"value":busted_url},"width":{"value":"100%"},"height":{"value":"900px"},"frameborder":{"value":"0"},"scrolling":{"value":"yes"}}},
@@ -1497,15 +1447,11 @@ if __name__ == "__main__":
         cust_id = cust["id"]
         keyword = cust["jql_keyword"]
 
-        # ── Check for existing HTML (need summary stats even for skipped customers) ─
         filename = f"{cust_id}_dashboard.html"
         gh_url   = f"https://vinod-tessell.github.io/cse-confluence/{filename}"
         conf_url = confluence_page_url(cust.get("confluence_page_id",""))
 
-        # ── Skipped customers: resolve conf_url from stored page_id ──────────────
-        conf_url = confluence_page_url(cust.get("confluence_page_id",""))
         if not is_dirty(cust_id, keyword, build_state) and os.path.exists(filename):
-            # ── SKIP: load lightweight summary from existing build_state metadata ──
             cached = build_state.get(f"{cust_id}__meta", {})
             print(f"  ⏭  {cust['name']} — unchanged, skipping rebuild")
             skipped.append(cust["name"])
@@ -1521,7 +1467,6 @@ if __name__ == "__main__":
             })
             continue
 
-        # ── DIRTY: full rebuild ────────────────────────────────────────────────
         print(f"\n── {cust['name']} ({cust['cso_epic']} · {cust['cso_status']}) ──")
         print(f"  Fetching Jira data (keyword: {keyword})...")
         try:
@@ -1546,8 +1491,6 @@ if __name__ == "__main__":
         if page_id and page_id != cust.get("confluence_page_id",""):
             cust["confluence_page_id"] = page_id; pages_updated = True
 
-        # ── All nav links point to Confluence only — GitHub URL is iframe-internal ──
-        # Re-read page_id from cust after ensure_confluence_page may have written it back
         conf_url = confluence_page_url(cust.get("confluence_page_id", ""))
 
         result = {
@@ -1558,13 +1501,12 @@ if __name__ == "__main__":
         customer_results.append(result)
         rebuilt.append(cust["name"])
 
-        # ── Persist fingerprint + lightweight meta for next run ────────────────
         mark_clean(cust_id, keyword, build_state)
         build_state[f"{cust_id}__meta"] = {
             "health_key":hk,"health_label":label,"health_color":color,
             "p0_count":len(data["p0p1"]),"open_count":len(data["open"]),"feat_count":len(data["features"])
         }
-        save_build_state(build_state)   # save incrementally — crash-safe
+        save_build_state(build_state)
 
     if pages_updated:
         with open("customers.json","w") as f: json.dump(CUSTOMERS,f,indent=2)
@@ -1574,7 +1516,6 @@ if __name__ == "__main__":
     if rebuilt: print(f"  Rebuilt:  {', '.join(rebuilt)}")
     if skipped: print(f"  Skipped:  {', '.join(skipped)}")
 
-    # ── Master dashboard — always rebuilt (fast, no Jira calls) ───────────────
     print("\n── Master Dashboard (always rebuilt) ───────────────────────────")
     master = build_master_html(customer_results)
     with open("master_dashboard.html","w") as f: f.write(master)
