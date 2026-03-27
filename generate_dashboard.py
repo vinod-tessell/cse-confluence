@@ -121,14 +121,14 @@ STATIC_OVERRIDES = {
         "id": "atlas-airlines", "jql_keyword": "Atlas Air",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://atlasair.tessell.com/",
         "confluence_page_id": "2165178370"         # Atlas Airlines — Customer Dashboard
     },
     "aon": {
         "id": "aon", "jql_keyword": "Aon",
         "cloud": "Azure", "region": "eastus",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://aon.tessell.com/",
         "confluence_page_id": "2165407755"         # AON — Customer Dashboard
     },
     "usda": {
@@ -142,7 +142,7 @@ STATIC_OVERRIDES = {
         "id": "duncan-solutions", "jql_keyword": "Duncan",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://duncansolutions.tessell.com/",
         "confluence_page_id": "2165866507"         # Duncan Solutions - Phase 2 — Customer Dashboard
     },
     "att": {
@@ -163,7 +163,7 @@ STATIC_OVERRIDES = {
         "id": "smfg", "jql_keyword": "SMFG",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://smfg.tessell.com",
         "confluence_page_id": "2165538818"         # SMFG — Customer Dashboard
     },
     "pwc": {
@@ -177,70 +177,70 @@ STATIC_OVERRIDES = {
         "id": "advizex-solutions", "jql_keyword": "Advizex",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://advizex.tessell.com/",
         "confluence_page_id": "2165899266"         # Advizex Solutions — Customer Dashboard
     },
     "levis": {
         "id": "levis-phase-1", "jql_keyword": "Levis",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://levis.tessell.com/",
         "confluence_page_id": "2164916227"         # Levis Phase-1 — Customer Dashboard
     },
     "williams": {
         "id": "williams", "jql_keyword": "Williams",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://williams.tessell.com/",
         "confluence_page_id": "2165243907"         # Williams — Customer Dashboard
     },
     "equinor": {
         "id": "equinor", "jql_keyword": "Equinor",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://equinor.tessell.com",
         "confluence_page_id": "2165604354"         # Equinor — Customer Dashboard
     },
     "brocacef": {
         "id": "brocacef-nl", "jql_keyword": "Brocacef",
         "cloud": "Azure", "region": "westeurope",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://brocacef.tessell.com/",
         "confluence_page_id": "2165309452"         # Brocacef-NL — Customer Dashboard
     },
     "magaya": {
         "id": "magaya", "jql_keyword": "Magaya",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://magaya.tessell.com/",
         "confluence_page_id": "2164719623"         # Magaya — Customer Dashboard
     },
     "darlingii": {
         "id": "darlingii", "jql_keyword": "Darlingii",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://darlingii.tessell.com/",
         "confluence_page_id": "2165932033"         # Darlingii — Customer Dashboard
     },
     "onity": {
         "id": "onity-group", "jql_keyword": "Onity",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://onitygroup.tessell.com",
         "confluence_page_id": "2165800982"         # Onity Group - Phase 1 — Customer Dashboard
     },
     "bhfl": {
         "id": "bhfl", "jql_keyword": "BHFL",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://bhfl.tessell.com/",
         "confluence_page_id": "2165964801"         # BHFL — Customer Dashboard
     },
     "collectors": {
         "id": "collectors", "jql_keyword": "Collectors",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://collectors.tessell.com/",
         "confluence_page_id": "2165702658"         # Collectors — Customer Dashboard
     },
     "usss": {
@@ -254,14 +254,14 @@ STATIC_OVERRIDES = {
         "id": "landisgyr", "jql_keyword": "LandisGyr",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://landisgyr.tessell.com",
         "confluence_page_id": "2165768194"         # LandisGyr — Customer Dashboard
     },
     "sallie": {
         "id": "sallie-mae", "jql_keyword": "Sallie Mae",
         "cloud": "AWS", "region": "us-east-1",
         "engines": ["Oracle"],
-        "portal_url": "",
+        "portal_url": "https://salliemae.tessell.com",
         "confluence_page_id": "2165080066"         # Sallie Mae — Customer Dashboard
     },
 }
