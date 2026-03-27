@@ -641,6 +641,7 @@ def make_jqls(keyword):
 
 def fetch_customer_data(keyword):
     queries = make_jqls(keyword)
+    print(f"  queries["features"]"); 
     return {
         "p0p1":           jql(queries["p0p1"],     max=100),
         "open":           jql(queries["open"],     max=200),
@@ -1015,10 +1016,10 @@ def build_customer_html(cust, data):
         key = i["key"]; summ = (i["fields"].get("summary") or "")[:65]; url = f"{JIRA_BASE}/browse/{key}"
         sc_, sl = status_class(i["fields"].get("status",{}).get("name",""))
         feat_items += (f'<div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡 </div>'
-                       f'<div class="fr-content"><div class="fr-title">{queries["features"]}</div>'
+                       f'<div class="fr-content"><div class="fr-title">{summ}</div>'
                        f'<div class="fr-meta"><a class="tlink" href="{url}" target="_blank">{key}</a></div></div>'
                        f'<span class="fr-status {sc_}">{sl}</span></div>')
-feat_items = ""
+
     portal_html = (f'<a href="{cust["portal_url"]}" target="_blank" style="color:#00C2E0;font-size:11px;text-decoration:none">{cust["portal_url"]}</a>') if cust.get("portal_url") else "—"
     engines_str = " · ".join(cust["engines"])
 
@@ -1083,7 +1084,7 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
       <div style="width:7px;height:7px;border-radius:50%;background:{health_color}" id="health-dot"></div>
       <span id="health-badge" style="color:{health_color}">{health_label}</span>
     </div>
-    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: {now}</div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: {datetime.now(timezone(timedelta(hours=-5), 'EST'))}</div>
   </div>
 </div>
 <div class="body">
