@@ -604,6 +604,7 @@ def fetch_customer_data(keyword):
         "recent":         jql(queries["recent"],   max=12),
         "ticket_history": fetch_monthly_buckets(keyword),
         "pulse":          fetch_pulse_from_comments(keyword),
+        "jqls":           queries,   # pass raw JQLs through to HTML builder
     }
 
 def fetch_monthly_buckets(keyword):
@@ -904,6 +905,17 @@ tr:last-child td{border-bottom:none}
 .drawer-head{padding:.7rem 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;justify-content:space-between}
 .drawer-title{font-size:12px;font-weight:700;color:#172B4D}
 .drawer-close{font-size:14px;color:#5E6C84;cursor:pointer;background:none;border:none;padding:0 4px;line-height:1}
+.jql-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:1rem 1.25rem}
+.jql-block{background:#F8F9FA;border:.5px solid #DFE1E6;border-radius:8px;overflow:hidden}
+.jql-block-head{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:#F4F5F7;border-bottom:.5px solid #DFE1E6}
+.jql-label{font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:5px}
+.jql-label-dot{width:6px;height:6px;border-radius:50%}
+.jql-copy{font-size:10px;font-weight:600;color:#1A6FDB;background:none;border:none;cursor:pointer;padding:0;line-height:1}
+.jql-copy:hover{text-decoration:underline}
+.jql-code{font-family:'SF Mono',ui-monospace,Menlo,Monaco,monospace;font-size:10.5px;color:#172B4D;line-height:1.65;padding:10px;word-break:break-word;white-space:pre-wrap}
+.jql-open-link{display:inline-block;margin:0 10px 10px;font-size:10px;font-weight:600;color:#1A6FDB;text-decoration:none}
+.jql-open-link:hover{text-decoration:underline}
+.jql-footer{padding:.6rem 1.25rem;background:#FAFBFC;border-top:.5px solid #DFE1E6;font-size:10px;color:#5E6C84;display:flex;align-items:center;gap:5px}
 """
 
 NAV_MASTER = """<div class="nav">
@@ -1019,6 +1031,29 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
     open_col = "orange" if len(open_t) > 5 else "yellow"
     nav = NAV_CUSTOMER.format(parent=CONFLUENCE_PARENT)
 
+    # ── JQL drawer blocks ──────────────────────────────────────────────────────
+    jqls = data.get("jqls", make_jqls(cust["jql_keyword"]))
+    _JQL_META = [
+        ("p0p1",     "🚨", "#E53E3E", "Open P0 / P1"),
+        ("open",     "🎫", "#DD6B20", "All Open Tickets"),
+        ("features", "💡", "#1A6FDB", "Feature Requests"),
+        ("resolved", "✅", "#38A169", "Resolved (30d)"),
+        ("recent",   "🕐", "#5E6C84", "Recent Activity"),
+    ]
+    jql_blocks_html = ""
+    for key, icon, dot_color, label in _JQL_META:
+        q   = jqls.get(key, "")
+        enc = q.replace(" ", "+").replace('"', '%22')
+        run_url = f"{JIRA_BASE}/issues/?jql={enc}"
+        jql_blocks_html += f"""<div class="jql-block">
+  <div class="jql-block-head">
+    <span class="jql-label"><span class="jql-label-dot" style="background:{dot_color}"></span>{icon} {label}</span>
+    <button class="jql-copy" onclick="copyJql(this,'{key}')">Copy</button>
+  </div>
+  <div class="jql-code" id="jql-{key}">{q}</div>
+  <a class="jql-open-link" href="{run_url}" target="_blank">↗ Run in Jira</a>
+</div>"""
+
     return f"""<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -1049,12 +1084,13 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust['phase']}</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div>{portal_html}</div></div>
   </div>
-  <div class="metrics">
+  <div class="metrics" style="grid-template-columns:repeat(6,1fr)">
     <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval {mv_col}">{len(p0p1)}</div><div class="msub">Active critical issues</div></div>
     <div class="metric" id="m-open" onclick="toggleDrawer('drawer-open','m-open')"><div class="mlabel">Open Tickets</div><div class="mval {open_col}">{len(open_t)}</div><div class="msub">Across all priorities</div></div>
     <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">{len(features)}</div><div class="msub">Pending delivery</div></div>
     <div class="metric" id="m-res" onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">{len(resolved)}</div><div class="msub">Last 30 days</div></div>
     <div class="metric" id="m-health" onclick="toggleDrawer('drawer-health','m-health')"><div class="mlabel">Health Score (WIP)</div><div class="mval" style="color:{health_color}">{score}/10</div><div class="msub">Rule-based</div></div>
+    <div class="metric" id="m-jql" onclick="toggleDrawer('drawer-jql','m-jql')" style="border-left:2px solid #E6F1FB"><div class="mlabel">JQL Queries</div><div class="mval" style="font-size:16px;padding-top:3px">🔍</div><div class="msub">Show / hide</div></div>
   </div>
   <div class="drawer" id="drawer-health">
     <div class="drawer-head"><span class="drawer-title">🧮 Health Score — {score}/10 · <span style="color:{health_color}">{health_label}</span></span><button class="drawer-close" onclick="toggleDrawer('drawer-health','m-health')">✕</button></div>
@@ -1072,6 +1108,14 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
   <div class="drawer" id="drawer-open"><div class="drawer-head"><span class="drawer-title">🎫 All Open Tickets ({len(open_t)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-open','m-open')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{tk_rows}</tbody></table></div>
   <div class="drawer" id="drawer-feat"><div class="drawer-head"><span class="drawer-title">💡 Feature Requests ({len(features)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in features) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr>'}</tbody></table></div>
   <div class="drawer" id="drawer-res"><div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days ({len(resolved)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in resolved) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr>'}</tbody></table></div>
+  <div class="drawer" id="drawer-jql">
+    <div class="drawer-head">
+      <span class="drawer-title">🔍 JQL Queries — <span style="font-weight:400;color:#5E6C84">queries executed for {cust['name']}</span></span>
+      <button class="drawer-close" onclick="toggleDrawer('drawer-jql','m-jql')">✕</button>
+    </div>
+    <div class="jql-grid">{jql_blocks_html}</div>
+    <div class="jql-footer">💡 Keyword used: <b style="color:#172B4D;margin-left:3px">{cust['jql_keyword']}</b> &nbsp;·&nbsp; Click "Run in Jira" to open results live &nbsp;·&nbsp; "Copy" copies the raw JQL to clipboard</div>
+  </div>
   <div class="grid2">
     <div>
       <div class="ai-panel">
@@ -1106,6 +1150,7 @@ const DATA={data_js};
 {HEALTH_JS}
 window.onload=()=>{{runHealth(DATA);buildHealthDrawer(DATA);}};
 function toggleDrawer(dId,mId){{const d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.metric').forEach(x=>x.classList.remove('active'));if(!open){{d.classList.add('open');m.classList.add('active');}}}}
+function copyJql(btn,key){{const el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(()=>{{const orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(()=>{{btn.textContent=orig;btn.style.color='';}} ,1500);}}).catch(()=>{{btn.textContent='Failed';setTimeout(()=>btn.textContent='Copy',1500);}});}}
 function buildHealthDrawer(DATA){{
   const factors=[],actions=[];
   if(DATA.p0p1>=3){{factors.push(['−4 pts',`${{DATA.p0p1}} active P0 incidents (${{DATA.p0keys.join(', ')}})`, '#E53E3E']);actions.push(['🚨','Escalate to engineering leadership']);}}
