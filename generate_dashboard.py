@@ -1044,7 +1044,7 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
   plugins:{{legend:{{display:true,position:'top',align:'end',labels:{{font:{{size:9}},color:'rgba(255,255,255,0.5)',boxWidth:8,padding:8}}}}}},
   scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:9}},color:'rgba(255,255,255,0.4)'}},border:{{display:false}}}},
            y:{{min:0,max:{chart_max},grid:{{color:'rgba(255,255,255,0.06)'}},ticks:{{font:{{size:9}},color:'rgba(255,255,255,0.4)',stepSize:2}},border:{{display:false}}}}}}}}}}); """
-        chart_block = f'<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ticket Volume Trend</div><div style="position:relative;height:120px"><canvas id="trendChart"></canvas></div>'
+        chart_block = f'<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ticket Volume Trend (WIP)</div><div style="position:relative;height:120px"><canvas id="trendChart"></canvas></div>'
     else:
         timeseries_js = ""; chart_block = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>'
 
