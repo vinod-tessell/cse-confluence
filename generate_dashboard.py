@@ -585,26 +585,38 @@ def jql(query, max=20):
     return r.json().get("issues", [])
 
 def make_jqls(keyword):
+    _feat_types  = 'issuetype in (Feature, Story) OR labels in ("FeatureRequest")'
+    _not_feat    = f'NOT ({_feat_types})'
     return {
-        "p0p1":     (f'project in (TS, SR) AND text ~ "{keyword}" AND (labels = P0 OR labels = P1) AND statusCategory != Done ORDER BY created DESC'),
-        "open":     (f'project in (TS, SR) AND text ~ "{keyword}" AND statusCategory != Done ORDER BY created DESC'),
-        "features": (f'project in (TS, SR) AND ("Customers[Labels]" IN ("{keyword}") or text ~ "{keyword}") AND (issuetype in (Feature, Story) OR labels in ("FeatureRequest")) AND statusCategory != Done ORDER BY created DESC'),
-        "resolved": (f'project in (TS, SR) AND text ~ "{keyword}" AND statusCategory = Done AND resolutiondate >= -30d ORDER BY resolutiondate DESC'),
-        "recent":   (f'project in (TS, SR) AND text ~ "{keyword}" AND updated >= -30d ORDER BY updated DESC'),
+        # P0/P1 critical incidents span both projects — severity label is the signal
+        "p0p1":        (f'project in (TS, SR) AND text ~ "{keyword}" AND (labels = P0 OR labels = P1) AND statusCategory != Done ORDER BY created DESC'),
+        # Support tickets — SR only (customer-reported issues / service requests)
+        "support":     (f'project = SR AND text ~ "{keyword}" AND statusCategory != Done ORDER BY created DESC'),
+        # Feature requests — TS only, Feature/Story issuetype or FeatureRequest label
+        "features":    (f'project = TS AND ("Customers[Labels]" IN ("{keyword}") OR text ~ "{keyword}") AND ({_feat_types}) AND statusCategory != Done ORDER BY created DESC'),
+        # Engineering tickets — TS only, everything that is NOT a feature/story
+        "eng_tickets": (f'project = TS AND text ~ "{keyword}" AND {_not_feat} AND statusCategory != Done ORDER BY created DESC'),
+        # Resolved — SR only (customer-facing closure is what matters for health)
+        "resolved":    (f'project = SR AND text ~ "{keyword}" AND statusCategory = Done AND resolutiondate >= -30d ORDER BY resolutiondate DESC'),
+        # Recent activity feed — both projects for full timeline
+        "recent":      (f'project in (TS, SR) AND text ~ "{keyword}" AND updated >= -30d ORDER BY updated DESC'),
     }
 
 def fetch_customer_data(keyword):
     queries = make_jqls(keyword)
-    print(f"  Features query: {queries['features']}")
+    print(f"  Support query:      {queries['support']}")
+    print(f"  Eng tickets query:  {queries['eng_tickets']}")
+    print(f"  Features query:     {queries['features']}")
     return {
-        "p0p1":           jql(queries["p0p1"],     max=100),
-        "open":           jql(queries["open"],     max=200),
-        "features":       jql(queries["features"], max=100),
-        "resolved":       jql(queries["resolved"], max=500),
-        "recent":         jql(queries["recent"],   max=12),
+        "p0p1":           jql(queries["p0p1"],        max=100),
+        "support":        jql(queries["support"],     max=200),
+        "features":       jql(queries["features"],    max=100),
+        "eng_tickets":    jql(queries["eng_tickets"],  max=100),
+        "resolved":       jql(queries["resolved"],    max=500),
+        "recent":         jql(queries["recent"],      max=12),
         "ticket_history": fetch_monthly_buckets(keyword),
         "pulse":          fetch_pulse_from_comments(keyword),
-        "jqls":           queries,   # pass raw JQLs through to HTML builder
+        "jqls":           queries,
     }
 
 def fetch_monthly_buckets(keyword):
@@ -722,25 +734,43 @@ def ticket_row(issue):
             f'<td>{summ}</td><td><span class="pb {pc}">{pl}</span></td>'
             f'<td><span class="sp {sc_}">{sl}</span></td><td>{age_days(f.get("created",""))}</td></tr>')
 
-def compute_health(p0p1, open_tickets, features, resolved):
+def compute_health(p0p1, support_tickets, features, resolved, eng_tickets):
     score   = 10
-    pending = len([i for i in open_tickets
+
+    # Pending count is SR-based (customer-visible blockage)
+    pending = len([i for i in support_tickets
                    if 'pending' in (i['fields'].get('status',{}).get('name','') or '').lower()])
-    if   len(p0p1) >= 3:          score -= 4
-    elif len(p0p1) == 2:          score -= 3
-    elif len(p0p1) == 1:          score -= 2
-    if   len(open_tickets) >= 10: score -= 2
-    elif len(open_tickets) >= 6:  score -= 1
-    if   pending >= 4:            score -= 2
-    elif pending >= 2:            score -= 1
-    if   len(features) >= 5:      score -= 1
-    if   len(resolved) == 0:      score -= 1
+
+    # P0/P1 critical incidents (−2 to −4)
+    if   len(p0p1) >= 3:              score -= 4
+    elif len(p0p1) == 2:              score -= 3
+    elif len(p0p1) == 1:              score -= 2
+
+    # Open support tickets SR backlog (−1 to −2)
+    if   len(support_tickets) >= 10:  score -= 2
+    elif len(support_tickets) >= 6:   score -= 1
+
+    # Pending engineering response on SR tickets (−1 to −2)
+    if   pending >= 4:                score -= 2
+    elif pending >= 2:                score -= 1
+
+    # Engineering TS tickets backlog (−1)
+    if   len(eng_tickets) >= 5:       score -= 1
+
+    # Feature request backlog TS (−1)
+    if   len(features) >= 5:          score -= 1
+
+    # No SR resolutions in 30d (−1)
+    if   len(resolved) == 0:          score -= 1
+
     score = max(1, min(10, score))
-    label = ("Healthy" if score >= 8 else "Stable" if score >= 6
-             else "Needs Attention" if score >= 4 else "At Risk")
+    label = ("Healthy"         if score >= 8 else
+             "Stable"          if score >= 6 else
+             "Needs Attention" if score >= 4 else "At Risk")
     color = "#68D391" if score >= 8 else "#FFC107" if score >= 6 else "#FC8181"
-    hk    = ("healthy" if score >= 8 else "stable" if score >= 6
-             else "attention" if score >= 4 else "atrisk")
+    hk    = ("healthy"   if score >= 8 else
+             "stable"    if score >= 6 else
+             "attention" if score >= 4 else "atrisk")
     return score, label, color, hk, pending
 
 # ── Timeline builder ───────────────────────────────────────────────────────────
@@ -943,14 +973,16 @@ function runHealth(DATA) {
   else if(DATA.p0p1===2){score-=3;findings.push(`<b style="color:#FC8181">2 active P0 incidents</b> (${DATA.p0keys.join(', ')})`);actions.push(`Both need an engineering owner today`);}
   else if(DATA.p0p1===1){score-=2;findings.push(`<b style="color:#FFC107">1 active P0/P1</b> (${DATA.p0keys[0]})`);actions.push(`Ensure ${DATA.p0keys[0]} has daily updates to customer`);}
   else{findings.push('<b style="color:#68D391">No active P0/P1 incidents</b>');}
-  if(DATA.open>=8){score-=2;findings.push(`High backlog: <b>${DATA.open} tickets</b> open`);}
-  else if(DATA.open>=5){score-=1;findings.push(`Moderate backlog: <b>${DATA.open} open tickets</b>`);}
-  else{findings.push(`<b style="color:#68D391">Healthy ticket volume</b>: ${DATA.open} open`);}
-  if(DATA.pendingEng>=4){score-=2;findings.push(`<b>${DATA.pendingEng} tickets stuck pending engineering</b>`);actions.push(`Set ETAs on all ${DATA.pendingEng} blocked tickets`);}
-  else if(DATA.pendingEng>=2){score-=1;findings.push(`${DATA.pendingEng} tickets pending engineering`);}
+  if(DATA.support>=8){score-=2;findings.push(`High SR backlog: <b>${DATA.support} support tickets</b> open`);}
+  else if(DATA.support>=5){score-=1;findings.push(`Moderate SR backlog: <b>${DATA.support} support tickets</b>`);}
+  else{findings.push(`<b style="color:#68D391">Healthy SR volume</b>: ${DATA.support} open`);}
+  if(DATA.pendingEng>=4){score-=2;findings.push(`<b>${DATA.pendingEng} SR tickets stuck pending engineering</b>`);actions.push(`Set ETAs on all ${DATA.pendingEng} blocked SR tickets`);}
+  else if(DATA.pendingEng>=2){score-=1;findings.push(`${DATA.pendingEng} SR tickets pending engineering`);}
+  if(DATA.eng_tickets>=5){score-=1;findings.push(`Engineering backlog: <b>${DATA.eng_tickets} TS tickets</b>`);actions.push('Review and prioritise TS engineering backlog');}
+  else{findings.push(`<b style="color:#68D391">TS engineering queue</b>: ${DATA.eng_tickets} open`);}
   if(DATA.features>=5){score-=1;findings.push(`Large feature backlog: <b>${DATA.features} requests</b>`);actions.push('Schedule a feature roadmap call');}
-  if(DATA.resolved===0){score-=1;findings.push('<b style="color:#FFC107">No tickets resolved in 30 days</b>');}
-  else{findings.push(`<b style="color:#68D391">${DATA.resolved} resolved</b> in last 30 days`);}
+  if(DATA.resolved===0){score-=1;findings.push('<b style="color:#FFC107">No SR tickets resolved in 30 days</b>');}
+  else{findings.push(`<b style="color:#68D391">${DATA.resolved} SR resolved</b> in last 30 days`);}
   score=Math.max(1,Math.min(10,score));
   const color=score>=8?'#68D391':score>=6?'#FFC107':'#FC8181';
   const label=score>=8?'Healthy':score>=6?'Stable':score>=4?'Needs Attention':'At Risk';
@@ -966,16 +998,20 @@ function runHealth(DATA) {
 
 # ── Customer dashboard builder ─────────────────────────────────────────────────
 def build_customer_html(cust, data):
-    now      = datetime.now(EST).strftime("%b %d, %Y %H:%M EST")
-    p0p1     = data["p0p1"]; open_t = data["open"]
-    features = data["features"]; resolved = data["resolved"]
-    timeline = build_timeline(data["recent"])
-    score, health_label, health_color, _, pending = compute_health(p0p1, open_t, features, resolved)
-    p0_keys  = [i["key"] for i in p0p1[:3]]
-    high_keys= [i["key"] for i in open_t if (i['fields'].get('priority',{}).get('name','') or '').lower() in ('high','p1','highest')][:3]
+    now         = datetime.now(EST).strftime("%b %d, %Y %H:%M EST")
+    p0p1        = data["p0p1"]
+    support     = data["support"]
+    features    = data["features"]
+    eng_tickets = data["eng_tickets"]
+    resolved    = data["resolved"]
+    timeline    = build_timeline(data["recent"])
+    score, health_label, health_color, _, pending = compute_health(p0p1, support, features, resolved, eng_tickets)
+    p0_keys   = [i["key"] for i in p0p1[:3]]
+    high_keys = [i["key"] for i in support if (i['fields'].get('priority',{}).get('name','') or '').lower() in ('high','p1','highest')][:3]
 
-    p0_rows = "".join(ticket_row(i) for i in p0p1[:5]) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr>'
-    tk_rows = "".join(ticket_row(i) for i in open_t[:10]) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open tickets</td></tr>'
+    p0_rows   = "".join(ticket_row(i) for i in p0p1[:5])   or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr>'
+    sup_rows  = "".join(ticket_row(i) for i in support[:10]) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open support tickets</td></tr>'
+    eng_rows  = "".join(ticket_row(i) for i in eng_tickets[:10]) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open engineering tickets</td></tr>'
 
     feat_items = ""
     for i in features[:5]:
@@ -1026,19 +1062,21 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
     kw_enc  = cust["jql_keyword"].replace(" ", "+").replace('"', '%22')
     ql_jira = f'{JIRA_BASE}/issues/?jql=text+~+%22{kw_enc}%22+AND+statusCategory+%21%3D+Done'
 
-    data_js  = json.dumps({"p0p1":len(p0p1),"open":len(open_t),"features":len(features),"resolved":len(resolved),"pendingEng":pending,"p0keys":p0_keys,"highKeys":high_keys,"generated":now,"score":score,"scoreLabel":health_label,"scoreColor":health_color})
-    mv_col   = "red"    if len(p0p1) > 0   else "green"
-    open_col = "orange" if len(open_t) > 5 else "yellow"
+    data_js  = json.dumps({"p0p1":len(p0p1),"support":len(support),"features":len(features),"eng_tickets":len(eng_tickets),"resolved":len(resolved),"pendingEng":pending,"p0keys":p0_keys,"highKeys":high_keys,"generated":now,"score":score,"scoreLabel":health_label,"scoreColor":health_color})
+    mv_col   = "red"    if len(p0p1) > 0     else "green"
+    sup_col  = "orange" if len(support) > 5  else "yellow"
+    eng_col  = "orange" if len(eng_tickets) > 4 else "blue"
     nav = NAV_CUSTOMER.format(parent=CONFLUENCE_PARENT)
 
     # ── JQL drawer blocks ──────────────────────────────────────────────────────
     jqls = data.get("jqls", make_jqls(cust["jql_keyword"]))
     _JQL_META = [
-        ("p0p1",     "🚨", "#E53E3E", "Open P0 / P1"),
-        ("open",     "🎫", "#DD6B20", "All Open Tickets"),
-        ("features", "💡", "#1A6FDB", "Feature Requests"),
-        ("resolved", "✅", "#38A169", "Resolved (30d)"),
-        ("recent",   "🕐", "#5E6C84", "Recent Activity"),
+        ("p0p1",        "🚨", "#E53E3E", "Open P0 / P1"),
+        ("support",     "🎫", "#DD6B20", "Support Tickets (SR)"),
+        ("features",    "💡", "#1A6FDB", "Feature Requests (TS)"),
+        ("eng_tickets", "⚙️",  "#7B2FBE", "Engineering Tickets (TS)"),
+        ("resolved",    "✅", "#38A169", "Resolved SR (30d)"),
+        ("recent",      "🕐", "#5E6C84", "Recent Activity"),
     ]
     jql_blocks_html = ""
     for key, icon, dot_color, label in _JQL_META:
@@ -1084,11 +1122,12 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust['phase']}</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div>{portal_html}</div></div>
   </div>
-  <div class="metrics" style="grid-template-columns:repeat(6,1fr)">
-    <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval {mv_col}">{len(p0p1)}</div><div class="msub">Active critical issues</div></div>
-    <div class="metric" id="m-open" onclick="toggleDrawer('drawer-open','m-open')"><div class="mlabel">Open Tickets</div><div class="mval {open_col}">{len(open_t)}</div><div class="msub">Across all priorities</div></div>
-    <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">{len(features)}</div><div class="msub">Pending delivery</div></div>
-    <div class="metric" id="m-res" onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">{len(resolved)}</div><div class="msub">Last 30 days</div></div>
+  <div class="metrics" style="grid-template-columns:repeat(7,1fr)">
+    <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval {mv_col}">{len(p0p1)}</div><div class="msub">Critical — SR &amp; TS</div></div>
+    <div class="metric" id="m-sup"  onclick="toggleDrawer('drawer-sup','m-sup')"><div class="mlabel">Support Tickets</div><div class="mval {sup_col}">{len(support)}</div><div class="msub">SR project · open</div></div>
+    <div class="metric" id="m-eng"  onclick="toggleDrawer('drawer-eng','m-eng')"><div class="mlabel">Eng Tickets</div><div class="mval {eng_col}">{len(eng_tickets)}</div><div class="msub">TS project · non-feature</div></div>
+    <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">{len(features)}</div><div class="msub">TS project · pending</div></div>
+    <div class="metric" id="m-res"  onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">{len(resolved)}</div><div class="msub">SR · last 30 days</div></div>
     <div class="metric" id="m-health" onclick="toggleDrawer('drawer-health','m-health')"><div class="mlabel">Health Score (WIP)</div><div class="mval" style="color:{health_color}">{score}/10</div><div class="msub">Rule-based</div></div>
     <div class="metric" id="m-jql" onclick="toggleDrawer('drawer-jql','m-jql')" style="border-left:2px solid #E6F1FB"><div class="mlabel">JQL Queries</div><div class="mval" style="font-size:16px;padding-top:3px">🔍</div><div class="msub">Show / hide</div></div>
   </div>
@@ -1104,17 +1143,18 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
       <span style="font-size:10px;color:#5E6C84">· Max deduction: {10-score} pts</span>
     </div>
   </div>
-  <div class="drawer" id="drawer-p0p1"><div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents ({len(p0p1)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{p0_rows}</tbody></table></div>
-  <div class="drawer" id="drawer-open"><div class="drawer-head"><span class="drawer-title">🎫 All Open Tickets ({len(open_t)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-open','m-open')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{tk_rows}</tbody></table></div>
-  <div class="drawer" id="drawer-feat"><div class="drawer-head"><span class="drawer-title">💡 Feature Requests ({len(features)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in features) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr>'}</tbody></table></div>
-  <div class="drawer" id="drawer-res"><div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days ({len(resolved)})</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in resolved) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr>'}</tbody></table></div>
+  <div class="drawer" id="drawer-p0p1"><div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents ({len(p0p1)}) — SR &amp; TS</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{p0_rows}</tbody></table></div>
+  <div class="drawer" id="drawer-sup"><div class="drawer-head"><span class="drawer-title">🎫 Support Tickets ({len(support)}) — SR project</span><button class="drawer-close" onclick="toggleDrawer('drawer-sup','m-sup')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{sup_rows}</tbody></table></div>
+  <div class="drawer" id="drawer-eng"><div class="drawer-head"><span class="drawer-title">⚙️ Engineering Tickets ({len(eng_tickets)}) — TS project · non-feature</span><button class="drawer-close" onclick="toggleDrawer('drawer-eng','m-eng')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{eng_rows}</tbody></table></div>
+  <div class="drawer" id="drawer-feat"><div class="drawer-head"><span class="drawer-title">💡 Feature Requests ({len(features)}) — TS project</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in features) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr>'}</tbody></table></div>
+  <div class="drawer" id="drawer-res"><div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days ({len(resolved)}) — SR project</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in resolved) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr>'}</tbody></table></div>
   <div class="drawer" id="drawer-jql">
     <div class="drawer-head">
       <span class="drawer-title">🔍 JQL Queries — <span style="font-weight:400;color:#5E6C84">queries executed for {cust['name']}</span></span>
       <button class="drawer-close" onclick="toggleDrawer('drawer-jql','m-jql')">✕</button>
     </div>
     <div class="jql-grid">{jql_blocks_html}</div>
-    <div class="jql-footer">💡 Keyword used: <b style="color:#172B4D;margin-left:3px">{cust['jql_keyword']}</b> &nbsp;·&nbsp; Click "Run in Jira" to open results live &nbsp;·&nbsp; "Copy" copies the raw JQL to clipboard</div>
+    <div class="jql-footer">💡 Keyword used: <b style="color:#172B4D;margin-left:3px">{cust['jql_keyword']}</b> &nbsp;·&nbsp; SR = customer support · TS = engineering &nbsp;·&nbsp; Click "Run in Jira" to open results live</div>
   </div>
   <div class="grid2">
     <div>
@@ -1130,8 +1170,9 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
         </div>
       </div>
       <div class="sec"><div class="sec-head"><span class="sec-title">🚨 Active P0 / P1 Incidents</span><span class="badge br">{len(p0p1)} Open</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{p0_rows}</tbody></table></div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">🎫 Open Support Tickets</span><span class="badge bo">{len(open_t)} Open</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{tk_rows}</tbody></table></div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">{len(features)} Active</span></div>{feat_items or '<p style="padding:1rem;font-size:12px;color:#5E6C84">No open feature requests.</p>'}</div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">🎫 Support Tickets</span><span class="badge bo">{len(support)} Open · SR</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{sup_rows}</tbody></table></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">⚙️ Engineering Tickets</span><span class="badge" style="background:#EEEDFE;color:#3C3489">{len(eng_tickets)} Open · TS</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{eng_rows}</tbody></table></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">{len(features)} Active · TS</span></div>{feat_items or '<p style="padding:1rem;font-size:12px;color:#5E6C84">No open feature requests.</p>'}</div>
     </div>
     <div>
       <div class="sb-sec"><div class="sb-head">📅 Recent Activity</div><div class="tl">{timeline}</div></div>
@@ -1157,16 +1198,18 @@ function buildHealthDrawer(DATA){{
   else if(DATA.p0p1===2){{factors.push(['−3 pts',`2 P0 incidents (${{DATA.p0keys.join(', ')}})`, '#E53E3E']);actions.push(['🚨','Both need engineering owner today']);}}
   else if(DATA.p0p1===1){{factors.push(['−2 pts',`1 active P0/P1 (${{DATA.p0keys[0]}})`, '#DD6B20']);actions.push(['🚨','Daily updates to customer until resolved']);}}
   else{{factors.push(['+0 pts','No active P0/P1 incidents','#38A169']);}}
-  if(DATA.open>=8){{factors.push(['−2 pts',`High backlog — ${{DATA.open}} open`,'#DD6B20']);actions.push(['🎫','Close or escalate stale tickets']);}}
-  else if(DATA.open>=5){{factors.push(['−1 pt',`Moderate backlog — ${{DATA.open}} open`,'#D69E2E']);actions.push(['🎫','Target 3 resolutions this sprint']);}}
-  else{{factors.push(['+0 pts',`Healthy volume — ${{DATA.open}} open`,'#38A169']);}}
-  if(DATA.pendingEng>=4){{factors.push(['−2 pts',`${{DATA.pendingEng}} blocked pending eng`,'#DD6B20']);actions.push(['⏳','Set ETAs and communicate to customer']);}}
-  else if(DATA.pendingEng>=2){{factors.push(['−1 pt',`${{DATA.pendingEng}} pending engineering`,'#D69E2E']);actions.push(['⏳','Chase ETAs this week']);}}
-  else{{factors.push(['+0 pts','No tickets blocked on engineering','#38A169']);}}
-  if(DATA.features>=5){{factors.push(['−1 pt',`${{DATA.features}} open feature requests`,'#D69E2E']);actions.push(['💡','Schedule roadmap call']);}}
+  if(DATA.support>=8){{factors.push(['−2 pts',`High SR backlog — ${{DATA.support}} open`,'#DD6B20']);actions.push(['🎫','Close or escalate stale SR tickets']);}}
+  else if(DATA.support>=5){{factors.push(['−1 pt',`Moderate SR backlog — ${{DATA.support}} open`,'#D69E2E']);actions.push(['🎫','Target 3 SR resolutions this sprint']);}}
+  else{{factors.push(['+0 pts',`Healthy SR volume — ${{DATA.support}} open`,'#38A169']);}}
+  if(DATA.pendingEng>=4){{factors.push(['−2 pts',`${{DATA.pendingEng}} SR tickets blocked pending eng`,'#DD6B20']);actions.push(['⏳','Set ETAs and communicate to customer']);}}
+  else if(DATA.pendingEng>=2){{factors.push(['−1 pt',`${{DATA.pendingEng}} SR tickets pending engineering`,'#D69E2E']);actions.push(['⏳','Chase ETAs this week']);}}
+  else{{factors.push(['+0 pts','No SR tickets blocked on engineering','#38A169']);}}
+  if(DATA.eng_tickets>=5){{factors.push(['−1 pt',`${{DATA.eng_tickets}} TS engineering tickets open`,'#D69E2E']);actions.push(['⚙️','Review and triage TS engineering backlog']);}}
+  else{{factors.push(['+0 pts',`${{DATA.eng_tickets}} TS engineering tickets`,'#38A169']);}}
+  if(DATA.features>=5){{factors.push(['−1 pt',`${{DATA.features}} TS feature requests open`,'#D69E2E']);actions.push(['💡','Schedule roadmap call']);}}
   else{{factors.push(['+0 pts',`${{DATA.features}} feature requests`,'#38A169']);}}
-  if(DATA.resolved===0){{factors.push(['−1 pt','No tickets resolved in 30d','#DD6B20']);actions.push(['✅','Close at least one ticket']);}}
-  else{{factors.push(['+0 pts',`${{DATA.resolved}} resolved in 30d`,'#38A169']);}}
+  if(DATA.resolved===0){{factors.push(['−1 pt','No SR tickets resolved in 30d','#DD6B20']);actions.push(['✅','Close at least one SR ticket']);}}
+  else{{factors.push(['+0 pts',`${{DATA.resolved}} SR resolved in 30d`,'#38A169']);}}
   document.getElementById('health-factors').innerHTML=factors.map(([pts,label,col])=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:${{col}}1A;color:${{col}};flex-shrink:0;min-width:44px;text-align:center">${{pts}}</span><span style="font-size:11px;color:#172B4D;line-height:1.5">${{label}}</span></div>`).join('');
   const aEl=document.getElementById('health-actions');
   aEl.innerHTML=actions.length===0?'<p style="font-size:11px;color:#38A169;font-weight:600">✅ Customer is healthy!</p>':actions.map(([icon,text])=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:13px;flex-shrink:0">${{icon}}</span><span style="font-size:11px;color:#172B4D;line-height:1.5">${{text}}</span></div>`).join('');
@@ -1188,8 +1231,9 @@ def build_master_html(customer_results):
         cust = cr["config"]
         if not cust.get("name"): continue
         hk,hl,hcol = cr["health_key"],cr["health_label"],cr["health_color"]
-        p0col = "red"    if cr["p0_count"]>0   else "green"
-        tkcol = "orange" if cr["open_count"]>5 else "gray" if cr["open_count"]>2 else "green"
+        p0col  = "red"    if cr["p0_count"]>0    else "green"
+        supcol = "orange" if cr["sup_count"]>5   else "gray" if cr["sup_count"]>2  else "green"
+        engcol = "orange" if cr["eng_count"]>4   else "blue"
         tags  = "".join(f'<span class="tag">{e}</span>' for e in cust["engines"]) + f'<span class="tag">{cust["cloud"]}</span>'
         url   = cr.get("dashboard_url","#")
         phase_emoji = {"Onboarding":"🔵","Implementation":"🟡","Stabilisation":"🟠","Production":"🟢","Steady State":"⚫"}.get(cust["phase"],"")
@@ -1202,7 +1246,8 @@ def build_master_html(customer_results):
   <div class="card-body">
     <div class="card-stats">
       <div class="cs"><div class="cs-val {p0col}">{cr['p0_count']}</div><div class="cs-label">P0/P1</div></div>
-      <div class="cs"><div class="cs-val {tkcol}">{cr['open_count']}</div><div class="cs-label">Open</div></div>
+      <div class="cs"><div class="cs-val {supcol}">{cr['sup_count']}</div><div class="cs-label">SR</div></div>
+      <div class="cs"><div class="cs-val {engcol}">{cr['eng_count']}</div><div class="cs-label">TS Eng</div></div>
       <div class="cs"><div class="cs-val blue">{cr['feat_count']}</div><div class="cs-label">Features</div></div>
     </div>
     <div class="card-tags">{tags}</div>
@@ -1217,15 +1262,15 @@ def build_master_html(customer_results):
         if cr["p0_count"]>0:
             sev,sev_cls = "Critical","sev-critical"
             title = f"{c['name']} — {cr['p0_count']} P0{'s' if cr['p0_count']>1 else ''} open"
-            desc  = f"{cr['open_count']} total open tickets. Immediate engineering escalation required."
-        elif cr["open_count"]>5:
+            desc  = f"{cr['sup_count']} SR + {cr['eng_count']} TS eng tickets open. Immediate escalation required."
+        elif cr["sup_count"]>5:
             sev,sev_cls = "High","sev-high"
-            title = f"{c['name']} — {cr['open_count']} open tickets"
-            desc  = f"{cr['feat_count']} feature requests pending."
+            title = f"{c['name']} — {cr['sup_count']} open SR tickets"
+            desc  = f"{cr['eng_count']} TS eng tickets · {cr['feat_count']} feature requests pending."
         else:
             sev,sev_cls = "Watch","sev-watch"
             title = f"{c['name']} — monitor closely"
-            desc  = f"Phase: {c['phase']}. {cr['open_count']} open tickets."
+            desc  = f"Phase: {c['phase']}. {cr['sup_count']} SR · {cr['eng_count']} TS eng open."
         action_items.append(f'<div class="action-item"><span class="ai-severity {sev_cls}">{sev}</span><div class="ai-title">{title}</div><div class="ai-desc">{desc}</div><a class="ai-link" href="{url}" target="_parent">→ View Dashboard</a></div>')
     while len(action_items)<3:
         action_items.append('<div class="action-item"><span class="ai-severity sev-watch">Watch</span><div class="ai-title">No further escalations</div><div class="ai-desc">Remaining customers are healthy.</div></div>')
@@ -1250,15 +1295,16 @@ def build_master_html(customer_results):
     for cr in customer_results:
         c   = cr["config"]
         cls = {"atrisk":"hm-risk","attention":"hm-warn","stable":"hm-stable","healthy":"hm-good"}.get(cr["health_key"],"hm-stable")
-        stat= f"{cr['p0_count']} P0s · {cr['open_count']} open" if cr["p0_count"]>0 else f"{cr['open_count']} open · {c['phase'][:12]}"
+        stat= f"{cr['p0_count']} P0s · {cr['sup_count']} SR" if cr["p0_count"]>0 else f"{cr['sup_count']} SR · {cr['eng_count']} TS"
         url = cr.get("dashboard_url","#")
         heatmap_cells += f'<a class="hm-cell {cls}" href="{url}" target="_parent"><div class="hm-name">{c["name"][:18]}</div><div class="hm-stat">{stat}</div></a>'
 
     owner_map = {}
     for cr in customer_results:
         owner = cr["config"].get("exec_sponsor","—") or "—"
-        if owner not in owner_map: owner_map[owner]={"p0":0,"open":0,"customers":[]}
-        owner_map[owner]["p0"]+=cr["p0_count"]; owner_map[owner]["open"]+=cr["open_count"]
+        if owner not in owner_map: owner_map[owner]={"p0":0,"sup":0,"customers":[]}
+        owner_map[owner]["p0"]  += cr["p0_count"]
+        owner_map[owner]["sup"] += cr["sup_count"]
         owner_map[owner]["customers"].append(cr["config"]["name"].split()[0])
     avatar_colors=[{"bg":"#E6F1FB","col":"#0C447C"},{"bg":"#EEEDFE","col":"#3C3489"},{"bg":"#EAF3DE","col":"#27500A"},{"bg":"#FAEEDA","col":"#633806"},{"bg":"#FBEAF0","col":"#72243E"},{"bg":"#E1F5EE","col":"#085041"}]
     owner_rows=""
@@ -1266,18 +1312,19 @@ def build_master_html(customer_results):
         ac=avatar_colors[idx%len(avatar_colors)]; parts=owner.split()
         initials=(parts[0][0]+(parts[1][0] if len(parts)>1 else parts[0][-1])).upper() if parts else "—"
         custs=", ".join(d["customers"][:3])+("…" if len(d["customers"])>3 else "")
-        p0col="#E53E3E" if d["p0"]>0 else "#D69E2E"; tkcol="#DD6B20" if d["open"]>5 else "#D69E2E" if d["open"]>2 else "#38A169"
+        p0col="#E53E3E" if d["p0"]>0 else "#D69E2E"
+        supcol="#DD6B20" if d["sup"]>5 else "#D69E2E" if d["sup"]>2 else "#38A169"
         owner_rows+=(f'<div class="owner-row"><div class="owner-info"><div class="owner-avatar" style="background:{ac["bg"]};color:{ac["col"]}">{initials}</div>'
                      f'<div><div class="owner-name">{owner}</div><div class="owner-meta">{custs}</div></div></div>'
                      f'<div class="owner-counts"><div class="oc"><div class="oc-val" style="color:{p0col}">{d["p0"]}</div><div class="oc-label">P0s</div></div>'
-                     f'<div class="oc"><div class="oc-val" style="color:{tkcol}">{d["open"]}</div><div class="oc-label">Open</div></div></div></div>')
+                     f'<div class="oc"><div class="oc-val" style="color:{supcol}">{d["sup"]}</div><div class="oc-label">SR</div></div></div></div>')
 
-    top5 = sorted([cr for cr in customer_results if cr["open_count"]>0],key=lambda x:-x["open_count"])[:5]
-    trend_max = top5[0]["open_count"] if top5 else 1
+    top5 = sorted([cr for cr in customer_results if cr["sup_count"]>0],key=lambda x:-x["sup_count"])[:5]
+    trend_max = top5[0]["sup_count"] if top5 else 1
     trend_rows="".join(
         f'<div class="trend-row"><span class="trend-label">{cr["config"]["name"].split()[0][:10]}</span>'
-        f'<div class="trend-bar-wrap"><div class="trend-bar" style="width:{round(cr["open_count"]/trend_max*100)}%;background:{"#E53E3E" if cr["p0_count"]>0 else "#DD6B20" if cr["open_count"]>5 else "#38A169"}"></div></div>'
-        f'<span class="trend-val" style="color:{"#E53E3E" if cr["p0_count"]>0 else "#DD6B20" if cr["open_count"]>5 else "#38A169"}">{cr["open_count"]}</span></div>'
+        f'<div class="trend-bar-wrap"><div class="trend-bar" style="width:{round(cr["sup_count"]/trend_max*100)}%;background:{"#E53E3E" if cr["p0_count"]>0 else "#DD6B20" if cr["sup_count"]>5 else "#38A169"}"></div></div>'
+        f'<span class="trend-val" style="color:{"#E53E3E" if cr["p0_count"]>0 else "#DD6B20" if cr["sup_count"]>5 else "#38A169"}">{cr["sup_count"]}</span></div>'
         for cr in top5)
 
     highlights=[]
@@ -1287,7 +1334,9 @@ def build_master_html(customer_results):
     if new_impl: highlights.append(f'🔄 <span style="color:#172B4D;font-weight:600">{len(new_impl)} customers</span> actively in implementation')
     prod=[cr for cr in customer_results if cr["config"].get("phase")=="Production"]
     if prod: highlights.append(f'✅ <span style="color:#172B4D;font-weight:600">{len(prod)} customers</span> in Production phase')
-    highlights.append(f'📋 <span style="color:#172B4D;font-weight:600">{total} total customers</span> — {healthy} healthy, {at_risk} at risk')
+    total_sr  = sum(c["sup_count"]  for c in real)
+    total_eng = sum(c["eng_count"]  for c in real)
+    highlights.append(f'📋 <span style="color:#172B4D;font-weight:600">{total} customers</span> — {total_sr} SR open · {total_eng} TS eng open · {healthy} healthy')
     highlights_html="".join(f'<div style="font-size:11px;color:#5E6C84;line-height:1.7;border-bottom:.5px solid #F4F5F7;padding-bottom:.6rem;margin-bottom:.6rem">{h}</div>' for h in highlights[:4])
 
     return f"""<!DOCTYPE html><html lang="en"><head>
@@ -1360,7 +1409,7 @@ def build_master_html(customer_results):
 .health-pill{{margin-left:auto;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px;flex-shrink:0}}
 .hp-dot{{width:6px;height:6px;border-radius:50%}}
 .card-body{{padding:.75rem 1rem}}
-.card-stats{{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:.7rem}}
+.card-stats{{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:.7rem}}
 .cs{{text-align:center}}.cs-val{{font-size:17px;font-weight:700;line-height:1}}.cs-label{{font-size:10px;color:#5E6C84;margin-top:2px}}
 .card-tags{{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.7rem}}
 .tag{{font-size:10px;padding:2px 6px;border-radius:4px;background:#F4F5F7;color:#5E6C84;font-weight:500}}
@@ -1398,7 +1447,7 @@ def build_master_html(customer_results):
   <div class="action-strip">
     <div class="action-head">
       <div class="action-head-title"><span style="font-size:14px">🔴</span> Action Required
-        <span class="action-head-badge">{min(3,len([cr for cr in customer_results if cr['p0_count']>0 or cr['open_count']>5]))} items</span>
+        <span class="action-head-badge">{min(3,len([cr for cr in customer_results if cr['p0_count']>0 or cr['sup_count']>5]))} items</span>
       </div>
     </div>
     <div class="action-items">{''.join(action_items)}</div>
@@ -1406,7 +1455,7 @@ def build_master_html(customer_results):
   <div class="main-grid">
     <div>
       <div class="sec"><div class="sec-head"><span class="sec-title">Implementation pipeline</span><span style="font-size:10px;color:#5E6C84">{total} total</span></div><div class="pipeline">{pipeline_html}</div></div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">Open ticket load by customer</span><span style="font-size:10px;color:#5E6C84">Top 5</span></div><div style="padding:6px 0 4px">{trend_rows}</div></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">Open SR ticket load by customer</span><span style="font-size:10px;color:#5E6C84">Top 5</span></div><div style="padding:6px 0 4px">{trend_rows}</div></div>
     </div>
     <div><div class="sec"><div class="sec-head"><span class="sec-title">Customer health heatmap</span><span style="font-size:10px;color:#5E6C84">Click any cell to drill in</span></div><div class="heatmap">{heatmap_cells}</div></div></div>
     <div>
@@ -1501,13 +1550,14 @@ if __name__ == "__main__":
             print(f"  ⏭  {cust['name']} — unchanged, skipping rebuild")
             skipped.append(cust["name"])
             customer_results.append({
-                "config":      cust,
-                "health_key":  cached.get("health_key","stable"),
-                "health_label":cached.get("health_label","Stable"),
-                "health_color":cached.get("health_color","#FFC107"),
-                "p0_count":    cached.get("p0_count",0),
-                "open_count":  cached.get("open_count",0),
-                "feat_count":  cached.get("feat_count",0),
+                "config":       cust,
+                "health_key":   cached.get("health_key","stable"),
+                "health_label": cached.get("health_label","Stable"),
+                "health_color": cached.get("health_color","#FFC107"),
+                "p0_count":     cached.get("p0_count",0),
+                "sup_count":    cached.get("sup_count",0),
+                "eng_count":    cached.get("eng_count",0),
+                "feat_count":   cached.get("feat_count",0),
                 "dashboard_url": conf_url,
             })
             continue
@@ -1520,13 +1570,13 @@ if __name__ == "__main__":
             print(f"  ⚠️  Jira fetch failed: {e}")
             customer_results.append({
                 "config":cust,"health_key":"stable","health_label":"Unknown",
-                "health_color":"#5E6C84","p0_count":0,"open_count":0,
-                "feat_count":0,"dashboard_url":conf_url
+                "health_color":"#5E6C84","p0_count":0,"sup_count":0,
+                "eng_count":0,"feat_count":0,"dashboard_url":conf_url
             })
             continue
 
-        print(f"  P0/P1:{len(data['p0p1'])}  Open:{len(data['open'])}  Features:{len(data['features'])}  Resolved(30d):{len(data['resolved'])}")
-        score, label, color, hk, pending = compute_health(data["p0p1"],data["open"],data["features"],data["resolved"])
+        print(f"  P0/P1:{len(data['p0p1'])}  Support(SR):{len(data['support'])}  Eng(TS):{len(data['eng_tickets'])}  Features:{len(data['features'])}  Resolved(30d):{len(data['resolved'])}")
+        score, label, color, hk, pending = compute_health(data["p0p1"],data["support"],data["features"],data["resolved"],data["eng_tickets"])
 
         html = build_customer_html(cust, data)
         with open(filename,"w") as f: f.write(html)
@@ -1539,17 +1589,24 @@ if __name__ == "__main__":
         conf_url = confluence_page_url(cust.get("confluence_page_id", ""))
 
         result = {
-            "config":cust,"health_key":hk,"health_label":label,"health_color":color,
-            "p0_count":len(data["p0p1"]),"open_count":len(data["open"]),
-            "feat_count":len(data["features"]),"dashboard_url":conf_url,
+            "config":     cust,
+            "health_key": hk, "health_label": label, "health_color": color,
+            "p0_count":   len(data["p0p1"]),
+            "sup_count":  len(data["support"]),
+            "eng_count":  len(data["eng_tickets"]),
+            "feat_count": len(data["features"]),
+            "dashboard_url": conf_url,
         }
         customer_results.append(result)
         rebuilt.append(cust["name"])
 
         mark_clean(cust_id, keyword, build_state)
         build_state[f"{cust_id}__meta"] = {
-            "health_key":hk,"health_label":label,"health_color":color,
-            "p0_count":len(data["p0p1"]),"open_count":len(data["open"]),"feat_count":len(data["features"])
+            "health_key":  hk,  "health_label": label, "health_color": color,
+            "p0_count":    len(data["p0p1"]),
+            "sup_count":   len(data["support"]),
+            "eng_count":   len(data["eng_tickets"]),
+            "feat_count":  len(data["features"]),
         }
         save_build_state(build_state)
 
