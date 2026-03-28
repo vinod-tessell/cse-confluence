@@ -676,9 +676,9 @@ window.addEventListener('DOMContentLoaded',function(){{
   }}
 }});
 function switchTab(custId,tabId){{
-  var tabs=['tab-current','tab-engage'];
+  var tabs=['current','engage'];
   tabs.forEach(function(t){{
-    var panel=document.getElementById(t+'-'+custId);
+    var panel=document.getElementById('tab-'+t+'-'+custId);
     var btn=document.getElementById('tab-btn-'+t+'-'+custId);
     if(!panel||!btn)return;
     var active=(t===tabId);
@@ -863,14 +863,14 @@ function buildHealthDrawer(DATA){{
 
         <!-- ── File-folder tabs ────────────────────────────────────────────── -->
         <div style="display:flex;border-bottom:.5px solid rgba(255,255,255,0.08)">
-          <button onclick="switchTab('{cust['id']}','tab-current')"
+          <button onclick="switchTab('{cust['id']}','current')"
             id="tab-btn-current-{cust['id']}"
             style="padding:.55rem 1.25rem;font-size:11px;font-weight:600;background:rgba(255,255,255,0.06);
                    color:#fff;border:none;border-right:.5px solid rgba(255,255,255,0.08);
                    border-bottom:2px solid #00C2E0;cursor:pointer;letter-spacing:.02em">
             Current Assessment
           </button>
-          <button onclick="switchTab('{cust['id']}','tab-engage')"
+          <button onclick="switchTab('{cust['id']}','engage')"
             id="tab-btn-engage-{cust['id']}"
             style="padding:.55rem 1.25rem;font-size:11px;font-weight:600;background:transparent;
                    color:rgba(255,255,255,0.4);border:none;border-right:.5px solid rgba(255,255,255,0.08);
