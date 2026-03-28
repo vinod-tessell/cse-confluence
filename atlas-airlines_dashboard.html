@@ -107,7 +107,7 @@ tr:last-child td{border-bottom:none}
       <div style="width:7px;height:7px;border-radius:50%;background:#68D391" id="health-dot"></div>
       <span id="health-badge" style="color:#68D391">Healthy</span>
     </div>
-    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 27, 2026 22:09 EST</div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 27, 2026 22:32 EST</div>
   </div>
 </div>
 <div class="body">
@@ -247,35 +247,61 @@ tr:last-child td{border-bottom:none}
   </div>
   <div class="grid2">
     <div>
-      <div class="ai-panel" style="padding:1.25rem">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-          <div>
-            <div class="ai-eyebrow">✦ Health Analysis</div>
-            <div class="ai-title" style="margin-bottom:0">Customer Health Assessment</div>
+      <div class="ai-panel" style="padding:0;overflow:hidden">
+
+        <!-- ── Top strip: eyebrow + title + score bar ──────────────────────── -->
+        <div style="padding:1rem 1.25rem .85rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.75rem">
+            <div>
+              <div class="ai-eyebrow">✦ Health Analysis</div>
+              <div class="ai-title" style="margin-bottom:0">Customer Health Assessment</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;margin-left:1rem">
+              <div id="health-score-num" style="font-size:32px;font-weight:800;color:#68D391;line-height:1">9/10</div>
+              <div id="health-score-label" style="font-size:11px;font-weight:700;color:#68D391;margin-top:2px">Healthy</div>
+            </div>
           </div>
-          <div style="text-align:right">
-            <div style="font-size:28px;font-weight:800;color:#68D391;line-height:1">9/10</div>
-            <div style="font-size:11px;font-weight:700;color:#68D391;margin-top:2px">Healthy</div>
+          <!-- Score bar -->
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
+              <div id="health-score-bar" style="height:100%;border-radius:3px;background:#68D391;width:90%;transition:width .6s ease"></div>
+            </div>
+            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 27, 2026 22:32 EST</span>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem">
-          <div>
-            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Findings & Actions</div>
-            <div class="ai-body" id="ai-body">Calculating...</div>
+
+        <!-- ── Row 1: Chart full width ──────────────────────────────────────── -->
+        <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
+          <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div><div style="position:relative;height:180px;width:100%;animation:chartFadeIn .4s ease forwards;opacity:0"><canvas id="trendChart"></canvas></div><style>@keyframes chartFadeIn{to{opacity:1}}</style>
+        </div>
+
+        <!-- ── Row 2: Findings+Actions | Customer Signals ───────────────────── -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+
+          <!-- Findings & Recommended Actions -->
+          <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08);
+                      background:rgba(255,255,255,0.03)">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);
+                        text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Findings</div>
+            <div id="ai-findings" style="margin-bottom:1rem">
+              <p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p>
+            </div>
+            <div style="font-size:10px;font-weight:700;color:#00C2E0;
+                        text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Recommended Actions</div>
+            <div id="ai-actions">
+              <p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p>
+            </div>
           </div>
-          <div>
-            <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div><div style="position:relative;height:180px;width:100%"><canvas id="trendChart"></canvas></div>
-          </div>
-          <div>
-            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Customer Signals <span style="font-weight:400;text-transform:none;letter-spacing:0">· last 21d</span></div>
+
+          <!-- Customer Signals -->
+          <div style="padding:1rem 1.25rem;background:rgba(0,194,224,0.04)">
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);
+                        text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">
+              Customer Signals <span style="font-weight:400;text-transform:none;letter-spacing:0;color:rgba(255,255,255,0.25)">· last 21d</span>
+            </div>
             <div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:.5rem">No recent customer signals detected.</div>
           </div>
-        </div>
-        <div style="margin-top:1rem;padding-top:.75rem;border-top:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:8px">
-          <div style="flex:1;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
-            <div style="height:100%;border-radius:3px;background:#68D391;width:90%;transition:width .6s ease"></div>
-          </div>
-          <span style="font-size:10px;color:rgba(255,255,255,0.35)">Score 9/10 · Generated Mar 27, 2026 22:09 EST</span>
+
         </div>
       </div>
     </div>
@@ -287,38 +313,111 @@ By:  — maneesh.rawat</div><div class="tl-dt">Mar 24, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38183" target="_blank">TS-38183</a> — Update on TS-38183</div><div class="tl-d">Atlas Air PITR Clone Provisioning Failures  INCIDENT ROOT CAUSES Issue 1: Stale Mounts Issue 2: Corrupted Logs Issue 3:  — srinivasu yalla</div><div class="tl-dt">Mar 23, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#FFF5F5">🚨</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38183" target="_blank">TS-38183</a> — TS-38183 escalated to Highest</div><div class="tl-d">Atlasair - PITR Recovery - Online redo log sequence mismatch blocked r — raised by srinivasu yalla</div><div class="tl-dt">Mar 23, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🎫</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-38183" target="_blank">TS-38183</a> — TS-38183 opened</div><div class="tl-d">Atlasair - PITR Recovery - Online redo log sequence mismatch blocked r</div><div class="tl-dt">Mar 16, 2026</div></div></div></div></div>
-      <div class="sb-sec"><div class="sb-head">🔗 Quick Links</div>
-        <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/issues/?jql=text+~+%22Atlas+Air%22+AND+statusCategory+%21%3D+Done" target="_blank">All Open Tickets in Jira</a></div>
-        <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/1990557712" target="_blank">Customer Portfolio</a></div>
-        <div class="ir"><span class="ilabel">Portal</span><span class="ival"><a class="tlink" href="https://atlasair.tessell.com/" target="_blank">https://atlasair.tessell.com/</a></span></div>
-      </div>
     </div>
   </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 
-setTimeout(function(){
+var CHART_DATA={
+  labels:["Oct 20", "Nov 20", "Dec 20", "Jan 20", "Feb 20", "Mar 20"],
+  open:[0, 0, 0, 0, 0, 0],
+  resolved:[0, 0, 0, 0, 0, 0],
+  yMax:4
+};
+function initChart(){
   var ctx=document.getElementById('trendChart');
   if(!ctx)return;
-  new Chart(ctx,{type:'bar',data:{labels:["Oct 20", "Nov 20", "Dec 20", "Jan 20", "Feb 20", "Mar 20"],datasets:[
-    {label:'Open (SR)',data:[0, 0, 0, 0, 0, 0],backgroundColor:'rgba(26,111,219,0.85)',borderRadius:3,barPercentage:0.6,categoryPercentage:0.7},
-    {label:'Resolved',data:[0, 0, 0, 0, 0, 0],backgroundColor:'rgba(56,161,105,0.85)',borderRadius:3,barPercentage:0.6,categoryPercentage:0.7}
-  ]},options:{responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:true,position:'top',align:'end',labels:{font:{size:9},color:'rgba(255,255,255,0.6)',boxWidth:8,padding:10}},
-              tooltip:{callbacks:{label:function(c){return ' '+c.dataset.label+': '+c.parsed.y;}}}},
-    scales:{
-      x:{grid:{display:false},ticks:{font:{size:10},color:'rgba(255,255,255,0.5)'},border:{display:false}},
-      y:{min:0,max:4,grid:{color:'rgba(255,255,255,0.08)'},
-          ticks:{font:{size:10},color:'rgba(255,255,255,0.5)',stepSize:Math.ceil(4/5)},
-          border:{display:false}}
+  if(typeof Chart==='undefined'){
+    setTimeout(initChart,150);
+    return;
+  }
+  Chart.defaults.animation = false;  // reset any global default first
+  var delayed=false;
+  new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:CHART_DATA.labels,
+      datasets:[
+        {
+          label:'Open (SR)',
+          data:CHART_DATA.open,
+          backgroundColor:'rgba(26,111,219,0.85)',
+          borderRadius:4,
+          barPercentage:0.6,
+          categoryPercentage:0.7
+        },
+        {
+          label:'Resolved',
+          data:CHART_DATA.resolved,
+          backgroundColor:'rgba(56,161,105,0.85)',
+          borderRadius:4,
+          barPercentage:0.6,
+          categoryPercentage:0.7
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:{
+        duration:900,
+        easing:'easeOutQuart',
+        delay:function(ctx){
+          // bars rise one column at a time, left to right
+          // each dataset in a column staggers by 60ms on top of the column delay
+          if(ctx.type==='data' && ctx.mode==='default' && !delayed){
+            return ctx.dataIndex*120 + ctx.datasetIndex*60;
+          }
+          return 0;
+        }
+      },
+      animations:{
+        y:{
+          from:function(ctx){
+            // bars start from zero (bottom of chart) and rise up
+            return ctx.chart.scales.y.bottom;
+          }
+        }
+      },
+      plugins:{
+        legend:{
+          display:true,
+          position:'top',
+          align:'end',
+          labels:{font:{size:9},color:'rgba(255,255,255,0.6)',boxWidth:8,padding:10}
+        },
+        tooltip:{
+          callbacks:{
+            label:function(c){return ' '+c.dataset.label+': '+c.parsed.y;}
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{font:{size:10},color:'rgba(255,255,255,0.5)'},
+          border:{display:false}
+        },
+        y:{
+          min:0,
+          max:CHART_DATA.yMax,
+          grid:{color:'rgba(255,255,255,0.08)'},
+          ticks:{
+            font:{size:10},
+            color:'rgba(255,255,255,0.5)',
+            stepSize:Math.ceil(CHART_DATA.yMax/5)
+          },
+          border:{display:false}
+        }
+      }
     }
-  }});
-}, 100);
-const DATA={"p0p1": 0, "support": 0, "features": 0, "eng_tickets": 1, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 27, 2026 22:09 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+  });
+}
+const DATA={"p0p1": 0, "support": 0, "features": 0, "eng_tickets": 1, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 27, 2026 22:32 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
-  const el=document.getElementById('ai-body'),sc=document.getElementById('ai-score');
+  const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
   let score=10,findings=[],actions=[];
   if(DATA.p0p1>=3){score-=4;findings.push(`<b style="color:#FC8181">${DATA.p0p1} active P0 incidents</b> (${DATA.p0keys.join(', ')})`);actions.push(`Escalate ${DATA.p0keys[0]} to engineering leadership for same-day resolution`);}
   else if(DATA.p0p1===2){score-=3;findings.push(`<b style="color:#FC8181">2 active P0 incidents</b> (${DATA.p0keys.join(', ')})`);actions.push(`Both need an engineering owner today`);}
@@ -341,13 +440,20 @@ function runHealth(DATA) {
   if(badge){badge.textContent=label;badge.style.color=color;}
   if(dot){dot.style.background=color;}
   if(badge&&badge.parentElement){badge.parentElement.style.borderColor=color+'4D';badge.parentElement.style.background=color+'1A';}
-  let html=findings.map(f=>`<p style="margin-bottom:6px">• ${f}</p>`).join('');
-  if(actions.length)html+=`<div style="margin-top:8px;padding-top:8px;border-top:.5px solid rgba(255,255,255,0.1)"><p style="font-size:10px;font-weight:700;color:#00C2E0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Recommended Actions</p>${actions.map(a=>`<p style="margin-bottom:4px">→ ${a}</p>`).join('')}</div>`;
-  if(el){el.innerHTML=html;}
+  // Update score bar in health panel
+  const bar=document.getElementById('health-score-bar'),barWrap=document.getElementById('health-score-label');
+  if(bar){bar.style.width=(score*10)+'%';bar.style.background=color;}
+  if(barWrap){barWrap.textContent=label;barWrap.style.color=color;}
+  const scoreNum=document.getElementById('health-score-num');
+  if(scoreNum){scoreNum.textContent=score+'/10';scoreNum.style.color=color;}
+  if(elF){elF.innerHTML=findings.map(f=>`<p style="margin-bottom:7px;font-size:11px;color:rgba(255,255,255,0.8);line-height:1.5">• ${f}</p>`).join('');}
+  if(elA){elA.innerHTML=actions.length===0
+    ?'<p style="font-size:11px;color:#68D391;font-weight:600">✅ No immediate actions needed</p>'
+    :actions.map(a=>`<div style="display:flex;gap:7px;margin-bottom:8px;align-items:flex-start"><span style="color:#00C2E0;flex-shrink:0;font-size:12px">→</span><p style="font-size:11px;color:rgba(255,255,255,0.8);line-height:1.5;margin:0">${a}</p></div>`).join('');}
   if(sc){sc.textContent=score;sc.style.color=color;}
 }
 
-window.onload=()=>{try{runHealth(DATA);}catch(e){console.error('runHealth error:',e);}try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer error:',e);}};
+window.onload=()=>{try{runHealth(DATA);}catch(e){console.error('runHealth error:',e);}try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer error:',e);}try{initChart();}catch(e){console.error('initChart error:',e);}};
 function toggleDrawer(dId,mId){const d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.metric').forEach(x=>x.classList.remove('active'));if(!open){d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer error:',e);}}}}
 function copyJql(btn,key){const el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(()=>{const orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(()=>{btn.textContent=orig;btn.style.color='';} ,1500);}).catch(()=>{btn.textContent='Failed';setTimeout(()=>btn.textContent='Copy',1500);});}
 function buildHealthDrawer(DATA){
