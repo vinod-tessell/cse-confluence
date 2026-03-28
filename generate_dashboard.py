@@ -1195,12 +1195,11 @@ function initChart(){{
         chart_block = (f'<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);'
                        f'text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">'
                        f'SR Ticket Trend — last 6 months</div>'
-                       f'<div style="position:relative;height:180px;width:100%;'
-                       f'animation:chartFadeIn .4s ease forwards;opacity:0">'
+                       f'<div style="position:relative;height:180px;width:100%">'
                        f'<canvas id="trendChart"></canvas></div>'
-                       f'<style>'
-                       f'@keyframes chartFadeIn{{to{{opacity:1}}}}'
-                       f'</style>')
+                       f'<script>'
+                       f'(function poll(){{if(typeof Chart!=="undefined"){{initChart();}}else{{setTimeout(poll,80);}}}})();'
+                       f'</scr' + f'ipt>')
     else:
         timeseries_js = "function initChart(){{}}"
         chart_block   = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>'
@@ -1269,6 +1268,7 @@ function initChart(){{
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <title>{cust['name']} — Customer Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>{SHARED_CSS}</style></head><body>
 {nav}
 <div style="background:#0B1F45;padding:1.1rem 1.5rem 1.25rem;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid #122752">
@@ -1292,8 +1292,6 @@ function initChart(){{
           <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:.05em">Phase</span>
           <span style="font-size:11px;font-weight:700;color:#fff;margin-left:4px">{cust['phase']}</span>
         </div>
-        {f'<a href="{cust["portal_url"]}" target="_blank" style="display:flex;align-items:center;gap:5px;background:rgba(0,194,224,0.1);border:.5px solid rgba(0,194,224,0.25);border-radius:6px;padding:4px 9px;text-decoration:none"><span style="font-size:9px;font-weight:600;color:rgba(0,194,224,0.6);text-transform:uppercase;letter-spacing:.05em">Portal</span><span style="font-size:11px;font-weight:700;color:#00C2E0;margin-left:4px">↗ Open</span></a>' if cust.get('portal_url') else ''}
-        <span style="font-size:10px;color:rgba(255,255,255,0.25);margin-left:2px">Refreshed {now}</span>
       </div>
     </div>
   </div>
@@ -1304,6 +1302,10 @@ function initChart(){{
       <span id="health-badge" style="color:{health_color}">{health_label}</span>
     </div>
   </div>
+</div>
+<div style="background:#0D2252;border-bottom:1px solid #122752;padding:.35rem 1.5rem;display:flex;align-items:center;gap:1.5rem">
+  {f'<a href="{cust["portal_url"]}" target="_blank" style="font-size:11px;color:#00C2E0;text-decoration:none;font-weight:600">↗ {cust["portal_url"]}</a>' if cust.get("portal_url") else ""}
+  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">{now}</span></span>
 </div>
 <div class="body">
   <div class="metrics" style="grid-template-columns:repeat(8,1fr)">
@@ -1426,13 +1428,23 @@ function initChart(){{
           <!-- Findings & Recommended Actions -->
           <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08);
                       background:rgba(255,255,255,0.03)">
-            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);
-                        text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Findings</div>
-            <div id="ai-findings" style="margin-bottom:1rem">
+            <div style="font-size:11px;font-weight:800;color:#fff;
+                        text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;
+                        padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);
+                        display:flex;align-items:center;gap:6px">
+              <span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>
+              Findings
+            </div>
+            <div id="ai-findings" style="margin-bottom:1.25rem">
               <p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p>
             </div>
-            <div style="font-size:10px;font-weight:700;color:#00C2E0;
-                        text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Recommended Actions</div>
+            <div style="font-size:11px;font-weight:800;color:#00C2E0;
+                        text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;
+                        padding-bottom:8px;border-bottom:.5px solid rgba(0,194,224,0.2);
+                        display:flex;align-items:center;gap:6px">
+              <span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>
+              Recommended Actions
+            </div>
             <div id="ai-actions">
               <p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p>
             </div>
@@ -1440,9 +1452,14 @@ function initChart(){{
 
           <!-- Customer Signals -->
           <div style="padding:1rem 1.25rem;background:rgba(0,194,224,0.04)">
-            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);
-                        text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">
-              Customer Signals <span style="font-weight:400;text-transform:none;letter-spacing:0;color:rgba(255,255,255,0.25)">· last 21d</span>
+            <div style="font-size:11px;font-weight:800;color:#fff;
+                        text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;
+                        padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);
+                        display:flex;align-items:center;gap:6px">
+              <span style="width:3px;height:14px;background:#7B2FBE;border-radius:2px;display:inline-block"></span>
+              Customer Signals
+              <span style="font-size:9px;font-weight:500;text-transform:none;letter-spacing:0;
+                           color:rgba(255,255,255,0.3);margin-left:2px">· last 21d</span>
             </div>
             {pulse_signals}
           </div>
@@ -1455,31 +1472,11 @@ function initChart(){{
     </div>
   </div>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 {timeseries_js}
 const DATA={data_js};
 {HEALTH_JS}
 window.onload=()=>{{try{{runHealth(DATA);}}catch(e){{console.error('runHealth:',e);}}try{{buildHealthDrawer(DATA);}}catch(e){{console.error('buildHealthDrawer:',e);}}}};
-// Chart: use IntersectionObserver so it fires when the canvas enters the viewport.
-// This works correctly inside Confluence iframes where window.onload is unreliable.
-(function(){{
-  function tryInit(){{
-    if(typeof Chart==='undefined'){{setTimeout(tryInit,150);return;}}
-    initChart();
-  }}
-  var canvas=document.getElementById('trendChart');
-  if(!canvas)return;
-  if('IntersectionObserver' in window){{
-    var obs=new IntersectionObserver(function(entries,o){{
-      if(entries[0].isIntersecting){{o.disconnect();tryInit();}}
-    }},{{threshold:0.1}});
-    obs.observe(canvas);
-  }}else{{
-    // Fallback for environments without IntersectionObserver
-    tryInit();
-  }}
-}})();;
 function toggleDrawer(dId,mId){{const d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.metric').forEach(x=>x.classList.remove('active'));if(!open){{d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){{try{{buildHealthDrawer(DATA);}}catch(e){{console.error('buildHealthDrawer error:',e);}}}}}}}}
 function copyJql(btn,key){{const el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(()=>{{const orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(()=>{{btn.textContent=orig;btn.style.color='';}} ,1500);}}).catch(()=>{{btn.textContent='Failed';setTimeout(()=>btn.textContent='Copy',1500);}});}}
 function buildHealthDrawer(DATA){{
