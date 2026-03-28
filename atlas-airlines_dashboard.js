@@ -14,7 +14,8 @@ function initChart(){
   var el=canvas;
   while(el&&W<10){W=el.offsetWidth||0;el=el.parentElement;}
   if(W<10)W=600;
-  var H=180;
+  var H=canvas.parentElement?canvas.parentElement.offsetHeight||220:220;
+  if(H<80)H=220;
   var dpr=window.devicePixelRatio||1;
   canvas.width=W*dpr; canvas.height=H*dpr;
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
@@ -80,7 +81,7 @@ if(document.readyState==='loading'){
   initChart();
 }
 
-var DATA={"p0p1": 0, "support": 0, "features": 0, "eng_tickets": 1, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 28, 2026 13:44 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+var DATA={"p0p1": 0, "support": 0, "features": 0, "eng_tickets": 1, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 28, 2026 14:31 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
@@ -156,7 +157,20 @@ window.addEventListener('DOMContentLoaded',function(){
     setTimeout(function(){requestAnimationFrame(countUp);},80);
   }
 });
-function toggleDrawer(dId,mId){var d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(function(x){x.classList.remove('open');});document.querySelectorAll('.metric').forEach(function(x){x.classList.remove('active');});if(!open){d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer:',e);}};}}
+function switchTab(custId,tabId){
+  var tabs=['tab-current','tab-engage'];
+  tabs.forEach(function(t){
+    var panel=document.getElementById(t+'-'+custId);
+    var btn=document.getElementById('tab-btn-'+t+'-'+custId);
+    if(!panel||!btn)return;
+    var active=(t===tabId);
+    panel.style.display=active?'block':'none';
+    btn.style.color=active?'#fff':'rgba(255,255,255,0.4)';
+    btn.style.background=active?'rgba(255,255,255,0.06)':'transparent';
+    btn.style.borderBottom=active?'2px solid #00C2E0':'2px solid transparent';
+  });
+}
+function toggleDrawer(dId,mId){var d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(function(x){x.classList.remove('open');});document.querySelectorAll('.metric').forEach(function(x){x.classList.remove('active');});if(!open){d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer:',e);}};  }}
 function copyJql(btn,key){var el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(function(){var orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(function(){btn.textContent=orig;btn.style.color='';},1500);}).catch(function(){btn.textContent='Failed';setTimeout(function(){btn.textContent='Copy';},1500);});}
 function buildHealthDrawer(DATA){
   var factors=[],actions=[];
