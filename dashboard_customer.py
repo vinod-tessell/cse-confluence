@@ -97,7 +97,8 @@ function initChart(){{
   var el=canvas;
   while(el&&W<10){{W=el.offsetWidth||0;el=el.parentElement;}}
   if(W<10)W=600;
-  var H=180;
+  var H=canvas.parentElement?canvas.parentElement.offsetHeight||220:220;
+  if(H<80)H=220;
   var dpr=window.devicePixelRatio||1;
   canvas.width=W*dpr; canvas.height=H*dpr;
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
@@ -162,8 +163,8 @@ if(document.readyState==='loading'){{
 }}else{{
   initChart();
 }}"""
-        chart_block = (f'<div style="position:relative;height:180px;width:100%">'
-                       f'<canvas id="trendChart"></canvas></div>')
+        chart_block = (f'<div style="position:absolute;inset:0">'
+                       f'<canvas id="trendChart" style="width:100%;height:100%"></canvas></div>')
     else:
         chart_js    = "function initChart(){}"
         chart_block = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>'
@@ -426,7 +427,15 @@ if(document.readyState==='loading'){{
     var exDiv=document.createElement('div');
     exDiv.className='ta-dp-examples';
     exDiv.innerHTML='<div style="font-size:9px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Recent tickets</div>'
-      +t.ex.map(function(e){{return '<div style="font-size:10px;color:rgba(255,255,255,0.45);margin-bottom:3px">· '+e+'</div>';}}).join('');
+      +t.ex.map(function(e){{
+        var colon=e.indexOf(': ');
+        var key=colon>0?e.substring(0,colon):'';
+        var rest=colon>0?e.substring(colon+2):e;
+        if(key&&(key.indexOf('SR-')===0||key.indexOf('TS-')===0)){{
+          return '<div style="font-size:10px;color:rgba(255,255,255,0.45);margin-bottom:4px">· <a href="{JIRA_BASE}/browse/'+key+'" target="_blank" style="color:#00C2E0;font-weight:600;text-decoration:none">'+key+'</a> '+rest+'</div>';
+        }}
+        return '<div style="font-size:10px;color:rgba(255,255,255,0.45);margin-bottom:3px">· '+e+'</div>';
+      }}).join('');
 
     inner.appendChild(mDiv);inner.appendChild(exDiv);panel.appendChild(inner);
     wrap.appendChild(row);wrap.appendChild(panel);
@@ -493,6 +502,117 @@ if(document.readyState==='loading'){{
     if not pulse_signals:
         pulse_signals = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:.5rem">No recent customer signals detected.</div>'
 
+    # ── Future Engagement data ────────────────────────────────────────────────
+    # Detects release labels, fixVersions, due dates on features + eng bugs
+    # Also scans SR tickets for maintenance/upgrade/expansion signals
+
+    RELEASE_LABEL_HINTS = [
+        "committed","release","patch","target","planned","roadmap",
+        "q1-","q2-","q3-","q4-","2026","2025","fix-","hotfix","sprint",
+    ]
+
+    def _extract_release_tag(issue_fields):
+        """Return best release label/version string, or empty string."""
+        # fixVersions first — most explicit
+        fv = issue_fields.get("fixVersions") or []
+        if fv:
+            return fv[0].get("name", "")
+        # duedate next
+        dd = issue_fields.get("duedate") or ""
+        if dd:
+            return f"Due {dd}"
+        # labels that look like release markers
+        for lbl in (issue_fields.get("labels") or []):
+            ll = lbl.lower()
+            if any(h in ll for h in RELEASE_LABEL_HINTS):
+                return lbl
+        return ""
+
+    def _ticket_row_eng(issue, tag_color="#00C2E0"):
+        key  = issue["key"]
+        f    = issue["fields"]
+        summ = (f.get("summary") or "")[:60]
+        tag  = _extract_release_tag(f)
+        status = (f.get("status", {}).get("name") or "Open")
+        url  = f"{JIRA_BASE}/browse/{key}"
+        tag_html = (f'<span style="font-size:9px;background:rgba(0,194,224,0.15);color:{tag_color};'
+                    f'padding:1px 6px;border-radius:10px;white-space:nowrap">{tag}</span>') if tag else ""
+        return (f'<div style="padding:7px 0;border-bottom:.5px solid rgba(255,255,255,0.07);'
+                f'display:flex;align-items:flex-start;gap:8px">'
+                f'<div style="min-width:0;flex:1">'
+                f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'
+                f'<a href="{url}" target="_blank" style="font-size:10px;font-weight:700;'
+                f'color:#00C2E0;text-decoration:none;flex-shrink:0">{key}</a>'
+                f'{tag_html}</div>'
+                f'<div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4">{summ}</div>'
+                f'</div>'
+                f'<span style="font-size:9px;color:rgba(255,255,255,0.3);flex-shrink:0;margin-top:2px">{status}</span>'
+                f'</div>')
+
+    # Features with release tags (committed/upcoming)
+    committed_features = []
+    other_features     = []
+    for issue in features.issues:
+        tag = _extract_release_tag(issue["fields"])
+        if tag:
+            committed_features.append(issue)
+        else:
+            other_features.append(issue)
+
+    features_html = ""
+    if committed_features:
+        features_html += f'<div style="font-size:9px;font-weight:600;color:#00C2E0;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Committed / Scheduled ({len(committed_features)})</div>'
+        for i in committed_features[:8]:
+            features_html += _ticket_row_eng(i, "#00C2E0")
+    if other_features:
+        features_html += f'<div style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.06em;margin:10px 0 6px">In Backlog ({len(other_features)})</div>'
+        for i in other_features[:5]:
+            features_html += _ticket_row_eng(i, "#7B8FA8")
+    if not features_html:
+        features_html = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No open feature requests found.</div>'
+
+    # Upcoming bug fixes from eng_tickets
+    upcoming_bugs_html = ""
+    for issue in eng_tickets.issues[:8]:
+        upcoming_bugs_html += _ticket_row_eng(issue, "#FFA94D")
+    if not upcoming_bugs_html:
+        upcoming_bugs_html = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No open engineering bugs found.</div>'
+
+    # Maintenance / upgrade signals from SR tickets
+    MAINT_KW = ["upgrade","patch","maintenance","scheduled","planned","migration",
+                "window","cutover","go-live","rollout","downtime","activity"]
+    EXPAND_KW = ["new environment","additional instance","new region","scale",
+                 "expand","additional db","new db","production setup","poc",
+                 "evaluation","pilot","onboard","new schema","new database"]
+
+    maint_items   = []
+    expand_items  = []
+    for issue in list(support.issues) + list(resolved.issues[:50]):
+        summ_l = (issue["fields"].get("summary") or "").lower()
+        key    = issue["key"]
+        summ   = (issue["fields"].get("summary") or "")[:65]
+        url    = f"{JIRA_BASE}/browse/{key}"
+        if any(k in summ_l for k in MAINT_KW) and key not in [x["key"] for x in maint_items]:
+            maint_items.append({"key": key, "summ": summ, "url": url})
+        if any(k in summ_l for k in EXPAND_KW) and key not in [x["key"] for x in expand_items]:
+            expand_items.append({"key": key, "summ": summ, "url": url})
+
+    def _signal_row(item, color):
+        return (f'<div style="padding:6px 0;border-bottom:.5px solid rgba(255,255,255,0.07)'
+                f';display:flex;align-items:flex-start;gap:7px">'
+                f'<div style="width:5px;height:5px;border-radius:50%;background:{color}'
+                f';flex-shrink:0;margin-top:5px"></div>'
+                f'<div style="min-width:0">'
+                f'<a href="{item["url"]}" target="_blank" style="font-size:10px;font-weight:700'
+                f';color:{color};text-decoration:none">{item["key"]}</a>'
+                f'<span style="font-size:11px;color:rgba(255,255,255,0.65);margin-left:6px">{item["summ"]}</span>'
+                f'</div></div>')
+
+    maint_html  = "".join(_signal_row(i, "#FFA94D") for i in maint_items[:6]) or \
+                  '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No maintenance signals found.</div>'
+    expand_html = "".join(_signal_row(i, "#68D391") for i in expand_items[:6]) or \
+                  '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No expansion signals found.</div>'
+
     kw_enc  = cust["jql_keyword"].replace(" ", "+").replace('"', '%22')
     ql_jira = f'{JIRA_BASE}/issues/?jql=text+~+%22{kw_enc}%22+AND+statusCategory+%21%3D+Done'
 
@@ -546,7 +666,20 @@ window.addEventListener('DOMContentLoaded',function(){{
     setTimeout(function(){{requestAnimationFrame(countUp);}},80);
   }}
 }});
-function toggleDrawer(dId,mId){{var d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(function(x){{x.classList.remove('open');}});document.querySelectorAll('.metric').forEach(function(x){{x.classList.remove('active');}});if(!open){{d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){{try{{buildHealthDrawer(DATA);}}catch(e){{console.error('buildHealthDrawer:',e);}}}};}}}}
+function switchTab(custId,tabId){{
+  var tabs=['tab-current','tab-engage'];
+  tabs.forEach(function(t){{
+    var panel=document.getElementById(t+'-'+custId);
+    var btn=document.getElementById('tab-btn-'+t+'-'+custId);
+    if(!panel||!btn)return;
+    var active=(t===tabId);
+    panel.style.display=active?'block':'none';
+    btn.style.color=active?'#fff':'rgba(255,255,255,0.4)';
+    btn.style.background=active?'rgba(255,255,255,0.06)':'transparent';
+    btn.style.borderBottom=active?'2px solid #00C2E0':'2px solid transparent';
+  }});
+}}
+function toggleDrawer(dId,mId){{var d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(function(x){{x.classList.remove('open');}});document.querySelectorAll('.metric').forEach(function(x){{x.classList.remove('active');}});if(!open){{d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){{try{{buildHealthDrawer(DATA);}}catch(e){{console.error('buildHealthDrawer:',e);}}}};  }}}}
 function copyJql(btn,key){{var el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(function(){{var orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(function(){{btn.textContent=orig;btn.style.color='';}},1500);}}).catch(function(){{btn.textContent='Failed';setTimeout(function(){{btn.textContent='Copy';}},1500);}});}}
 function buildHealthDrawer(DATA){{
   var factors=[],actions=[];
@@ -701,6 +834,8 @@ function buildHealthDrawer(DATA){{
   <div class="grid2">
     <div>
       <div class="ai-panel" style="padding:0;overflow:hidden">
+
+        <!-- ── Panel header: score + bar (always visible) ─────────────────── -->
         <div style="padding:1rem 1.25rem .85rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.75rem">
             <div><div class="ai-eyebrow">✦ Health Analysis</div><div class="ai-title" style="margin-bottom:0">Customer Health Assessment</div></div>
@@ -716,30 +851,113 @@ function buildHealthDrawer(DATA){{
             <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated {now}</span>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:.5px solid rgba(255,255,255,0.08)">
-          <!-- SR Ticket Trend -->
-          <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08)">
-            <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div>
-            {chart_block}
+
+        <!-- ── File-folder tabs ────────────────────────────────────────────── -->
+        <div style="display:flex;border-bottom:.5px solid rgba(255,255,255,0.08)">
+          <button onclick="switchTab('{cust['id']}','tab-current')"
+            id="tab-btn-current-{cust['id']}"
+            style="padding:.55rem 1.25rem;font-size:11px;font-weight:600;background:rgba(255,255,255,0.06);
+                   color:#fff;border:none;border-right:.5px solid rgba(255,255,255,0.08);
+                   border-bottom:2px solid #00C2E0;cursor:pointer;letter-spacing:.02em">
+            Current Assessment
+          </button>
+          <button onclick="switchTab('{cust['id']}','tab-engage')"
+            id="tab-btn-engage-{cust['id']}"
+            style="padding:.55rem 1.25rem;font-size:11px;font-weight:600;background:transparent;
+                   color:rgba(255,255,255,0.4);border:none;border-right:.5px solid rgba(255,255,255,0.08);
+                   border-bottom:2px solid transparent;cursor:pointer;letter-spacing:.02em">
+            Future Engagement
+          </button>
+        </div>
+
+        <!-- ════════════════ TAB 1 — CURRENT ASSESSMENT ════════════════════ -->
+        <div id="tab-current-{cust['id']}">
+
+          <!-- Chart + Themes row -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:.5px solid rgba(255,255,255,0.08)">
+            <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08);display:flex;flex-direction:column">
+              <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div>
+              <div style="flex:1;position:relative;min-height:200px">{chart_block}</div>
+            </div>
+            <div style="padding:0;overflow:hidden;background:rgba(255,255,255,0.02)">
+              <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.06em;padding:1rem 1.25rem .5rem">Recurring Issue Themes — last 90d</div>
+              {analytics_block}
+            </div>
           </div>
-          <!-- Recurring Issue Themes -->
-          <div style="padding:0;overflow:hidden;background:rgba(255,255,255,0.02)">
-            <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.06em;padding:1rem 1.25rem .5rem">Recurring Issue Themes — last 90d</div>
-            {analytics_block}
+
+          <!-- Findings + Signals row -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+            <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03)">
+              <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>Findings</div>
+              <div id="ai-findings" style="margin-bottom:1.25rem"><p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p></div>
+              <div style="font-size:11px;font-weight:800;color:#00C2E0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(0,194,224,0.2);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>Recommended Actions</div>
+              <div id="ai-actions"><p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p></div>
+            </div>
+            <div style="padding:1rem 1.25rem;background:rgba(0,194,224,0.04)">
+              <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#7B2FBE;border-radius:2px;display:inline-block"></span>Customer Signals<span style="font-size:9px;font-weight:500;text-transform:none;letter-spacing:0;color:rgba(255,255,255,0.3);margin-left:2px">· last 21d</span></div>
+              {pulse_signals}
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ════════════════ TAB 2 — FUTURE ENGAGEMENT ════════════════════ -->
+        <div id="tab-engage-{cust['id']}" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+
+            <!-- LEFT: Features + Bug fixes -->
+            <div style="border-right:.5px solid rgba(255,255,255,0.08)">
+
+              <!-- Upcoming Features -->
+              <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
+                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+                  <span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>
+                  Upcoming Features
+                  <span style="font-size:9px;font-weight:500;color:rgba(255,255,255,0.3);text-transform:none;letter-spacing:0;margin-left:2px">{len(features)} pending · click to open in Jira</span>
+                </div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;padding-left:9px">Features with release labels are shown first</div>
+                <div style="max-height:220px;overflow-y:auto">{features_html}</div>
+              </div>
+
+              <!-- Upcoming Bug Fixes -->
+              <div style="padding:1rem 1.25rem">
+                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+                  <span style="width:3px;height:14px;background:#FFA94D;border-radius:2px;display:inline-block"></span>
+                  Engineering Bug Fixes
+                  <span style="font-size:9px;font-weight:500;color:rgba(255,255,255,0.3);text-transform:none;letter-spacing:0;margin-left:2px">{len(eng_tickets)} open</span>
+                </div>
+                <div style="max-height:180px;overflow-y:auto">{upcoming_bugs_html}</div>
+              </div>
+
+            </div>
+
+            <!-- RIGHT: Maintenance + Expansion signals -->
+            <div>
+
+              <!-- Maintenance / Scheduled activity -->
+              <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
+                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+                  <span style="width:3px;height:14px;background:#FFA94D;border-radius:2px;display:inline-block"></span>
+                  Planned Activity
+                </div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;padding-left:9px">SR tickets signalling upgrades, patches, migrations</div>
+                <div style="max-height:180px;overflow-y:auto">{maint_html}</div>
+              </div>
+
+              <!-- Expansion / Growth signals -->
+              <div style="padding:1rem 1.25rem">
+                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+                  <span style="width:3px;height:14px;background:#68D391;border-radius:2px;display:inline-block"></span>
+                  Expansion Signals
+                </div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;padding-left:9px">New environments, additional instances, onboarding</div>
+                <div style="max-height:180px;overflow-y:auto">{expand_html}</div>
+              </div>
+
+            </div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-          <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03)">
-            <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>Findings</div>
-            <div id="ai-findings" style="margin-bottom:1.25rem"><p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p></div>
-            <div style="font-size:11px;font-weight:800;color:#00C2E0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(0,194,224,0.2);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>Recommended Actions</div>
-            <div id="ai-actions"><p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p></div>
-          </div>
-          <div style="padding:1rem 1.25rem;background:rgba(0,194,224,0.04)">
-            <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#7B2FBE;border-radius:2px;display:inline-block"></span>Customer Signals<span style="font-size:9px;font-weight:500;text-transform:none;letter-spacing:0;color:rgba(255,255,255,0.3);margin-left:2px">· last 21d</span></div>
-            {pulse_signals}
-          </div>
-        </div>
+
       </div>
     </div>
     <div>
