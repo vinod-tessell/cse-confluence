@@ -91,8 +91,10 @@ var CHART_DATA={{
 function initChart(){{
   var canvas=document.getElementById('trendChart');
   if(!canvas)return;
+  // Defer until the canvas has a real layout width
+  var W=canvas.offsetWidth||canvas.parentElement&&canvas.parentElement.offsetWidth||0;
+  if(W<10){{requestAnimationFrame(initChart);return;}}
   var ctx=canvas.getContext('2d');
-  var W=canvas.offsetWidth||canvas.parentElement.offsetWidth||600;
   var H=180;
   canvas.width=W; canvas.height=H;
   var PAD={{top:28,right:12,bottom:36,left:32}};
