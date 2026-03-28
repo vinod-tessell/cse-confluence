@@ -107,7 +107,7 @@ tr:last-child td{border-bottom:none}
       <div style="width:7px;height:7px;border-radius:50%;background:#68D391" id="health-dot"></div>
       <span id="health-badge" style="color:#68D391">Healthy</span>
     </div>
-    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 27, 2026 18:37 EST</div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 27, 2026 20:26 EST</div>
   </div>
 </div>
 <div class="body">
@@ -119,11 +119,12 @@ tr:last-child td{border-bottom:none}
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">Onboarding</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div>—</div></div>
   </div>
-  <div class="metrics" style="grid-template-columns:repeat(6,1fr)">
-    <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval green">0</div><div class="msub">Active critical issues</div></div>
-    <div class="metric" id="m-open" onclick="toggleDrawer('drawer-open','m-open')"><div class="mlabel">Open Tickets</div><div class="mval yellow">2</div><div class="msub">Across all priorities</div></div>
-    <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">0</div><div class="msub">Pending delivery</div></div>
-    <div class="metric" id="m-res" onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">0</div><div class="msub">Last 30 days</div></div>
+  <div class="metrics" style="grid-template-columns:repeat(7,1fr)">
+    <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval green">0</div><div class="msub">Critical — SR &amp; TS</div></div>
+    <div class="metric" id="m-sup"  onclick="toggleDrawer('drawer-sup','m-sup')"><div class="mlabel">Support Tickets</div><div class="mval yellow">1</div><div class="msub">SR project · open</div></div>
+    <div class="metric" id="m-eng"  onclick="toggleDrawer('drawer-eng','m-eng')"><div class="mlabel">Eng Tickets</div><div class="mval blue">0</div><div class="msub">TS project · non-feature</div></div>
+    <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">0</div><div class="msub">TS project · pending</div></div>
+    <div class="metric" id="m-res"  onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">0</div><div class="msub">SR · last 30 days</div></div>
     <div class="metric" id="m-health" onclick="toggleDrawer('drawer-health','m-health')"><div class="mlabel">Health Score (WIP)</div><div class="mval" style="color:#68D391">9/10</div><div class="msub">Rule-based</div></div>
     <div class="metric" id="m-jql" onclick="toggleDrawer('drawer-jql','m-jql')" style="border-left:2px solid #E6F1FB"><div class="mlabel">JQL Queries</div><div class="mval" style="font-size:16px;padding-top:3px">🔍</div><div class="msub">Show / hide</div></div>
   </div>
@@ -139,10 +140,11 @@ tr:last-child td{border-bottom:none}
       <span style="font-size:10px;color:#5E6C84">· Max deduction: 1 pts</span>
     </div>
   </div>
-  <div class="drawer" id="drawer-p0p1"><div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr></tbody></table></div>
-  <div class="drawer" id="drawer-open"><div class="drawer-head"><span class="drawer-title">🎫 All Open Tickets (2)</span><button class="drawer-close" onclick="toggleDrawer('drawer-open','m-open')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8302" target="_blank">SR-8302</a></td><td>Database import to SQL HA</td><td><span class="pb ph">High</span></td><td><span class="sp spe">Pending Eng</span></td><td>16d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37541" target="_blank">TS-37541</a></td><td>ATT HCP POC deployment</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>32d</td></tr></tbody></table></div>
-  <div class="drawer" id="drawer-feat"><div class="drawer-head"><span class="drawer-title">💡 Feature Requests (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr></tbody></table></div>
-  <div class="drawer" id="drawer-res"><div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days (0)</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr></tbody></table></div>
+  <div class="drawer" id="drawer-p0p1"><div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents (0) — SR &amp; TS</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr></tbody></table></div>
+  <div class="drawer" id="drawer-sup"><div class="drawer-head"><span class="drawer-title">🎫 Support Tickets (1) — SR project</span><button class="drawer-close" onclick="toggleDrawer('drawer-sup','m-sup')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8302" target="_blank">SR-8302</a></td><td>Database import to SQL HA</td><td><span class="pb ph">High</span></td><td><span class="sp spe">Pending Eng</span></td><td>16d</td></tr></tbody></table></div>
+  <div class="drawer" id="drawer-eng"><div class="drawer-head"><span class="drawer-title">⚙️ Engineering Tickets (0) — TS project · non-feature</span><button class="drawer-close" onclick="toggleDrawer('drawer-eng','m-eng')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open engineering tickets</td></tr></tbody></table></div>
+  <div class="drawer" id="drawer-feat"><div class="drawer-head"><span class="drawer-title">💡 Feature Requests (0) — TS project</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr></tbody></table></div>
+  <div class="drawer" id="drawer-res"><div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days (0) — SR project</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr></tbody></table></div>
   <div class="drawer" id="drawer-jql">
     <div class="drawer-head">
       <span class="drawer-title">🔍 JQL Queries — <span style="font-weight:400;color:#5E6C84">queries executed for ATT</span></span>
@@ -157,25 +159,32 @@ tr:last-child td{border-bottom:none}
   <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+in+(TS,+SR)+AND+text+~+%22ATT%22+AND+(labels+=+P0+OR+labels+=+P1)+AND+statusCategory+!=+Done+ORDER+BY+created+DESC" target="_blank">↗ Run in Jira</a>
 </div><div class="jql-block">
   <div class="jql-block-head">
-    <span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 All Open Tickets</span>
-    <button class="jql-copy" onclick="copyJql(this,'open')">Copy</button>
+    <span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 Support Tickets (SR)</span>
+    <button class="jql-copy" onclick="copyJql(this,'support')">Copy</button>
   </div>
-  <div class="jql-code" id="jql-open">project in (TS, SR) AND text ~ "ATT" AND statusCategory != Done ORDER BY created DESC</div>
-  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+in+(TS,+SR)+AND+text+~+%22ATT%22+AND+statusCategory+!=+Done+ORDER+BY+created+DESC" target="_blank">↗ Run in Jira</a>
+  <div class="jql-code" id="jql-support">project = SR AND text ~ "ATT" AND statusCategory != Done ORDER BY created DESC</div>
+  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+=+SR+AND+text+~+%22ATT%22+AND+statusCategory+!=+Done+ORDER+BY+created+DESC" target="_blank">↗ Run in Jira</a>
 </div><div class="jql-block">
   <div class="jql-block-head">
-    <span class="jql-label"><span class="jql-label-dot" style="background:#1A6FDB"></span>💡 Feature Requests</span>
+    <span class="jql-label"><span class="jql-label-dot" style="background:#1A6FDB"></span>💡 Feature Requests (TS)</span>
     <button class="jql-copy" onclick="copyJql(this,'features')">Copy</button>
   </div>
-  <div class="jql-code" id="jql-features">project in (TS, SR) AND ("Customers[Labels]" IN ("ATT") or text ~ "ATT") AND (issuetype in (Feature, Story) OR labels in ("FeatureRequest")) AND statusCategory != Done ORDER BY created DESC</div>
-  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+in+(TS,+SR)+AND+(%22Customers[Labels]%22+IN+(%22ATT%22)+or+text+~+%22ATT%22)+AND+(issuetype+in+(Feature,+Story)+OR+labels+in+(%22FeatureRequest%22))+AND+statusCategory+!=+Done+ORDER+BY+created+DESC" target="_blank">↗ Run in Jira</a>
+  <div class="jql-code" id="jql-features">project = TS AND ("Customers[Labels]" IN ("ATT") OR text ~ "ATT") AND (issuetype in (Feature, Story) OR labels in ("FeatureRequest")) AND statusCategory != Done ORDER BY created DESC</div>
+  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+=+TS+AND+(%22Customers[Labels]%22+IN+(%22ATT%22)+OR+text+~+%22ATT%22)+AND+(issuetype+in+(Feature,+Story)+OR+labels+in+(%22FeatureRequest%22))+AND+statusCategory+!=+Done+ORDER+BY+created+DESC" target="_blank">↗ Run in Jira</a>
 </div><div class="jql-block">
   <div class="jql-block-head">
-    <span class="jql-label"><span class="jql-label-dot" style="background:#38A169"></span>✅ Resolved (30d)</span>
+    <span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ Engineering Tickets (TS)</span>
+    <button class="jql-copy" onclick="copyJql(this,'eng_tickets')">Copy</button>
+  </div>
+  <div class="jql-code" id="jql-eng_tickets">project = TS AND text ~ "ATT" AND NOT (issuetype in (Feature, Story) OR labels in ("FeatureRequest")) AND statusCategory != Done ORDER BY created DESC</div>
+  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+=+TS+AND+text+~+%22ATT%22+AND+NOT+(issuetype+in+(Feature,+Story)+OR+labels+in+(%22FeatureRequest%22))+AND+statusCategory+!=+Done+ORDER+BY+created+DESC" target="_blank">↗ Run in Jira</a>
+</div><div class="jql-block">
+  <div class="jql-block-head">
+    <span class="jql-label"><span class="jql-label-dot" style="background:#38A169"></span>✅ Resolved SR (30d)</span>
     <button class="jql-copy" onclick="copyJql(this,'resolved')">Copy</button>
   </div>
-  <div class="jql-code" id="jql-resolved">project in (TS, SR) AND text ~ "ATT" AND statusCategory = Done AND resolutiondate >= -30d ORDER BY resolutiondate DESC</div>
-  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+in+(TS,+SR)+AND+text+~+%22ATT%22+AND+statusCategory+=+Done+AND+resolutiondate+>=+-30d+ORDER+BY+resolutiondate+DESC" target="_blank">↗ Run in Jira</a>
+  <div class="jql-code" id="jql-resolved">project = SR AND text ~ "ATT" AND statusCategory = Done AND resolutiondate >= -30d ORDER BY resolutiondate DESC</div>
+  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+=+SR+AND+text+~+%22ATT%22+AND+statusCategory+=+Done+AND+resolutiondate+>=+-30d+ORDER+BY+resolutiondate+DESC" target="_blank">↗ Run in Jira</a>
 </div><div class="jql-block">
   <div class="jql-block-head">
     <span class="jql-label"><span class="jql-label-dot" style="background:#5E6C84"></span>🕐 Recent Activity</span>
@@ -184,7 +193,7 @@ tr:last-child td{border-bottom:none}
   <div class="jql-code" id="jql-recent">project in (TS, SR) AND text ~ "ATT" AND updated >= -30d ORDER BY updated DESC</div>
   <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+in+(TS,+SR)+AND+text+~+%22ATT%22+AND+updated+>=+-30d+ORDER+BY+updated+DESC" target="_blank">↗ Run in Jira</a>
 </div></div>
-    <div class="jql-footer">💡 Keyword used: <b style="color:#172B4D;margin-left:3px">ATT</b> &nbsp;·&nbsp; Click "Run in Jira" to open results live &nbsp;·&nbsp; "Copy" copies the raw JQL to clipboard</div>
+    <div class="jql-footer">💡 Keyword used: <b style="color:#172B4D;margin-left:3px">ATT</b> &nbsp;·&nbsp; SR = customer support · TS = engineering &nbsp;·&nbsp; Click "Run in Jira" to open results live</div>
   </div>
   <div class="grid2">
     <div>
@@ -200,8 +209,9 @@ tr:last-child td{border-bottom:none}
         </div>
       </div>
       <div class="sec"><div class="sec-head"><span class="sec-title">🚨 Active P0 / P1 Incidents</span><span class="badge br">0 Open</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr></tbody></table></div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">🎫 Open Support Tickets</span><span class="badge bo">2 Open</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8302" target="_blank">SR-8302</a></td><td>Database import to SQL HA</td><td><span class="pb ph">High</span></td><td><span class="sp spe">Pending Eng</span></td><td>16d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37541" target="_blank">TS-37541</a></td><td>ATT HCP POC deployment</td><td><span class="pb pm">Medium</span></td><td><span class="sp si">In Progress</span></td><td>32d</td></tr></tbody></table></div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">0 Active</span></div><p style="padding:1rem;font-size:12px;color:#5E6C84">No open feature requests.</p></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">🎫 Support Tickets</span><span class="badge bo">1 Open · SR</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8302" target="_blank">SR-8302</a></td><td>Database import to SQL HA</td><td><span class="pb ph">High</span></td><td><span class="sp spe">Pending Eng</span></td><td>16d</td></tr></tbody></table></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">⚙️ Engineering Tickets</span><span class="badge" style="background:#EEEDFE;color:#3C3489">0 Open · TS</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open engineering tickets</td></tr></tbody></table></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">0 Active · TS</span></div><p style="padding:1rem;font-size:12px;color:#5E6C84">No open feature requests.</p></div>
     </div>
     <div>
       <div class="sb-sec"><div class="sb-head">📅 Recent Activity</div><div class="tl"><div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8302" target="_blank">SR-8302</a> — Update on SR-8302</div><div class="tl-d">The collation issue is fixed in rel-140 patch 1 and TS ticket   . Please refer the fleet screenshot. cc — Rajasekar Doraswamy</div><div class="tl-dt">Mar 24, 2026</div></div></div>
@@ -230,7 +240,7 @@ new Chart(document.getElementById('trendChart'),{type:'bar',data:{labels:["Oct 2
   plugins:{legend:{display:true,position:'top',align:'end',labels:{font:{size:9},color:'rgba(255,255,255,0.5)',boxWidth:8,padding:8}}},
   scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)'},border:{display:false}},
            y:{min:0,max:2,grid:{color:'rgba(255,255,255,0.06)'},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)',stepSize:2},border:{display:false}}}}}); 
-const DATA={"p0p1": 0, "open": 2, "features": 0, "resolved": 0, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8302"], "generated": "Mar 27, 2026 18:37 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+const DATA={"p0p1": 0, "support": 1, "features": 0, "eng_tickets": 0, "resolved": 0, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8302"], "generated": "Mar 27, 2026 20:26 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const el=document.getElementById('ai-body'),sc=document.getElementById('ai-score');
@@ -239,14 +249,16 @@ function runHealth(DATA) {
   else if(DATA.p0p1===2){score-=3;findings.push(`<b style="color:#FC8181">2 active P0 incidents</b> (${DATA.p0keys.join(', ')})`);actions.push(`Both need an engineering owner today`);}
   else if(DATA.p0p1===1){score-=2;findings.push(`<b style="color:#FFC107">1 active P0/P1</b> (${DATA.p0keys[0]})`);actions.push(`Ensure ${DATA.p0keys[0]} has daily updates to customer`);}
   else{findings.push('<b style="color:#68D391">No active P0/P1 incidents</b>');}
-  if(DATA.open>=8){score-=2;findings.push(`High backlog: <b>${DATA.open} tickets</b> open`);}
-  else if(DATA.open>=5){score-=1;findings.push(`Moderate backlog: <b>${DATA.open} open tickets</b>`);}
-  else{findings.push(`<b style="color:#68D391">Healthy ticket volume</b>: ${DATA.open} open`);}
-  if(DATA.pendingEng>=4){score-=2;findings.push(`<b>${DATA.pendingEng} tickets stuck pending engineering</b>`);actions.push(`Set ETAs on all ${DATA.pendingEng} blocked tickets`);}
-  else if(DATA.pendingEng>=2){score-=1;findings.push(`${DATA.pendingEng} tickets pending engineering`);}
+  if(DATA.support>=8){score-=2;findings.push(`High SR backlog: <b>${DATA.support} support tickets</b> open`);}
+  else if(DATA.support>=5){score-=1;findings.push(`Moderate SR backlog: <b>${DATA.support} support tickets</b>`);}
+  else{findings.push(`<b style="color:#68D391">Healthy SR volume</b>: ${DATA.support} open`);}
+  if(DATA.pendingEng>=4){score-=2;findings.push(`<b>${DATA.pendingEng} SR tickets stuck pending engineering</b>`);actions.push(`Set ETAs on all ${DATA.pendingEng} blocked SR tickets`);}
+  else if(DATA.pendingEng>=2){score-=1;findings.push(`${DATA.pendingEng} SR tickets pending engineering`);}
+  if(DATA.eng_tickets>=5){score-=1;findings.push(`Engineering backlog: <b>${DATA.eng_tickets} TS tickets</b>`);actions.push('Review and prioritise TS engineering backlog');}
+  else{findings.push(`<b style="color:#68D391">TS engineering queue</b>: ${DATA.eng_tickets} open`);}
   if(DATA.features>=5){score-=1;findings.push(`Large feature backlog: <b>${DATA.features} requests</b>`);actions.push('Schedule a feature roadmap call');}
-  if(DATA.resolved===0){score-=1;findings.push('<b style="color:#FFC107">No tickets resolved in 30 days</b>');}
-  else{findings.push(`<b style="color:#68D391">${DATA.resolved} resolved</b> in last 30 days`);}
+  if(DATA.resolved===0){score-=1;findings.push('<b style="color:#FFC107">No SR tickets resolved in 30 days</b>');}
+  else{findings.push(`<b style="color:#68D391">${DATA.resolved} SR resolved</b> in last 30 days`);}
   score=Math.max(1,Math.min(10,score));
   const color=score>=8?'#68D391':score>=6?'#FFC107':'#FC8181';
   const label=score>=8?'Healthy':score>=6?'Stable':score>=4?'Needs Attention':'At Risk';
@@ -268,16 +280,18 @@ function buildHealthDrawer(DATA){
   else if(DATA.p0p1===2){factors.push(['−3 pts',`2 P0 incidents (${DATA.p0keys.join(', ')})`, '#E53E3E']);actions.push(['🚨','Both need engineering owner today']);}
   else if(DATA.p0p1===1){factors.push(['−2 pts',`1 active P0/P1 (${DATA.p0keys[0]})`, '#DD6B20']);actions.push(['🚨','Daily updates to customer until resolved']);}
   else{factors.push(['+0 pts','No active P0/P1 incidents','#38A169']);}
-  if(DATA.open>=8){factors.push(['−2 pts',`High backlog — ${DATA.open} open`,'#DD6B20']);actions.push(['🎫','Close or escalate stale tickets']);}
-  else if(DATA.open>=5){factors.push(['−1 pt',`Moderate backlog — ${DATA.open} open`,'#D69E2E']);actions.push(['🎫','Target 3 resolutions this sprint']);}
-  else{factors.push(['+0 pts',`Healthy volume — ${DATA.open} open`,'#38A169']);}
-  if(DATA.pendingEng>=4){factors.push(['−2 pts',`${DATA.pendingEng} blocked pending eng`,'#DD6B20']);actions.push(['⏳','Set ETAs and communicate to customer']);}
-  else if(DATA.pendingEng>=2){factors.push(['−1 pt',`${DATA.pendingEng} pending engineering`,'#D69E2E']);actions.push(['⏳','Chase ETAs this week']);}
-  else{factors.push(['+0 pts','No tickets blocked on engineering','#38A169']);}
-  if(DATA.features>=5){factors.push(['−1 pt',`${DATA.features} open feature requests`,'#D69E2E']);actions.push(['💡','Schedule roadmap call']);}
+  if(DATA.support>=8){factors.push(['−2 pts',`High SR backlog — ${DATA.support} open`,'#DD6B20']);actions.push(['🎫','Close or escalate stale SR tickets']);}
+  else if(DATA.support>=5){factors.push(['−1 pt',`Moderate SR backlog — ${DATA.support} open`,'#D69E2E']);actions.push(['🎫','Target 3 SR resolutions this sprint']);}
+  else{factors.push(['+0 pts',`Healthy SR volume — ${DATA.support} open`,'#38A169']);}
+  if(DATA.pendingEng>=4){factors.push(['−2 pts',`${DATA.pendingEng} SR tickets blocked pending eng`,'#DD6B20']);actions.push(['⏳','Set ETAs and communicate to customer']);}
+  else if(DATA.pendingEng>=2){factors.push(['−1 pt',`${DATA.pendingEng} SR tickets pending engineering`,'#D69E2E']);actions.push(['⏳','Chase ETAs this week']);}
+  else{factors.push(['+0 pts','No SR tickets blocked on engineering','#38A169']);}
+  if(DATA.eng_tickets>=5){factors.push(['−1 pt',`${DATA.eng_tickets} TS engineering tickets open`,'#D69E2E']);actions.push(['⚙️','Review and triage TS engineering backlog']);}
+  else{factors.push(['+0 pts',`${DATA.eng_tickets} TS engineering tickets`,'#38A169']);}
+  if(DATA.features>=5){factors.push(['−1 pt',`${DATA.features} TS feature requests open`,'#D69E2E']);actions.push(['💡','Schedule roadmap call']);}
   else{factors.push(['+0 pts',`${DATA.features} feature requests`,'#38A169']);}
-  if(DATA.resolved===0){factors.push(['−1 pt','No tickets resolved in 30d','#DD6B20']);actions.push(['✅','Close at least one ticket']);}
-  else{factors.push(['+0 pts',`${DATA.resolved} resolved in 30d`,'#38A169']);}
+  if(DATA.resolved===0){factors.push(['−1 pt','No SR tickets resolved in 30d','#DD6B20']);actions.push(['✅','Close at least one SR ticket']);}
+  else{factors.push(['+0 pts',`${DATA.resolved} SR resolved in 30d`,'#38A169']);}
   document.getElementById('health-factors').innerHTML=factors.map(([pts,label,col])=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:${col}1A;color:${col};flex-shrink:0;min-width:44px;text-align:center">${pts}</span><span style="font-size:11px;color:#172B4D;line-height:1.5">${label}</span></div>`).join('');
   const aEl=document.getElementById('health-actions');
   aEl.innerHTML=actions.length===0?'<p style="font-size:11px;color:#38A169;font-weight:600">✅ Customer is healthy!</p>':actions.map(([icon,text])=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:13px;flex-shrink:0">${icon}</span><span style="font-size:11px;color:#172B4D;line-height:1.5">${text}</span></div>`).join('');
