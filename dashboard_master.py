@@ -1,0 +1,444 @@
+"""
+dashboard_master.py — builds the master portfolio HTML dashboard.
+"""
+import json
+from datetime import datetime
+
+from config import CONFLUENCE_PARENT, EST
+from templates import SHARED_CSS, NAV_MASTER
+
+# ── Master dashboard builder ───────────────────────────────────────────────────
+def build_master_html(customer_results):
+    now    = datetime.now(EST).strftime("%b %d, %Y %H:%M EST")
+    real   = [c for c in customer_results if c["config"].get("name")]
+    total  = len(real)
+    at_risk= sum(1 for c in real if c["health_key"]=="atrisk")
+    healthy= sum(1 for c in real if c["health_key"] in ("healthy","stable"))
+    total_p0 = sum(c["p0_count"] for c in real)
+
+    cards = ""
+    for cr in customer_results:
+        cust = cr["config"]
+        if not cust.get("name"): continue
+        hk,hl,hcol = cr["health_key"],cr["health_label"],cr["health_color"]
+        p0col  = "red"    if cr["p0_count"]>0    else "green"
+        supcol = "orange" if cr["sup_count"]>5   else "gray" if cr["sup_count"]>2  else "green"
+        engcol = "orange" if cr["eng_count"]>4   else "blue"
+        tags  = "".join(f'<span class="tag">{e}</span>' for e in cust["engines"]) + f'<span class="tag">{cust["cloud"]}</span>'
+        url   = cr.get("dashboard_url","#")
+        phase_emoji = {"Onboarding":"🔵","Implementation":"🟡","Stabilisation":"🟠","Production":"🟢","Steady State":"⚫"}.get(cust["phase"],"")
+        cards += f"""<a class="cust-card" data-health="{hk}" data-name="{cust['name'].lower()}" href="{url}" target="_parent" style="text-decoration:none;color:inherit">
+  <div class="card-header">
+    <div class="card-logo" style="background:{cust['logo_bg']};color:{cust['logo_color']}">{cust['initials']}</div>
+    <div><div class="card-name">{cust['name']}</div><div class="card-meta">{cust['region']} · CSE: {cust.get('cse_owner','—')}</div></div>
+    <div class="health-pill" style="background:{hcol}1A;border:1px solid {hcol}4D;color:{hcol}"><div class="hp-dot" style="background:{hcol}"></div>{hl}</div>
+  </div>
+  <div class="card-body">
+    <div class="card-stats">
+      <div class="cs"><div class="cs-val {p0col}">{cr['p0_count']}</div><div class="cs-label">P0/P1</div></div>
+      <div class="cs"><div class="cs-val {supcol}">{cr['sup_count']}</div><div class="cs-label">SR</div></div>
+      <div class="cs"><div class="cs-val {engcol}">{cr['eng_count']}</div><div class="cs-label">TS Eng</div></div>
+      <div class="cs"><div class="cs-val blue">{cr['feat_count']}</div><div class="cs-label">Features</div></div>
+    </div>
+    <div class="card-tags">{tags}</div>
+    <div class="card-footer"><span class="phase-lbl">{phase_emoji} {cust['phase']}</span><span class="drill-btn">View Dashboard →</span></div>
+  </div>
+</a>"""
+
+    action_items = []
+    for cr in sorted(customer_results, key=lambda x:x["p0_count"], reverse=True)[:3]:
+        c   = cr["config"]
+        url = cr.get("dashboard_url","#")
+        if cr["p0_count"]>0:
+            sev,sev_cls = "Critical","sev-critical"
+            title = f"{c['name']} — {cr['p0_count']} P0{'s' if cr['p0_count']>1 else ''} open"
+            desc  = f"{cr['sup_count']} SR + {cr['eng_count']} TS eng tickets open. Immediate escalation required."
+        elif cr["sup_count"]>5:
+            sev,sev_cls = "High","sev-high"
+            title = f"{c['name']} — {cr['sup_count']} open SR tickets"
+            desc  = f"{cr['eng_count']} TS eng tickets · {cr['feat_count']} feature requests pending."
+        else:
+            sev,sev_cls = "Watch","sev-watch"
+            title = f"{c['name']} — monitor closely"
+            desc  = f"Phase: {c['phase']}. {cr['sup_count']} SR · {cr['eng_count']} TS eng open."
+        action_items.append(f'<div class="action-item"><span class="ai-severity {sev_cls}">{sev}</span><div class="ai-title">{title}</div><div class="ai-desc">{desc}</div><a class="ai-link" href="{url}" target="_parent">→ View Dashboard</a></div>')
+    while len(action_items)<3:
+        action_items.append('<div class="action-item"><span class="ai-severity sev-watch">Watch</span><div class="ai-title">No further escalations</div><div class="ai-desc">Remaining customers are healthy.</div></div>')
+
+    phase_counts = {"Onboarding":0,"Implementation":0,"Stabilisation":0,"Production":0,"Steady State":0}
+    for cr in customer_results:
+        p = cr["config"].get("phase","")
+        if p in phase_counts: phase_counts[p]+=1
+    pipe_max = max(phase_counts.values()) or 1
+    def pipe_row(label,count,color,text_color):
+        pct=round(count/pipe_max*100)
+        return (f'<div class="phase-row"><span class="phase-label">{label}</span>'
+                f'<div class="phase-track"><div class="phase-fill" style="width:{max(pct,8)}%;background:{color};color:{text_color}">{count if pct>15 else ""}</div></div>'
+                f'<span class="phase-count" style="color:{color}">{count}</span></div>')
+    pipeline_html = (pipe_row("Onboarding",phase_counts["Onboarding"],"#378ADD","#E6F1FB")+
+                     pipe_row("Implementation",phase_counts["Implementation"],"#BA7517","#FAEEDA")+
+                     pipe_row("Stabilisation",phase_counts["Stabilisation"],"#E24B4A","#FCEBEB")+
+                     pipe_row("Production",phase_counts["Production"],"#1D9E75","#E1F5EE")+
+                     pipe_row("Steady State",phase_counts["Steady State"],"#5F5E5A","#F1EFE8"))
+
+    _HEALTH_ORDER = {"atrisk": 0, "attention": 1, "stable": 2, "healthy": 3}
+    heatmap_cells = ""
+    for cr in sorted(customer_results, key=lambda x: (_HEALTH_ORDER.get(x["health_key"], 2), -x["p0_count"], -x["sup_count"])):
+        c   = cr["config"]
+        cls = {"atrisk":"hm-risk","attention":"hm-warn","stable":"hm-stable","healthy":"hm-good"}.get(cr["health_key"],"hm-stable")
+        stat= f"{cr['p0_count']} P0s · {cr['sup_count']} SR" if cr["p0_count"]>0 else f"{cr['sup_count']} SR · {cr['eng_count']} TS"
+        url = cr.get("dashboard_url","#")
+        heatmap_cells += f'<a class="hm-cell {cls}" href="{url}" target="_parent"><div class="hm-name">{c["name"][:18]}</div><div class="hm-stat">{stat}</div></a>'
+
+    # ── TAM load scoring ───────────────────────────────────────────────────────
+    # Accumulate raw signals per TAM then normalise to a 0-100 capacity score.
+    # Factors (with rationale):
+    #   P0/P1 account     +8  — active fire, demands daily TAM attention
+    #   At Risk account   +4  — health=atrisk but no P0 yet; high watch load
+    #   Needs Attention   +2  — health=attention; moderate monitoring overhead
+    #   Open SR tickets   +0.5 each (cap 15) — direct customer-facing workload
+    #   Open Eng tickets  +0.3 each (cap 8)  — coordination with engineering
+    #   Accounts managed  +3 each (cap 10)   — base management overhead
+    #   Impl/Onboarding   +3 per account     — highest-touch lifecycle phase
+    # Raw scores are clamped to 0-100 via a soft cap of 80 = "full".
+    LOAD_SOFT_CAP = 80   # raw score at which capacity reads 100 %
+
+    tam_map = {}
+    for cr in customer_results:
+        tam = cr["config"].get("tam_primary","—") or "—"
+        if tam == "—": continue
+        if tam not in tam_map:
+            tam_map[tam] = {"p0":0,"sup":0,"eng":0,"accounts":0,
+                            "atrisk":0,"attention":0,"impl":0,
+                            "raw_load":0,"customers":[],"crits":[]}
+        d = tam_map[tam]
+        d["accounts"]  += 1
+        d["p0"]        += cr["p0_count"]
+        d["sup"]       += cr["sup_count"]
+        d["eng"]       += cr["eng_count"]
+        d["customers"].append(cr["config"]["name"].split()[0])
+        hk = cr["health_key"]
+        if hk == "atrisk":    d["atrisk"]    += 1
+        if hk == "attention": d["attention"] += 1
+        if cr["config"].get("phase") in ("Onboarding","Implementation"): d["impl"] += 1
+        if cr["p0_count"] > 0: d["crits"].append(cr["config"]["name"].split()[0])
+
+    for tam, d in tam_map.items():
+        raw = (d["p0"]        * 8 +
+               d["atrisk"]    * 4 +
+               d["attention"] * 2 +
+               min(d["sup"] * 0.5, 15) +
+               min(d["eng"] * 0.3,  8) +
+               min(d["accounts"] * 3, 10) +
+               d["impl"]      * 3)
+        d["raw_load"] = raw
+        d["pct"]      = min(round(raw / LOAD_SOFT_CAP * 100), 100)
+
+    avatar_colors=[{"bg":"#E6F1FB","col":"#0C447C"},{"bg":"#EEEDFE","col":"#3C3489"},
+                   {"bg":"#EAF3DE","col":"#27500A"},{"bg":"#FAEEDA","col":"#633806"},
+                   {"bg":"#FBEAF0","col":"#72243E"},{"bg":"#E1F5EE","col":"#085041"}]
+
+    # Sort by load descending so most-loaded TAM shows first
+    sorted_tams = sorted(tam_map.items(), key=lambda x: -x[1]["pct"])
+
+    # Recommendation: least-loaded TAM who is not over capacity
+    best_tam     = next((t for t,d in reversed(sorted_tams) if d["pct"] < 70), None)
+    best_tam_row = ""
+    if best_tam:
+        bd = tam_map[best_tam]
+        best_tam_row = (f'<div style="margin:0 1rem .75rem;padding:.6rem .75rem;background:#EAF3DE;'
+                        f'border-radius:6px;border:.5px solid #97C459;display:flex;align-items:center;gap:8px">'
+                        f'<span style="font-size:13px">✅</span>'
+                        f'<div><div style="font-size:11px;font-weight:700;color:#27500A">Recommended for next account: {best_tam}</div>'
+                        f'<div style="font-size:10px;color:#3A6E1F;margin-top:1px">'
+                        f'{bd["accounts"]} accounts · {bd["pct"]}% capacity · {bd["sup"]} SR open</div></div></div>')
+
+    owner_rows = ""
+    for idx, (tam, d) in enumerate(sorted_tams):
+        ac      = avatar_colors[idx % len(avatar_colors)]
+        parts   = tam.split()
+        initials= (parts[0][0]+(parts[1][0] if len(parts)>1 else parts[0][-1])).upper() if parts else "—"
+        pct     = d["pct"]
+        # Bar colour and status label
+        if pct >= 85:
+            bar_col, status, status_bg, status_col = "#E53E3E", "Over capacity", "#FFF5F5", "#A32D2D"
+        elif pct >= 65:
+            bar_col, status, status_bg, status_col = "#DD6B20", "Busy",          "#FFFAF0", "#854F0B"
+        elif pct >= 35:
+            bar_col, status, status_bg, status_col = "#D69E2E", "Available",     "#FFFDF0", "#7A5A00"
+        else:
+            bar_col, status, status_bg, status_col = "#38A169", "Has bandwidth", "#EAF3DE", "#27500A"
+
+        custs   = ", ".join(d["customers"][:4]) + ("…" if len(d["customers"]) > 4 else "")
+        crit_note = (f' · 🚨 {", ".join(d["crits"][:2])}' if d["crits"] else "")
+        impl_note = (f' · 🔄 {d["impl"]} impl' if d["impl"] else "")
+
+        # Breakdown tooltip text
+        breakdown = (f'{d["accounts"]} accts'
+                     f' · {d["p0"]} P0s'
+                     f' · {d["sup"]} SR'
+                     f' · {d["eng"]} TS eng'
+                     f'{crit_note}{impl_note}')
+
+        owner_rows += f"""<div class="tam-row">
+  <div class="tam-top">
+    <div class="tam-info">
+      <div class="owner-avatar" style="background:{ac['bg']};color:{ac['col']};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">{initials}</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#172B4D;line-height:1.2">{tam}</div>
+        <div style="font-size:10px;color:#5E6C84;margin-top:1px">{custs}</div>
+      </div>
+    </div>
+    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:{status_bg};color:{status_col};flex-shrink:0">{status}</span>
+  </div>
+  <div class="tam-bar-wrap">
+    <div class="tam-bar-track">
+      <div class="tam-bar-fill" style="width:{pct}%;background:{bar_col}"></div>
+    </div>
+    <span class="tam-pct" style="color:{bar_col}">{pct}%</span>
+  </div>
+  <div class="tam-breakdown">{breakdown}</div>
+</div>"""
+
+    top5 = sorted([cr for cr in customer_results if cr["sup_count"]>0],key=lambda x:-x["sup_count"])[:5]
+    trend_max = top5[0]["sup_count"] if top5 else 1
+    trend_rows="".join(
+        f'<div class="trend-row"><span class="trend-label">{cr["config"]["name"].split()[0][:10]}</span>'
+        f'<div class="trend-bar-wrap"><div class="trend-bar" style="width:{round(cr["sup_count"]/trend_max*100)}%;background:{"#E53E3E" if cr["p0_count"]>0 else "#DD6B20" if cr["sup_count"]>5 else "#38A169"}"></div></div>'
+        f'<span class="trend-val" style="color:{"#E53E3E" if cr["p0_count"]>0 else "#DD6B20" if cr["sup_count"]>5 else "#38A169"}">{cr["sup_count"]}</span></div>'
+        for cr in top5)
+
+    highlights=[]
+    crit=[cr for cr in customer_results if cr["p0_count"]>0]
+    if crit: highlights.append(f'🚨 <span style="color:#172B4D;font-weight:600">{sum(c["p0_count"] for c in crit)} P0/P1s open</span> — {", ".join(c["config"]["name"].split()[0] for c in crit[:2])} need immediate attention')
+    new_impl=[cr for cr in customer_results if cr["config"].get("phase") in ("Onboarding","Implementation")]
+    if new_impl: highlights.append(f'🔄 <span style="color:#172B4D;font-weight:600">{len(new_impl)} customers</span> actively in implementation')
+    prod=[cr for cr in customer_results if cr["config"].get("phase")=="Production"]
+    if prod: highlights.append(f'✅ <span style="color:#172B4D;font-weight:600">{len(prod)} customers</span> in Production phase')
+    total_sr  = sum(c["sup_count"]  for c in real)
+    total_eng = sum(c["eng_count"]  for c in real)
+    highlights.append(f'📋 <span style="color:#172B4D;font-weight:600">{total} customers</span> — {total_sr} SR open · {total_eng} TS eng open · {healthy} healthy')
+    highlights_html="".join(f'<div style="font-size:11px;color:#5E6C84;line-height:1.7;border-bottom:.5px solid #F4F5F7;padding-bottom:.6rem;margin-bottom:.6rem">{h}</div>' for h in highlights[:4])
+
+    return f"""<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<title>CSE — Customer Portfolio</title>
+<style>
+{SHARED_CSS}
+.wordmark-bar{{width:3px;height:36px;background:#00C2E0;border-radius:2px;flex-shrink:0}}
+.hero{{background:#0B1F45;padding:1.5rem 1.5rem 1.75rem}}
+.hero-top{{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}}
+.kpi-strip{{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}}
+.kpi{{background:rgba(255,255,255,0.06);border:.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:1rem 1.1rem;position:relative;overflow:hidden}}
+.kpi-label{{font-size:10px;font-weight:500;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}}
+.kpi-val{{font-size:28px;font-weight:700;color:#fff;line-height:1}}
+.kpi-sub{{font-size:10px;margin-top:4px}}
+.kpi-accent{{position:absolute;top:0;left:0;width:3px;height:100%}}
+.action-strip{{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;margin-bottom:1.25rem;overflow:hidden}}
+.action-head{{background:#0B1F45;padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between}}
+.action-head-title{{font-size:12px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}}
+.action-head-badge{{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(252,129,129,0.2);color:#FC8181;border:.5px solid rgba(252,129,129,0.3)}}
+.action-head-ts{{font-size:10px;color:rgba(255,255,255,0.3)}}
+.action-items{{display:grid;grid-template-columns:repeat(3,1fr)}}
+.action-item{{padding:.9rem 1.25rem;border-right:.5px solid #F4F5F7}}
+.action-item:last-child{{border-right:none}}
+.ai-severity{{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:6px}}
+.sev-critical{{background:#FFF5F5;color:#A32D2D}}.sev-high{{background:#FFFAF0;color:#854F0B}}.sev-watch{{background:#E6F1FB;color:#0C447C}}
+.ai-title{{font-size:12px;font-weight:700;color:#172B4D;margin-bottom:3px;line-height:1.35}}
+.ai-desc{{font-size:11px;color:#5E6C84;line-height:1.5}}
+.ai-link{{font-size:11px;font-weight:600;color:#1A6FDB;margin-top:5px;display:block;text-decoration:none}}
+.main-grid{{display:grid;grid-template-columns:1fr 1fr 300px;gap:1.1rem;align-items:start}}
+.pipeline{{padding:.9rem 1.1rem}}
+.phase-row{{display:flex;align-items:center;gap:10px;margin-bottom:8px}}
+.phase-row:last-child{{margin-bottom:0}}
+.phase-label{{font-size:11px;color:#5E6C84;width:110px;flex-shrink:0}}
+.phase-track{{flex:1;height:20px;background:#F4F5F7;border-radius:4px;overflow:hidden}}
+.phase-fill{{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:700;min-width:8px}}
+.phase-count{{font-size:11px;font-weight:700;width:20px;text-align:right;flex-shrink:0}}
+.heatmap{{padding:.9rem 1.1rem;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}}
+.hm-cell{{border-radius:6px;padding:7px 8px;display:block;text-decoration:none;transition:filter .15s}}
+.hm-cell:hover{{filter:brightness(0.93)}}
+.hm-name{{font-size:10px;font-weight:600;line-height:1.3;margin-bottom:2px}}
+.hm-stat{{font-size:10px;opacity:.75}}
+.hm-risk{{background:#FFF5F5;border:.5px solid #F09595}}.hm-risk .hm-name,.hm-risk .hm-stat{{color:#A32D2D}}
+.hm-warn{{background:#FFFAF0;border:.5px solid #EF9F27}}.hm-warn .hm-name,.hm-warn .hm-stat{{color:#854F0B}}
+.hm-stable{{background:#E6F1FB;border:.5px solid #85B7EB}}.hm-stable .hm-name,.hm-stable .hm-stat{{color:#0C447C}}
+.hm-good{{background:#EAF3DE;border:.5px solid #97C459}}.hm-good .hm-name,.hm-good .hm-stat{{color:#27500A}}
+.sb-sec{{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.1rem}}
+.sb-head{{padding:.7rem 1rem;border-bottom:.5px solid #DFE1E6;font-size:12px;font-weight:700;color:#172B4D}}
+.owner-row{{display:flex;align-items:center;justify-content:space-between;padding:7px 1rem;border-bottom:.5px solid #DFE1E6}}
+.owner-row:last-child{{border-bottom:none}}
+.owner-info{{display:flex;align-items:center;gap:8px}}
+.owner-avatar{{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}}
+.owner-name{{font-size:12px;font-weight:600;color:#172B4D}}.owner-meta{{font-size:10px;color:#5E6C84}}
+.owner-counts{{display:flex;gap:8px}}.oc{{text-align:center}}
+.oc-val{{font-size:13px;font-weight:700}}.oc-label{{font-size:9px;color:#5E6C84}}
+.trend-row{{display:flex;align-items:center;gap:8px;padding:6px 1rem;border-bottom:.5px solid #DFE1E6}}
+.trend-row:last-child{{border-bottom:none}}
+.trend-label{{font-size:11px;color:#5E6C84;width:60px;flex-shrink:0}}
+.trend-bar-wrap{{flex:1;height:6px;background:#F4F5F7;border-radius:3px;overflow:hidden}}
+.trend-bar{{height:100%;border-radius:3px}}
+.trend-val{{font-size:11px;font-weight:700;width:20px;text-align:right;flex-shrink:0}}
+.cards-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:1.1rem}}
+.cust-card{{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;transition:transform .15s;display:block}}
+.cust-card:hover{{transform:translateY(-2px)}}
+.card-header{{padding:.9rem 1rem .75rem;border-bottom:.5px solid #F4F5F7;display:flex;align-items:center;gap:10px}}
+.card-logo{{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}}
+.card-name{{font-size:12px;font-weight:700;color:#172B4D;margin-bottom:1px}}.card-meta{{font-size:10px;color:#5E6C84}}
+.health-pill{{margin-left:auto;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px;flex-shrink:0}}
+.hp-dot{{width:6px;height:6px;border-radius:50%}}
+.card-body{{padding:.75rem 1rem}}
+.card-stats{{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:.7rem}}
+.cs{{text-align:center}}.cs-val{{font-size:17px;font-weight:700;line-height:1}}.cs-label{{font-size:10px;color:#5E6C84;margin-top:2px}}
+.card-tags{{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.7rem}}
+.tag{{font-size:10px;padding:2px 6px;border-radius:4px;background:#F4F5F7;color:#5E6C84;font-weight:500}}
+.card-footer{{display:flex;align-items:center;justify-content:space-between;padding-top:.6rem;border-top:.5px solid #F4F5F7}}
+.phase-lbl{{font-size:10px;font-weight:600;color:#5E6C84}}.drill-btn{{font-size:11px;font-weight:600;color:#1A6FDB}}
+.sec-divider{{font-size:13px;font-weight:700;color:#172B4D;margin:1.25rem 0 .75rem;display:flex;align-items:center;gap:8px}}
+.sec-divider::after{{content:'';flex:1;height:.5px;background:#DFE1E6}}
+.filter-bar{{display:flex;align-items:center;gap:8px;flex-wrap:wrap}}
+.filter-btn{{font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:.5px solid #DFE1E6;background:#fff;color:#5E6C84;cursor:pointer}}
+.filter-btn.active{{background:#0B1F45;color:#fff;border-color:#0B1F45}}
+.search-input{{flex:1;max-width:220px;padding:5px 12px;border-radius:20px;border:.5px solid #DFE1E6;font-size:12px;outline:none;background:#fff;color:#172B4D}}
+.tam-row{{padding:.75rem 1rem;border-bottom:.5px solid #DFE1E6}}
+.tam-row:last-child{{border-bottom:none}}
+.tam-top{{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}}
+.tam-info{{display:flex;align-items:center;gap:8px;min-width:0}}
+.tam-bar-wrap{{display:flex;align-items:center;gap:7px;margin-bottom:4px}}
+.tam-bar-track{{flex:1;height:7px;background:#F4F5F7;border-radius:4px;overflow:hidden}}
+.tam-bar-fill{{height:100%;border-radius:4px;transition:width .4s ease}}
+.tam-pct{{font-size:11px;font-weight:700;width:32px;text-align:right;flex-shrink:0}}
+.tam-breakdown{{font-size:10px;color:#A0AEC0;line-height:1.4}}
+.master-logic-drawer{{display:none;border-top:.5px solid #DFE1E6;background:#FAFBFC}}
+.master-logic-drawer.open{{display:block}}
+</style></head><body>
+{NAV_MASTER}
+<div class="hero">
+  <div class="hero-top">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="wordmark-bar"></div>
+      <div><div style="font-size:20px;font-weight:700;color:#fff">Customer Success Portfolio</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">Executive overview · Tessell CSE · Auto-refreshed from Jira every 30 minutes</div></div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.55)">{datetime.now(EST).strftime("%B %d, %Y")}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px">{now}</div>
+    </div>
+  </div>
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-accent" style="background:#00C2E0"></div><div class="kpi-label">Total customers</div><div class="kpi-val">{total}</div><div class="kpi-sub" style="color:rgba(255,255,255,0.4)">Active accounts</div></div>
+    <div class="kpi"><div class="kpi-accent" style="background:#FC8181"></div><div class="kpi-label">At risk</div><div class="kpi-val" style="color:#FC8181">{at_risk}</div><div class="kpi-sub" style="color:#FC8181">Needs immediate action</div></div>
+    <div class="kpi"><div class="kpi-accent" style="background:#FC8181"></div><div class="kpi-label">Open P0 / P1</div><div class="kpi-val" style="color:#FC8181">{total_p0}</div><div class="kpi-sub" style="color:rgba(255,255,255,0.4)">Across all customers</div></div>
+    <div class="kpi"><div class="kpi-accent" style="background:#FFC107"></div><div class="kpi-label">In implementation</div><div class="kpi-val" style="color:#FFC107">{phase_counts['Onboarding']+phase_counts['Implementation']}</div><div class="kpi-sub" style="color:rgba(255,255,255,0.4)">Active onboarding</div></div>
+    <div class="kpi"><div class="kpi-accent" style="background:#68D391"></div><div class="kpi-label">Healthy</div><div class="kpi-val" style="color:#68D391">{healthy}</div><div class="kpi-sub" style="color:rgba(255,255,255,0.4)">Stable, no escalations</div></div>
+  </div>
+</div>
+<div class="body">
+  <div class="action-strip">
+    <div class="action-head">
+      <div class="action-head-title"><span style="font-size:14px">🔴</span> Action Required
+        <span class="action-head-badge">{min(3,len([cr for cr in customer_results if cr['p0_count']>0 or cr['sup_count']>5]))} items</span>
+      </div>
+    </div>
+    <div class="action-items">{''.join(action_items)}</div>
+  </div>
+  <div class="main-grid">
+    <div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">Implementation pipeline</span><span style="font-size:10px;color:#5E6C84">{total} total</span></div><div class="pipeline">{pipeline_html}</div></div>
+      <div class="sec"><div class="sec-head"><span class="sec-title">Open SR ticket load by customer</span><span style="font-size:10px;color:#5E6C84">Top 5</span></div><div style="padding:6px 0 4px">{trend_rows}</div></div>
+    </div>
+    <div><div class="sec"><div class="sec-head"><span class="sec-title">Customer health heatmap</span><span style="font-size:10px;color:#5E6C84">Click any cell to drill in</span></div><div class="heatmap">{heatmap_cells}</div></div></div>
+    <div>
+      <div class="sb-sec">
+        <div class="sb-head" style="display:flex;align-items:center;justify-content:space-between">
+          <span>TAM / TPM capacity</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;color:#5E6C84;font-weight:400">sorted by load</span>
+            <button onclick="toggleMasterLogic()" id="master-logic-btn"
+              style="font-size:10px;font-weight:600;color:#7B2FBE;background:#EEEDFE;border:.5px solid #C4B9F5;
+                     border-radius:10px;padding:2px 9px;cursor:pointer;line-height:1.6">⚙️ Logic</button>
+          </div>
+        </div>
+        <div class="master-logic-drawer" id="master-logic-drawer">
+          <div style="padding:.75rem 1rem .25rem;font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em">TAM Load Scoring Formula</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:.5rem 1rem 1rem">
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#E53E3E"></span>🚨 P0/P1 Account</span></div>
+              <div class="jql-code">+8 pts per account with active P0/P1
+Rationale: active fire — daily calls,
+escalations, executive pressure</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FC8181"></span>⚠️ At Risk Account</span></div>
+              <div class="jql-code">+4 pts per At Risk account (no P0)
+Rationale: high watch load — imminent
+escalation risk, needs close monitoring</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FFC107"></span>👀 Needs Attention Account</span></div>
+              <div class="jql-code">+2 pts per Needs Attention account
+Rationale: regular check-ins required,
+moderate monitoring overhead</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 Open SR Tickets</span></div>
+              <div class="jql-code">+0.5 pts each · capped at 15 pts
+Rationale: direct customer-facing
+workload across all accounts</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ Open TS Eng Tickets</span></div>
+              <div class="jql-code">+0.3 pts each · capped at 8 pts
+Rationale: engineering coordination
+and follow-up overhead</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#1A6FDB"></span>📋 Accounts Managed</span></div>
+              <div class="jql-code">+3 pts per account · capped at 10 pts
+Rationale: base management overhead
+per account regardless of activity</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#0D6E85"></span>🔄 Impl / Onboarding</span></div>
+              <div class="jql-code">+3 pts per active impl account
+Rationale: highest-touch phase —
+onboarding is effectively a second job</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#38A169"></span>📊 Capacity Thresholds</span></div>
+              <div class="jql-code">≥ 85%  →  Over capacity  🔴
+65–84% →  Busy           🟠
+35–64% →  Available      🟡
+&lt;  35%  →  Has bandwidth 🟢
+Soft cap: raw score 80 = 100%</div>
+            </div>
+          </div>
+          <div class="jql-footer" style="border-top:.5px solid #DFE1E6">⚙️ Raw score = sum of all factors above · divided by soft cap (80) · clamped to 100% &nbsp;·&nbsp; Recommendation = least-loaded TAM under 70%</div>
+        </div>
+        {best_tam_row}
+        {owner_rows}
+      </div>
+      <div class="sb-sec"><div class="sb-head">This week's highlights</div><div style="padding:.75rem 1rem">{highlights_html}</div></div>
+    </div>
+  </div>
+  <div class="sec-divider">All Customers
+    <div class="filter-bar" style="margin:0">
+      <button class="filter-btn active" onclick="filterCards('all',this)">All</button>
+      <button class="filter-btn" onclick="filterCards('atrisk',this)">At Risk</button>
+      <button class="filter-btn" onclick="filterCards('attention',this)">Needs Attention</button>
+      <button class="filter-btn" onclick="filterCards('healthy',this)">Healthy</button>
+      <button class="filter-btn" onclick="filterCards('stable',this)">Stable</button>
+      <input class="search-input" type="text" placeholder="Search..." oninput="searchCards(this.value)"/>
+    </div>
+  </div>
+  <div class="cards-grid">{cards}</div>
+</div>
+<script>
+function filterCards(h,btn){{document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.cust-card').forEach(el=>{{el.style.display=h==='all'||el.dataset.health===h?'':'none';}});}}
+function searchCards(q){{q=q.toLowerCase();document.querySelectorAll('.cust-card').forEach(el=>{{el.style.display=(el.dataset.name||'').includes(q)?'':'none';}});}}
+function toggleMasterLogic(){{const d=document.getElementById('master-logic-drawer'),btn=document.getElementById('master-logic-btn'),open=d.classList.contains('open');d.classList.toggle('open');btn.textContent=open?'⚙️ Logic':'⚙️ Hide';btn.style.background=open?'#EEEDFE':'#7B2FBE';btn.style.color=open?'#7B2FBE':'#fff';btn.style.borderColor=open?'#C4B9F5':'#7B2FBE';}}
+</script></body></html>"""
+
+
