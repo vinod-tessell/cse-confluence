@@ -78,7 +78,7 @@ def make_jqls(keyword):
     return {
         "p0p1":        f'project in (TS, SR) AND text ~ "{keyword}" AND (labels = P0 OR labels = P1) AND statusCategory != Done ORDER BY created DESC',
         "support":     f'project = SR AND text ~ "{keyword}" AND statusCategory != Done ORDER BY created DESC',
-        "features":    f'project = TS AND ("Customers[Labels]" IN ("{keyword}") OR text ~ "{keyword}") AND ({_feat}) AND statusCategory != Done ORDER BY created DESC',
+        "features":    f'project = TS AND ("Customers[Labels]" IN ("{keyword}") OR text ~ "{keyword}") AND ({_feat}) AND statusCategory != Done AND created >= "2024-03-01" ORDER BY created DESC',
         "eng_tickets": f'project = TS AND text ~ "{keyword}" AND issuetype = Bug AND reporter IN ({_eng_reporters}) AND created >= "2026-01-01" AND statusCategory != Done ORDER BY created DESC',
         "resolved":    f'project = SR AND text ~ "{keyword}" AND statusCategory = Done AND resolutiondate >= -180d ORDER BY resolutiondate DESC',
         "recent":      f'project in (TS, SR) AND text ~ "{keyword}" AND updated >= -30d ORDER BY updated DESC',
