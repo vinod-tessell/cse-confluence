@@ -91,19 +91,21 @@ var CHART_DATA={{
 function initChart(){{
   var canvas=document.getElementById('trendChart');
   if(!canvas)return;
-  // Defer until the canvas has a real layout width
   var W=canvas.offsetWidth||canvas.parentElement&&canvas.parentElement.offsetWidth||0;
   if(W<10){{requestAnimationFrame(initChart);return;}}
-  var ctx=canvas.getContext('2d');
   var H=180;
-  canvas.width=W; canvas.height=H;
+  var dpr=window.devicePixelRatio||1;
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  var ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
   var PAD={{top:28,right:12,bottom:36,left:32}};
   var n=CHART_DATA.labels.length;
   var chartW=W-PAD.left-PAD.right;
   var chartH=H-PAD.top-PAD.bottom;
-  var yMax=CHART_DATA.yMax;
+  var yMax=CHART_DATA.yMax||1;
   var groupW=chartW/n;
-  var barW=groupW*0.32;
+  var barW=Math.max(4,groupW*0.32);
   var gap=groupW*0.04;
   var startTime=null;
   var DUR=900;
@@ -128,12 +130,14 @@ function initChart(){{
         var cx=PAD.left+gi*groupW+groupW/2;
         var delay0=gi*0.12;
         var p0=ease(Math.max(0,Math.min(1,(prog-delay0)/(1-delay0||0.01))));
-        var h0=(CHART_DATA.open[gi]/yMax)*chartH*p0;
-        if(h0>0){{ctx.fillStyle='rgba(26,111,219,0.88)';ctx.fillRect(cx-barW-gap/2,PAD.top+chartH-h0,barW,h0);}}
+        var h0=Math.max(CHART_DATA.open[gi]>0?2:0,(CHART_DATA.open[gi]/yMax)*chartH*p0);
+        ctx.fillStyle='rgba(26,111,219,0.88)';
+        ctx.fillRect(cx-barW-gap/2,PAD.top+chartH-h0,barW,h0);
         var delay1=gi*0.12+0.05;
         var p1=ease(Math.max(0,Math.min(1,(prog-delay1)/(1-delay1||0.01))));
-        var h1=(CHART_DATA.resolved[gi]/yMax)*chartH*p1;
-        if(h1>0){{ctx.fillStyle='rgba(56,161,105,0.88)';ctx.fillRect(cx+gap/2,PAD.top+chartH-h1,barW,h1);}}
+        var h1=Math.max(CHART_DATA.resolved[gi]>0?2:0,(CHART_DATA.resolved[gi]/yMax)*chartH*p1);
+        ctx.fillStyle='rgba(56,161,105,0.88)';
+        ctx.fillRect(cx+gap/2,PAD.top+chartH-h1,barW,h1);
         ctx.fillStyle='rgba(255,255,255,0.5)';
         ctx.font='9px system-ui,sans-serif';
         ctx.textAlign='center';
