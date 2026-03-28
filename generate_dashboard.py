@@ -1106,88 +1106,34 @@ var CHART_DATA={{
 function initChart(){{
   var ctx=document.getElementById('trendChart');
   if(!ctx)return;
-  if(typeof Chart==='undefined'){{
-    setTimeout(initChart,150);
-    return;
-  }}
-  Chart.defaults.animation = false;  // reset any global default first
-  var delayed=false;
+  if(typeof Chart==='undefined'){{setTimeout(initChart,150);return;}}
   new Chart(ctx,{{
     type:'bar',
     data:{{
       labels:CHART_DATA.labels,
       datasets:[
-        {{
-          label:'Open (SR)',
-          data:CHART_DATA.open,
-          backgroundColor:'rgba(26,111,219,0.85)',
-          borderRadius:4,
-          barPercentage:0.6,
-          categoryPercentage:0.7
-        }},
-        {{
-          label:'Resolved',
-          data:CHART_DATA.resolved,
-          backgroundColor:'rgba(56,161,105,0.85)',
-          borderRadius:4,
-          barPercentage:0.6,
-          categoryPercentage:0.7
-        }}
+        {{label:'Open (SR)',data:CHART_DATA.open,backgroundColor:'rgba(26,111,219,0.85)',borderRadius:4,barPercentage:0.6,categoryPercentage:0.7}},
+        {{label:'Resolved',data:CHART_DATA.resolved,backgroundColor:'rgba(56,161,105,0.85)',borderRadius:4,barPercentage:0.6,categoryPercentage:0.7}}
       ]
     }},
     options:{{
       responsive:true,
       maintainAspectRatio:false,
       animation:{{
-        duration:900,
+        duration:800,
         easing:'easeOutQuart',
-        delay:function(ctx){{
-          // bars rise one column at a time, left to right
-          // each dataset in a column staggers by 60ms on top of the column delay
-          if(ctx.type==='data' && ctx.mode==='default' && !delayed){{
-            return ctx.dataIndex*120 + ctx.datasetIndex*60;
-          }}
-          return 0;
+        delay:function(context){{
+          return context.type==='data'?context.dataIndex*100+context.datasetIndex*50:0;
         }}
       }},
-      animations:{{
-        y:{{
-          from:function(ctx){{
-            // bars start from zero (bottom of chart) and rise up
-            return ctx.chart.scales.y.bottom;
-          }}
-        }}
-      }},
+      animations:{{y:{{from:0}}}},
       plugins:{{
-        legend:{{
-          display:true,
-          position:'top',
-          align:'end',
-          labels:{{font:{{size:9}},color:'rgba(255,255,255,0.6)',boxWidth:8,padding:10}}
-        }},
-        tooltip:{{
-          callbacks:{{
-            label:function(c){{return ' '+c.dataset.label+': '+c.parsed.y;}}
-          }}
-        }}
+        legend:{{display:true,position:'top',align:'end',labels:{{font:{{size:9}},color:'rgba(255,255,255,0.6)',boxWidth:8,padding:10}}}},
+        tooltip:{{callbacks:{{label:function(c){{return ' '+c.dataset.label+': '+c.parsed.y;}}}}}}
       }},
       scales:{{
-        x:{{
-          grid:{{display:false}},
-          ticks:{{font:{{size:10}},color:'rgba(255,255,255,0.5)'}},
-          border:{{display:false}}
-        }},
-        y:{{
-          min:0,
-          max:CHART_DATA.yMax,
-          grid:{{color:'rgba(255,255,255,0.08)'}},
-          ticks:{{
-            font:{{size:10}},
-            color:'rgba(255,255,255,0.5)',
-            stepSize:Math.ceil(CHART_DATA.yMax/5)
-          }},
-          border:{{display:false}}
-        }}
+        x:{{grid:{{display:false}},ticks:{{font:{{size:10}},color:'rgba(255,255,255,0.5)'}},border:{{display:false}}}},
+        y:{{min:0,max:CHART_DATA.yMax,grid:{{color:'rgba(255,255,255,0.08)'}},ticks:{{font:{{size:10}},color:'rgba(255,255,255,0.5)',stepSize:Math.ceil(CHART_DATA.yMax/5)}},border:{{display:false}}}}
       }}
     }}
   }});
