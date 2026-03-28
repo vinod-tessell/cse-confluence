@@ -8,8 +8,10 @@ var CHART_DATA={
 function initChart(){
   var canvas=document.getElementById('trendChart');
   if(!canvas)return;
+  // Defer until the canvas has a real layout width
+  var W=canvas.offsetWidth||canvas.parentElement&&canvas.parentElement.offsetWidth||0;
+  if(W<10){requestAnimationFrame(initChart);return;}
   var ctx=canvas.getContext('2d');
-  var W=canvas.offsetWidth||canvas.parentElement.offsetWidth||600;
   var H=180;
   canvas.width=W; canvas.height=H;
   var PAD={top:28,right:12,bottom:36,left:32};
@@ -70,7 +72,7 @@ if(document.readyState==='loading'){
   initChart();
 }
 
-var DATA={"p0p1": 2, "support": 13, "features": 33, "eng_tickets": 100, "resolved": 62, "pendingEng": 3, "p0keys": ["TS-37329", "TS-37328"], "highKeys": ["SR-8545", "SR-8533", "SR-8530"], "generated": "Mar 28, 2026 01:20 EST", "score": 2, "scoreLabel": "At Risk", "scoreColor": "#FC8181"};
+var DATA={"p0p1": 2, "support": 13, "features": 33, "eng_tickets": 100, "resolved": 62, "pendingEng": 3, "p0keys": ["TS-37329", "TS-37328"], "highKeys": ["SR-8545", "SR-8533", "SR-8530"], "generated": "Mar 28, 2026 01:31 EST", "score": 2, "scoreLabel": "At Risk", "scoreColor": "#FC8181"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');

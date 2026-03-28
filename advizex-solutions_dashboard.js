@@ -8,8 +8,10 @@ var CHART_DATA={
 function initChart(){
   var canvas=document.getElementById('trendChart');
   if(!canvas)return;
+  // Defer until the canvas has a real layout width
+  var W=canvas.offsetWidth||canvas.parentElement&&canvas.parentElement.offsetWidth||0;
+  if(W<10){requestAnimationFrame(initChart);return;}
   var ctx=canvas.getContext('2d');
-  var W=canvas.offsetWidth||canvas.parentElement.offsetWidth||600;
   var H=180;
   canvas.width=W; canvas.height=H;
   var PAD={top:28,right:12,bottom:36,left:32};
@@ -70,7 +72,7 @@ if(document.readyState==='loading'){
   initChart();
 }
 
-var DATA={"p0p1": 0, "support": 0, "features": 0, "eng_tickets": 3, "resolved": 2, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 28, 2026 01:22 EST", "score": 10, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+var DATA={"p0p1": 0, "support": 0, "features": 0, "eng_tickets": 3, "resolved": 2, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 28, 2026 01:33 EST", "score": 10, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
