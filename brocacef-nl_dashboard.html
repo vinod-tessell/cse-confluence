@@ -3,87 +3,6 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <title>Brocacef-NL — Customer Dashboard</title>
-<script>
-var CHART_DATA={
-  labels:["Oct 20", "Nov 20", "Dec 20", "Jan 20", "Feb 20", "Mar 20"],
-  open:[0, 0, 0, 0, 0, 0],
-  resolved:[0, 0, 0, 0, 0, 0],
-  yMax:4
-};
-function initChart(){
-  var canvas=document.getElementById('trendChart');
-  if(!canvas)return;
-  var ctx=canvas.getContext('2d');
-  var W=canvas.offsetWidth||canvas.parentElement.offsetWidth||600;
-  var H=canvas.offsetHeight||180;
-  canvas.width=W; canvas.height=H;
-  var PAD={top:28,right:12,bottom:36,left:32};
-  var n=CHART_DATA.labels.length;
-  var chartW=W-PAD.left-PAD.right;
-  var chartH=H-PAD.top-PAD.bottom;
-  var yMax=CHART_DATA.yMax;
-  var groupW=chartW/n;
-  var barW=groupW*0.32;
-  var gap=groupW*0.04;
-  var startTime=null;
-  var DUR=900;
-  function ease(t){return t<1?1-Math.pow(1-t,4):1;}
-  function draw(ts){
-    if(!startTime)startTime=ts;
-    var prog=Math.min((ts-startTime)/DUR,1);
-    ctx.clearRect(0,0,W,H);
-    // Grid lines
-    ctx.strokeStyle='rgba(255,255,255,0.07)';
-    ctx.lineWidth=0.5;
-    var steps=5;
-    for(var i=0;i<=steps;i++){
-      var y=PAD.top+chartH-(i/steps)*chartH;
-      ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(W-PAD.right,y);ctx.stroke();
-      ctx.fillStyle='rgba(255,255,255,0.45)';
-      ctx.font='9px system-ui,sans-serif';
-      ctx.textAlign='right';
-      ctx.fillText(Math.round(yMax*i/steps),PAD.left-4,y+3);
-    }
-    // Bars with stagger
-    for(var gi=0;gi<n;gi++){
-      var cx=PAD.left+gi*groupW+groupW/2;
-      // Open bar — stagger by column index
-      var delay0=gi*0.12;
-      var p0=ease(Math.max(0,Math.min(1,(prog-delay0)/(1-delay0||0.01))));
-      var h0=(CHART_DATA.open[gi]/yMax)*chartH*p0;
-      ctx.fillStyle='rgba(26,111,219,0.88)';
-      ctx.beginPath();
-      ctx.roundRect(cx-barW-gap/2,PAD.top+chartH-h0,barW,h0,2);
-      ctx.fill();
-      // Resolved bar — stagger slightly after open
-      var delay1=gi*0.12+0.05;
-      var p1=ease(Math.max(0,Math.min(1,(prog-delay1)/(1-delay1||0.01))));
-      var h1=(CHART_DATA.resolved[gi]/yMax)*chartH*p1;
-      ctx.fillStyle='rgba(56,161,105,0.88)';
-      ctx.beginPath();
-      ctx.roundRect(cx+gap/2,PAD.top+chartH-h1,barW,h1,2);
-      ctx.fill();
-      // X-axis labels
-      ctx.fillStyle='rgba(255,255,255,0.5)';
-      ctx.font='9px system-ui,sans-serif';
-      ctx.textAlign='center';
-      ctx.fillText(CHART_DATA.labels[gi],cx,H-8);
-    }
-    // Legend
-    ctx.fillStyle='rgba(26,111,219,0.88)';
-    ctx.fillRect(W-PAD.right-90,6,8,8);
-    ctx.fillStyle='rgba(255,255,255,0.6)';
-    ctx.font='9px system-ui,sans-serif';
-    ctx.textAlign='left';
-    ctx.fillText('Open (SR)',W-PAD.right-79,14);
-    ctx.fillStyle='rgba(56,161,105,0.88)';
-    ctx.fillRect(W-PAD.right-35,6,8,8);
-    ctx.fillStyle='rgba(255,255,255,0.6)';
-    ctx.fillText('Resolved',W-PAD.right-24,14);
-    if(prog<1)requestAnimationFrame(draw);
-  }
-  requestAnimationFrame(draw);
-}</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 body{background:#F4F5F7}
@@ -157,7 +76,8 @@ tr:last-child td{border-bottom:none}
 .jql-open-link{display:inline-block;margin:0 10px 10px;font-size:10px;font-weight:600;color:#1A6FDB;text-decoration:none}
 .jql-open-link:hover{text-decoration:underline}
 .jql-footer{padding:.6rem 1.25rem;background:#FAFBFC;border-top:.5px solid #DFE1E6;font-size:10px;color:#5E6C84;display:flex;align-items:center;gap:5px}
-</style></head><body>
+</style>
+</head><body>
 <div class="nav">
   <div class="nav-links">
     <a class="nl" href="https://tessell.atlassian.net/wiki/spaces/CSE/overview" target="_parent">Home</a>
@@ -172,7 +92,6 @@ tr:last-child td{border-bottom:none}
     <div style="flex:1;min-width:0">
       <div style="font-size:18px;font-weight:700;color:#fff;line-height:1.2">Brocacef-NL</div>
       <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px">Azure · westeurope · Oracle</div>
-      <!-- Metadata chips row -->
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center">
         <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.07);border:.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px 9px">
           <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:.05em">Exec Sponsor</span>
@@ -190,7 +109,6 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
   </div>
-  <!-- Only the health status badge stays right-aligned -->
   <div style="flex-shrink:0;padding-top:2px">
     <div style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15)" id="health-wrap">
       <div style="width:7px;height:7px;border-radius:50%;background:#68D391" id="health-dot"></div>
@@ -200,7 +118,7 @@ tr:last-child td{border-bottom:none}
 </div>
 <div style="background:#0D2252;border-bottom:1px solid #122752;padding:.35rem 1.5rem;display:flex;align-items:center;gap:1.5rem">
   <a href="https://brocacef.tessell.com/" target="_blank" style="font-size:11px;color:#00C2E0;text-decoration:none;font-weight:600">↗ https://brocacef.tessell.com/</a>
-  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">Mar 28, 2026 00:16 EST</span></span>
+  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">Mar 28, 2026 01:20 EST</span></span>
 </div>
 <div class="body">
   <div class="metrics" style="grid-template-columns:repeat(8,1fr)">
@@ -278,7 +196,7 @@ tr:last-child td{border-bottom:none}
   <div class="jql-code" id="jql-recent">project in (TS, SR) AND text ~ "Brocacef" AND updated >= -30d ORDER BY updated DESC</div>
   <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+in+(TS,+SR)+AND+text+~+%22Brocacef%22+AND+updated+>=+-30d+ORDER+BY+updated+DESC" target="_blank">↗ Run in Jira</a>
 </div></div>
-    <div class="jql-footer">💡 Keyword used: <b style="color:#172B4D;margin-left:3px">Brocacef</b> &nbsp;·&nbsp; SR = customer support · TS = engineering &nbsp;·&nbsp; Click "Run in Jira" to open results live</div>
+    <div class="jql-footer">💡 Keyword: <b style="color:#172B4D;margin-left:3px">Brocacef</b> &nbsp;·&nbsp; SR = customer support · TS = engineering &nbsp;·&nbsp; Click "Run in Jira" to open results live</div>
   </div>
   <div class="drawer" id="drawer-logic">
     <div class="drawer-head">
@@ -286,121 +204,45 @@ tr:last-child td{border-bottom:none}
       <button class="drawer-close" onclick="toggleDrawer('drawer-logic','m-logic')">✕</button>
     </div>
     <div class="jql-grid" style="grid-template-columns:1fr 1fr 1fr">
-      <div class="jql-block">
-        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#E53E3E"></span>🚨 P0 / P1 Incidents</span></div>
-        <div class="jql-code">≥ 3 open  →  −4 pts
-2 open   →  −3 pts
-1 open   →  −2 pts
-0 open   →   no deduction</div>
-        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: SR + TS · P0 or P1 label</div>
-      </div>
-      <div class="jql-block">
-        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 SR Support Backlog</span></div>
-        <div class="jql-code">≥ 10 open  →  −2 pts
-≥  6 open  →  −1 pt
-&lt;  6 open  →   no deduction</div>
-        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: SR project · open tickets</div>
-      </div>
-      <div class="jql-block">
-        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#D69E2E"></span>⏳ Pending Engineering</span></div>
-        <div class="jql-code">≥ 4 SR pending eng  →  −2 pts
-≥ 2 SR pending eng  →  −1 pt
-&lt; 2                →   no deduction</div>
-        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">SR tickets with status "Pending Eng"</div>
-      </div>
-      <div class="jql-block">
-        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ TS Engineering Backlog</span></div>
-        <div class="jql-code">≥ 5 open TS eng tickets  →  −1 pt
-&lt; 5                      →   no deduction</div>
-        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: TS project · non-feature issues</div>
-      </div>
-      <div class="jql-block">
-        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#1A6FDB"></span>💡 Feature Request Backlog</span></div>
-        <div class="jql-code">≥ 5 open feature requests  →  −1 pt
-&lt; 5                        →   no deduction</div>
-        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: TS project · Feature / Story type</div>
-      </div>
-      <div class="jql-block">
-        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#38A169"></span>✅ SR Resolution Cadence</span></div>
-        <div class="jql-code">0 SR resolved in last 30d  →  −1 pt
-≥ 1 SR resolved            →   no deduction</div>
-        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: SR project · resolved ≥ −30d</div>
-      </div>
+      <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#E53E3E"></span>🚨 P0/P1 Incidents</span></div><div class="jql-code">≥ 3 open → −4 pts&#10;2 open → −3 pts&#10;1 open → −2 pts</div><div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: SR + TS · P0 or P1 label</div></div>
+      <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 SR Support Backlog</span></div><div class="jql-code">≥ 10 open → −2 pts&#10;≥ 6 open → −1 pt</div><div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: SR project · open tickets</div></div>
+      <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#D69E2E"></span>⏳ Pending Engineering</span></div><div class="jql-code">≥ 4 SR pending → −2 pts&#10;≥ 2 SR pending → −1 pt</div><div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">SR tickets with status "Pending Eng"</div></div>
+      <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ TS Engineering Backlog</span></div><div class="jql-code">≥ 5 open TS eng → −1 pt</div><div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: TS project · non-feature</div></div>
+      <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#1A6FDB"></span>💡 Feature Backlog</span></div><div class="jql-code">≥ 5 open features → −1 pt</div><div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: TS project · Feature / Story</div></div>
+      <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#38A169"></span>✅ SR Resolution Cadence</span></div><div class="jql-code">0 resolved in 30d → −1 pt</div><div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: SR project · resolved ≥ −30d</div></div>
     </div>
-    <div class="jql-footer">⚙️ Health score starts at 10 · deductions are cumulative · floor is 1 &nbsp;·&nbsp; Score ≥ 8 = Healthy · ≥ 6 = Stable · ≥ 4 = Needs Attention · &lt; 4 = At Risk</div>
+    <div class="jql-footer">⚙️ Score starts at 10 · floor 1 &nbsp;·&nbsp; ≥8 Healthy · ≥6 Stable · ≥4 Needs Attention · &lt;4 At Risk</div>
   </div>
   <div class="grid2">
     <div>
       <div class="ai-panel" style="padding:0;overflow:hidden">
-
-        <!-- ── Top strip: eyebrow + title + score bar ──────────────────────── -->
         <div style="padding:1rem 1.25rem .85rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.75rem">
-            <div>
-              <div class="ai-eyebrow">✦ Health Analysis</div>
-              <div class="ai-title" style="margin-bottom:0">Customer Health Assessment</div>
-            </div>
+            <div><div class="ai-eyebrow">✦ Health Analysis</div><div class="ai-title" style="margin-bottom:0">Customer Health Assessment</div></div>
             <div style="text-align:right;flex-shrink:0;margin-left:1rem">
               <div id="health-score-num" style="font-size:32px;font-weight:800;color:#68D391;line-height:1">10/10</div>
               <div id="health-score-label" style="font-size:11px;font-weight:700;color:#68D391;margin-top:2px">Healthy</div>
             </div>
           </div>
-          <!-- Score bar -->
           <div style="display:flex;align-items:center;gap:8px">
             <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
               <div id="health-score-bar" style="height:100%;border-radius:3px;background:#68D391;width:100%;transition:width .6s ease"></div>
             </div>
-            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 28, 2026 00:16 EST</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 28, 2026 01:20 EST</span>
           </div>
         </div>
-
-        <!-- ── Row 1: Chart full width ──────────────────────────────────────── -->
-        <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
-          <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div><div style="position:relative;height:180px;width:100%"><canvas id="trendChart"></canvas></div><script>initChart();</script>
-        </div>
-
-        <!-- ── Row 2: Findings+Actions | Customer Signals ───────────────────── -->
+        <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)"><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div><div style="position:relative;height:180px;width:100%"><canvas id="trendChart"></canvas></div></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-
-          <!-- Findings & Recommended Actions -->
-          <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08);
-                      background:rgba(255,255,255,0.03)">
-            <div style="font-size:11px;font-weight:800;color:#fff;
-                        text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;
-                        padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);
-                        display:flex;align-items:center;gap:6px">
-              <span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>
-              Findings
-            </div>
-            <div id="ai-findings" style="margin-bottom:1.25rem">
-              <p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p>
-            </div>
-            <div style="font-size:11px;font-weight:800;color:#00C2E0;
-                        text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;
-                        padding-bottom:8px;border-bottom:.5px solid rgba(0,194,224,0.2);
-                        display:flex;align-items:center;gap:6px">
-              <span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>
-              Recommended Actions
-            </div>
-            <div id="ai-actions">
-              <p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p>
-            </div>
+          <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03)">
+            <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>Findings</div>
+            <div id="ai-findings" style="margin-bottom:1.25rem"><p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p></div>
+            <div style="font-size:11px;font-weight:800;color:#00C2E0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(0,194,224,0.2);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>Recommended Actions</div>
+            <div id="ai-actions"><p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p></div>
           </div>
-
-          <!-- Customer Signals -->
           <div style="padding:1rem 1.25rem;background:rgba(0,194,224,0.04)">
-            <div style="font-size:11px;font-weight:800;color:#fff;
-                        text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;
-                        padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);
-                        display:flex;align-items:center;gap:6px">
-              <span style="width:3px;height:14px;background:#7B2FBE;border-radius:2px;display:inline-block"></span>
-              Customer Signals
-              <span style="font-size:9px;font-weight:500;text-transform:none;letter-spacing:0;
-                           color:rgba(255,255,255,0.3);margin-left:2px">· last 21d</span>
-            </div>
+            <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#7B2FBE;border-radius:2px;display:inline-block"></span>Customer Signals<span style="font-size:9px;font-weight:500;text-transform:none;letter-spacing:0;color:rgba(255,255,255,0.3);margin-left:2px">· last 21d</span></div>
             <div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;flex-shrink:0;margin-top:1px">🟠</span><div style="min-width:0"><div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">Database links in 19c databases OTA  (from SEC to CDM )</div><div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45"><a href="https://tessell.atlassian.net/browse/SR-8467" target="_blank" style="font-size:10px;font-weight:700;color:#DD6B20;text-decoration:none">SR-8467</a> · "Hello Gopal,  The database links are removed now.  The ticket can be closed.  Re…" — Hans Smeets</div></div></div><div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;flex-shrink:0;margin-top:1px">🟡</span><div style="min-width:0"><div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">Database links in 19c databases OTA  (from SEC to CDM )</div><div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45"><a href="https://tessell.atlassian.net/browse/SR-8467" target="_blank" style="font-size:10px;font-weight:700;color:#D69E2E;text-decoration:none">SR-8467</a> · "Hello Hans Smeets, Could you please share any updates on this so we can proceed …" — Gopal Reddy</div></div></div><div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;flex-shrink:0;margin-top:1px">🟢</span><div style="min-width:0"><div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">Database links in 19c databases OTA  (from SEC to CDM )</div><div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45"><a href="https://tessell.atlassian.net/browse/SR-8467" target="_blank" style="font-size:10px;font-weight:700;color:#38A169;text-decoration:none">SR-8467</a> · "This message is sent by Hans Smeets< hsmeets@brocacef.nl > Dear Gopal Reddy, Tha…" — Tessell Support</div></div></div>
           </div>
-
         </div>
       </div>
     </div>
@@ -416,68 +258,5 @@ tr:last-child td{border-bottom:none}
     </div>
   </div>
 </div>
-<script>
-const DATA={"p0p1": 0, "support": 0, "features": 0, "eng_tickets": 1, "resolved": 1, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 28, 2026 00:16 EST", "score": 10, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
-
-function runHealth(DATA) {
-  const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
-  let score=10,findings=[],actions=[];
-  if(DATA.p0p1>=3){score-=4;findings.push(`<b style="color:#FC8181">${DATA.p0p1} active P0 incidents</b> (${DATA.p0keys.join(', ')})`);actions.push(`Escalate ${DATA.p0keys[0]} to engineering leadership for same-day resolution`);}
-  else if(DATA.p0p1===2){score-=3;findings.push(`<b style="color:#FC8181">2 active P0 incidents</b> (${DATA.p0keys.join(', ')})`);actions.push(`Both need an engineering owner today`);}
-  else if(DATA.p0p1===1){score-=2;findings.push(`<b style="color:#FFC107">1 active P0/P1</b> (${DATA.p0keys[0]})`);actions.push(`Ensure ${DATA.p0keys[0]} has daily updates to customer`);}
-  else{findings.push('<b style="color:#68D391">No active P0/P1 incidents</b>');}
-  if(DATA.support>=8){score-=2;findings.push(`High SR backlog: <b>${DATA.support} support tickets</b> open`);}
-  else if(DATA.support>=5){score-=1;findings.push(`Moderate SR backlog: <b>${DATA.support} support tickets</b>`);}
-  else{findings.push(`<b style="color:#68D391">Healthy SR volume</b>: ${DATA.support} open`);}
-  if(DATA.pendingEng>=4){score-=2;findings.push(`<b>${DATA.pendingEng} SR tickets stuck pending engineering</b>`);actions.push(`Set ETAs on all ${DATA.pendingEng} blocked SR tickets`);}
-  else if(DATA.pendingEng>=2){score-=1;findings.push(`${DATA.pendingEng} SR tickets pending engineering`);}
-  if(DATA.eng_tickets>=5){score-=1;findings.push(`Engineering backlog: <b>${DATA.eng_tickets} TS tickets</b>`);actions.push('Review and prioritise TS engineering backlog');}
-  else{findings.push(`<b style="color:#68D391">TS engineering queue</b>: ${DATA.eng_tickets} open`);}
-  if(DATA.features>=5){score-=1;findings.push(`Large feature backlog: <b>${DATA.features} requests</b>`);actions.push('Schedule a feature roadmap call');}
-  if(DATA.resolved===0){score-=1;findings.push('<b style="color:#FFC107">No SR tickets resolved in 30 days</b>');}
-  else{findings.push(`<b style="color:#68D391">${DATA.resolved} SR resolved</b> in last 30 days`);}
-  score=Math.max(1,Math.min(10,score));
-  const color=score>=8?'#68D391':score>=6?'#FFC107':'#FC8181';
-  const label=score>=8?'Healthy':score>=6?'Stable':score>=4?'Needs Attention':'At Risk';
-  const badge=document.getElementById('health-badge'),dot=document.getElementById('health-dot');
-  if(badge){badge.textContent=label;badge.style.color=color;}
-  if(dot){dot.style.background=color;}
-  if(badge&&badge.parentElement){badge.parentElement.style.borderColor=color+'4D';badge.parentElement.style.background=color+'1A';}
-  const bar=document.getElementById('health-score-bar'),barWrap=document.getElementById('health-score-label');
-  if(bar){bar.style.width=(score*10)+'%';bar.style.background=color;}
-  if(barWrap){barWrap.textContent=label;barWrap.style.color=color;}
-  const scoreNum=document.getElementById('health-score-num');
-  if(scoreNum){scoreNum.textContent=score+'/10';scoreNum.style.color=color;}
-  if(elF){elF.innerHTML=findings.map(f=>`<p style="margin-bottom:7px;font-size:11px;color:rgba(255,255,255,0.8);line-height:1.5">• ${f}</p>`).join('');}
-  if(elA){elA.innerHTML=actions.length===0
-    ?'<p style="font-size:11px;color:#68D391;font-weight:600">✅ No immediate actions needed</p>'
-    :actions.map(a=>`<div style="display:flex;gap:7px;margin-bottom:8px;align-items:flex-start"><span style="color:#00C2E0;flex-shrink:0;font-size:12px">→</span><p style="font-size:11px;color:rgba(255,255,255,0.8);line-height:1.5;margin:0">${a}</p></div>`).join('');}
-  if(sc){sc.textContent=score;sc.style.color=color;}
-}
-
-window.onload=()=>{try{runHealth(DATA);}catch(e){console.error('runHealth:',e);}try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer:',e);}};
-function toggleDrawer(dId,mId){const d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.metric').forEach(x=>x.classList.remove('active'));if(!open){d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer error:',e);}}}}
-function copyJql(btn,key){const el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(()=>{const orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(()=>{btn.textContent=orig;btn.style.color='';} ,1500);}).catch(()=>{btn.textContent='Failed';setTimeout(()=>btn.textContent='Copy',1500);});}
-function buildHealthDrawer(DATA){
-  const factors=[],actions=[];
-  if(DATA.p0p1>=3){factors.push(['−4 pts',`${DATA.p0p1} active P0 incidents (${DATA.p0keys.join(', ')})`, '#E53E3E']);actions.push(['🚨','Escalate to engineering leadership']);}
-  else if(DATA.p0p1===2){factors.push(['−3 pts',`2 P0 incidents (${DATA.p0keys.join(', ')})`, '#E53E3E']);actions.push(['🚨','Both need engineering owner today']);}
-  else if(DATA.p0p1===1){factors.push(['−2 pts',`1 active P0/P1 (${DATA.p0keys[0]})`, '#DD6B20']);actions.push(['🚨','Daily updates to customer until resolved']);}
-  else{factors.push(['+0 pts','No active P0/P1 incidents','#38A169']);}
-  if(DATA.support>=8){factors.push(['−2 pts',`High SR backlog — ${DATA.support} open`,'#DD6B20']);actions.push(['🎫','Close or escalate stale SR tickets']);}
-  else if(DATA.support>=5){factors.push(['−1 pt',`Moderate SR backlog — ${DATA.support} open`,'#D69E2E']);actions.push(['🎫','Target 3 SR resolutions this sprint']);}
-  else{factors.push(['+0 pts',`Healthy SR volume — ${DATA.support} open`,'#38A169']);}
-  if(DATA.pendingEng>=4){factors.push(['−2 pts',`${DATA.pendingEng} SR tickets blocked pending eng`,'#DD6B20']);actions.push(['⏳','Set ETAs and communicate to customer']);}
-  else if(DATA.pendingEng>=2){factors.push(['−1 pt',`${DATA.pendingEng} SR tickets pending engineering`,'#D69E2E']);actions.push(['⏳','Chase ETAs this week']);}
-  else{factors.push(['+0 pts','No SR tickets blocked on engineering','#38A169']);}
-  if(DATA.eng_tickets>=5){factors.push(['−1 pt',`${DATA.eng_tickets} TS engineering tickets open`,'#D69E2E']);actions.push(['⚙️','Review and triage TS engineering backlog']);}
-  else{factors.push(['+0 pts',`${DATA.eng_tickets} TS engineering tickets`,'#38A169']);}
-  if(DATA.features>=5){factors.push(['−1 pt',`${DATA.features} TS feature requests open`,'#D69E2E']);actions.push(['💡','Schedule roadmap call']);}
-  else{factors.push(['+0 pts',`${DATA.features} feature requests`,'#38A169']);}
-  if(DATA.resolved===0){factors.push(['−1 pt','No SR tickets resolved in 30d','#DD6B20']);actions.push(['✅','Close at least one SR ticket']);}
-  else{factors.push(['+0 pts',`${DATA.resolved} SR resolved in 30d`,'#38A169']);}
-  document.getElementById('health-factors').innerHTML=factors.map(([pts,label,col])=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:${col}1A;color:${col};flex-shrink:0;min-width:44px;text-align:center">${pts}</span><span style="font-size:11px;color:#172B4D;line-height:1.5">${label}</span></div>`).join('');
-  const aEl=document.getElementById('health-actions');
-  aEl.innerHTML=actions.length===0?'<p style="font-size:11px;color:#38A169;font-weight:600">✅ Customer is healthy!</p>':actions.map(([icon,text])=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:13px;flex-shrink:0">${icon}</span><span style="font-size:11px;color:#172B4D;line-height:1.5">${text}</span></div>`).join('');
-}
-</script></body></html>
+<script src="brocacef-nl_dashboard.js"></script>
+</body></html>
