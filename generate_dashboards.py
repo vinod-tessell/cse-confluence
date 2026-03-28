@@ -92,6 +92,8 @@ if __name__ == "__main__":
         with open(filename, "w", encoding="utf-8") as f:
                f.write(html)
         js_filename = filename.replace(".html", ".js")
+        # Sanitise surrogate characters that some Python builds produce from emoji
+        page_js_clean = page_js.encode("utf-8", errors="replace").decode("utf-8")
         with open(js_filename, "w", encoding="utf-8") as f:
                f.write(page_js)
         print(f"  ✅ Written {filename} + {js_filename}")
