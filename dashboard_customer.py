@@ -514,20 +514,72 @@ if(document.readyState==='loading'){{
 
     def _extract_release_tag(issue_fields):
         """Return best release label/version string, or empty string."""
-        # fixVersions first — most explicit
         fv = issue_fields.get("fixVersions") or []
         if fv:
             return fv[0].get("name", "")
-        # duedate next
         dd = issue_fields.get("duedate") or ""
         if dd:
             return f"Due {dd}"
-        # labels that look like release markers
         for lbl in (issue_fields.get("labels") or []):
             ll = lbl.lower()
             if any(h in ll for h in RELEASE_LABEL_HINTS):
                 return lbl
         return ""
+
+    def _extract_release_date(issue_fields):
+        """
+        Try to derive an actual date from fixVersions releaseDate, duedate,
+        quarter labels (Q1-2026 etc), or version strings. Returns a date object
+        or None if nothing can be parsed.
+        """
+        from datetime import date as _d
+        import re as _re
+
+        # fixVersions with a releaseDate field
+        fv = issue_fields.get("fixVersions") or []
+        for v in fv:
+            rd = v.get("releaseDate") or ""
+            if rd:
+                try: return _d.fromisoformat(rd)
+                except Exception: pass
+
+        # explicit duedate
+        dd = issue_fields.get("duedate") or ""
+        if dd:
+            try: return _d.fromisoformat(dd)
+            except Exception: pass
+
+        # quarter labels: Q1-2026, Q2-2026 etc → last day of that quarter
+        QUARTER_END = {1: (3,31), 2: (6,30), 3: (9,30), 4: (12,31)}
+        for lbl in (issue_fields.get("labels") or []):
+            m = _re.search(r'[Qq]([1-4])[-_]?(\d{4})', lbl)
+            if m:
+                q, yr = int(m.group(1)), int(m.group(2))
+                mo, dy = QUARTER_END[q]
+                try: return _d(yr, mo, dy)
+                except Exception: pass
+
+        # fixVersion name that looks like a date: "2026-04-15", "Apr 2026", "April 2026"
+        MONTHS_MAP = {"jan":1,"feb":2,"mar":3,"apr":4,"may":5,"jun":6,
+                      "jul":7,"aug":8,"sep":9,"oct":10,"nov":11,"dec":12,
+                      "january":1,"february":2,"march":3,"april":4,"june":6,
+                      "july":7,"august":8,"september":9,"october":10,"november":11,"december":12}
+        for v in fv:
+            name = v.get("name","")
+            # ISO date in name
+            m = _re.search(r'(\d{4}-\d{2}-\d{2})', name)
+            if m:
+                try: return _d.fromisoformat(m.group(1))
+                except Exception: pass
+            # "Apr 2026" or "April 2026"
+            m = _re.search(r'([A-Za-z]+)\s+(\d{4})', name)
+            if m:
+                mn = MONTHS_MAP.get(m.group(1).lower())
+                if mn:
+                    try: return _d(int(m.group(2)), mn, 28)  # end of month approx
+                    except Exception: pass
+
+        return None
 
     def _ticket_row_eng(issue, tag_color="#00C2E0"):
         key    = issue["key"]
@@ -540,8 +592,8 @@ if(document.readyState==='loading'){{
                     f'padding:1px 6px;border-radius:10px;white-space:nowrap">{tag}</span>') if tag else ""
         return (
             f'<a href="{url}" target="_blank" style="display:flex;align-items:flex-start;gap:8px;'
-            f'padding:7px 0;border-bottom:.5px solid rgba(255,255,255,0.07);text-decoration:none;'
-            f'cursor:pointer;transition:background .15s;border-radius:4px;padding-left:4px;padding-right:4px"'
+            f'padding:7px 4px;border-bottom:.5px solid rgba(255,255,255,0.07);text-decoration:none;'
+            f'cursor:pointer;transition:background .15s;border-radius:4px"'
             f' onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'"'
             f' onmouseout="this.style.background=\'transparent\'">'
             f'<div style="min-width:0;flex:1">'
@@ -554,25 +606,58 @@ if(document.readyState==='loading'){{
             f'</a>'
         )
 
-    # Features with release tags (committed/upcoming)
-    committed_features = []
-    other_features     = []
-    for issue in features.issues:
-        tag = _extract_release_tag(issue["fields"])
-        if tag:
-            committed_features.append(issue)
-        else:
-            other_features.append(issue)
+    # ── Timeline bucketing ────────────────────────────────────────────────────
+    from datetime import date as _date2, timedelta as _td
+    _today  = _date2.today()
+    _7d     = _today + _td(days=7)
+    _30d    = _today + _td(days=30)
+    _90d    = _today + _td(days=90)
 
-    features_html = ""
-    if committed_features:
-        features_html += f'<div style="font-size:9px;font-weight:600;color:#00C2E0;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Committed / Scheduled ({len(committed_features)})</div>'
-        for i in committed_features[:8]:
-            features_html += _ticket_row_eng(i, "#00C2E0")
-    if other_features:
-        features_html += f'<div style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.06em;margin:10px 0 6px">In Backlog ({len(other_features)})</div>'
-        for i in other_features[:5]:
-            features_html += _ticket_row_eng(i, "#7B8FA8")
+    buckets = {"week": [], "month": [], "quarter": [], "beyond": [], "unscheduled": []}
+
+    for issue in features.issues:
+        rd = _extract_release_date(issue["fields"])
+        if rd is None:
+            tag = _extract_release_tag(issue["fields"])
+            if tag:
+                buckets["beyond"].append(issue)      # has a label but no parseable date
+            else:
+                buckets["unscheduled"].append(issue)
+        elif rd <= _7d:
+            buckets["week"].append(issue)
+        elif rd <= _30d:
+            buckets["month"].append(issue)
+        elif rd <= _90d:
+            buckets["quarter"].append(issue)
+        else:
+            buckets["beyond"].append(issue)
+
+    def _bucket_section(label, issues, color, accent_color="#00C2E0", limit=10):
+        if not issues:
+            return ""
+        html  = (f'<div style="display:flex;align-items:center;gap:8px;margin:10px 0 6px">'
+                 f'<div style="width:3px;height:14px;background:{accent_color};border-radius:2px;flex-shrink:0"></div>'
+                 f'<span style="font-size:9px;font-weight:700;color:{accent_color};text-transform:uppercase;letter-spacing:.07em">'
+                 f'{label}</span>'
+                 f'<span style="font-size:9px;color:rgba(255,255,255,0.25)">{len(issues)} ticket{"s" if len(issues)!=1 else ""}</span>'
+                 f'</div>')
+        for i in issues[:limit]:
+            html += _ticket_row_eng(i, accent_color)
+        if len(issues) > limit:
+            kw_enc = cust["jql_keyword"].replace(" ","+").replace('"','%22')
+            more_url = f'{JIRA_BASE}/issues/?jql=project=TS+AND+text+~+"{kw_enc}"+AND+statusCategory!=Done'
+            html += (f'<div style="font-size:10px;color:rgba(255,255,255,0.3);padding:6px 4px">'
+                     f'<a href="{more_url}" target="_blank" style="color:#00C2E0;text-decoration:none">'
+                     f'+{len(issues)-limit} more in Jira →</a></div>')
+        return html
+
+    features_html = (
+        _bucket_section("Next 7 days",      buckets["week"],        "#E53E3E", "#FC8181")  +
+        _bucket_section("Next 30 days",     buckets["month"],       "#FFA94D", "#FFA94D")  +
+        _bucket_section("Next 3 months",    buckets["quarter"],     "#00C2E0", "#00C2E0")  +
+        _bucket_section("Later / labelled", buckets["beyond"],      "#7B8FA8", "#7B8FA8")  +
+        _bucket_section("Unscheduled",      buckets["unscheduled"], "#5E6C84", "#5E6C84", limit=5)
+    )
     if not features_html:
         features_html = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No open feature requests found.</div>'
 
