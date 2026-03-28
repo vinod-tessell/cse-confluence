@@ -65,10 +65,11 @@ function initChart(){
         ctx.textAlign='center';
         ctx.fillText(CHART_DATA.labels[gi],cx,H-8);
       }
-      ctx.fillStyle='rgba(26,111,219,0.88)';ctx.fillRect(W-PAD.right-90,6,8,8);
-      ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='9px system-ui,sans-serif';ctx.textAlign='left';ctx.fillText('Open (SR)',W-PAD.right-79,14);
-      ctx.fillStyle='rgba(56,161,105,0.88)';ctx.fillRect(W-PAD.right-35,6,8,8);
-      ctx.fillStyle='rgba(255,255,255,0.6)';ctx.fillText('Resolved',W-PAD.right-24,14);
+      // Legend — top left, clear of bars
+      ctx.fillStyle='rgba(26,111,219,0.88)';ctx.fillRect(PAD.left,5,8,8);
+      ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font='9px system-ui,sans-serif';ctx.textAlign='left';ctx.fillText('Open (SR)',PAD.left+11,13);
+      ctx.fillStyle='rgba(56,161,105,0.88)';ctx.fillRect(PAD.left+68,5,8,8);
+      ctx.fillStyle='rgba(255,255,255,0.55)';ctx.fillText('Resolved',PAD.left+79,13);
       if(prog<1)requestAnimationFrame(draw);
     }catch(e){console.error('chart draw error:',e);}
   }
@@ -81,7 +82,7 @@ if(document.readyState==='loading'){
   initChart();
 }
 
-var DATA={"p0p1": 0, "support": 7, "features": 20, "eng_tickets": 10, "resolved": 24, "pendingEng": 3, "p0keys": [], "highKeys": ["SR-8494", "SR-8049", "SR-7946"], "generated": "Mar 28, 2026 14:29 EST", "score": 6, "scoreLabel": "Stable", "scoreColor": "#FFC107"};
+var DATA={"p0p1": 0, "support": 7, "features": 20, "eng_tickets": 10, "resolved": 24, "pendingEng": 3, "p0keys": [], "highKeys": ["SR-8494", "SR-8049", "SR-7946"], "generated": "Mar 28, 2026 14:43 EST", "score": 6, "scoreLabel": "Stable", "scoreColor": "#FFC107"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
