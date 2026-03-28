@@ -1269,6 +1269,7 @@ function initChart(){{
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <title>{cust['name']} — Customer Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>{timeseries_js}</script>
 <style>{SHARED_CSS}</style></head><body>
 {nav}
 <div style="background:#0B1F45;padding:1.1rem 1.5rem 1.25rem;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid #122752">
@@ -1473,7 +1474,6 @@ function initChart(){{
   </div>
 </div>
 <script>
-{timeseries_js}
 const DATA={data_js};
 {HEALTH_JS}
 window.onload=()=>{{try{{runHealth(DATA);}}catch(e){{console.error('runHealth:',e);}}try{{buildHealthDrawer(DATA);}}catch(e){{console.error('buildHealthDrawer:',e);}}}};
