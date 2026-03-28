@@ -89,10 +89,13 @@ if __name__ == "__main__":
             data["resolved"], data["eng_tickets"],
         )
 
-        html = build_customer_html(cust, data)
-        with open(filename, "w") as f:
-            f.write(html)
-        print(f"  ✅ Written {filename}")
+       html, page_js = build_customer_html(cust, data)
+       with open(filename, "w") as f:
+           f.write(html)
+       js_filename = filename.replace(".html", ".js")
+       with open(js_filename, "w") as f:
+           f.write(page_js)
+       print(f"  ✅ Written {filename} + {js_filename}")
 
         page_id = ensure_confluence_page(cust, gh_url)
         if page_id and page_id != cust.get("confluence_page_id", ""):
