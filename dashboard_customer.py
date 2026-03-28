@@ -208,26 +208,26 @@ function toggleDrawer(dId,mId){{var d=document.getElementById(dId),m=document.ge
 function copyJql(btn,key){{var el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(function(){{var orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(function(){{btn.textContent=orig;btn.style.color='';}},1500);}}).catch(function(){{btn.textContent='Failed';setTimeout(function(){{btn.textContent='Copy';}},1500);}});}}
 function buildHealthDrawer(DATA){{
   var factors=[],actions=[];
-  if(DATA.p0p1>=3){{factors.push(['\u22124 pts',DATA.p0p1+' active P0 incidents ('+DATA.p0keys.join(', ')+')', '#E53E3E']);actions.push(['\uD83D\uDEA8','Escalate to engineering leadership']);}}
-  else if(DATA.p0p1===2){{factors.push(['\u22123 pts','2 P0 incidents ('+DATA.p0keys.join(', ')+')', '#E53E3E']);actions.push(['\uD83D\uDEA8','Both need engineering owner today']);}}
-  else if(DATA.p0p1===1){{factors.push(['\u22122 pts','1 active P0/P1 ('+DATA.p0keys[0]+')', '#DD6B20']);actions.push(['\uD83D\uDEA8','Daily updates to customer until resolved']);}}
+  if(DATA.p0p1>=3){{factors.push(['-4 pts',DATA.p0p1+' active P0 incidents ('+DATA.p0keys.join(', ')+')', '#E53E3E']);actions.push(['[P0]','Escalate to engineering leadership']);}}
+  else if(DATA.p0p1===2){{factors.push(['-3 pts','2 P0 incidents ('+DATA.p0keys.join(', ')+')', '#E53E3E']);actions.push(['[P0]','Both need engineering owner today']);}}
+  else if(DATA.p0p1===1){{factors.push(['-2 pts','1 active P0/P1 ('+DATA.p0keys[0]+')', '#DD6B20']);actions.push(['[P0]','Daily updates to customer until resolved']);}}
   else{{factors.push(['+0 pts','No active P0/P1 incidents','#38A169']);}}
-  if(DATA.support>=8){{factors.push(['\u22122 pts','High SR backlog \u2014 '+DATA.support+' open','#DD6B20']);actions.push(['\uD83C\uDF9F\uFE0F','Close or escalate stale SR tickets']);}}
-  else if(DATA.support>=5){{factors.push(['\u22121 pt','Moderate SR backlog \u2014 '+DATA.support+' open','#D69E2E']);actions.push(['\uD83C\uDF9F\uFE0F','Target 3 SR resolutions this sprint']);}}
-  else{{factors.push(['+0 pts','Healthy SR volume \u2014 '+DATA.support+' open','#38A169']);}}
-  if(DATA.pendingEng>=4){{factors.push(['\u22122 pts',DATA.pendingEng+' SR tickets blocked pending eng','#DD6B20']);actions.push(['\u23F3','Set ETAs and communicate to customer']);}}
-  else if(DATA.pendingEng>=2){{factors.push(['\u22121 pt',DATA.pendingEng+' SR tickets pending engineering','#D69E2E']);actions.push(['\u23F3','Chase ETAs this week']);}}
+  if(DATA.support>=8){{factors.push(['-2 pts','High SR backlog — '+DATA.support+' open','#DD6B20']);actions.push(['[SR]','Close or escalate stale SR tickets']);}}
+  else if(DATA.support>=5){{factors.push(['-1 pt','Moderate SR backlog — '+DATA.support+' open','#D69E2E']);actions.push(['[SR]','Target 3 SR resolutions this sprint']);}}
+  else{{factors.push(['+0 pts','Healthy SR volume — '+DATA.support+' open','#38A169']);}}
+  if(DATA.pendingEng>=4){{factors.push(['-2 pts',DATA.pendingEng+' SR tickets blocked pending eng','#DD6B20']);actions.push(['[ENG]','Set ETAs and communicate to customer']);}}
+  else if(DATA.pendingEng>=2){{factors.push(['-1 pt',DATA.pendingEng+' SR tickets pending engineering','#D69E2E']);actions.push(['[ENG]','Chase ETAs this week']);}}
   else{{factors.push(['+0 pts','No SR tickets blocked on engineering','#38A169']);}}
-  if(DATA.eng_tickets>=5){{factors.push(['\u22121 pt',DATA.eng_tickets+' TS engineering tickets open','#D69E2E']);actions.push(['\u2699\uFE0F','Review and triage TS engineering backlog']);}}
+  if(DATA.eng_tickets>=5){{factors.push(['-1 pt',DATA.eng_tickets+' TS engineering tickets open','#D69E2E']);actions.push(['[TS]','Review and triage TS engineering backlog']);}}
   else{{factors.push(['+0 pts',DATA.eng_tickets+' TS engineering tickets','#38A169']);}}
-  if(DATA.features>=5){{factors.push(['\u22121 pt',DATA.features+' TS feature requests open','#D69E2E']);actions.push(['\uD83D\uDCA1','Schedule roadmap call']);}}
+  if(DATA.features>=5){{factors.push(['-1 pt',DATA.features+' TS feature requests open','#D69E2E']);actions.push(['[FR]','Schedule roadmap call']);}}
   else{{factors.push(['+0 pts',DATA.features+' feature requests','#38A169']);}}
-  if(DATA.resolved===0){{factors.push(['\u22121 pt','No SR tickets resolved in 30d','#DD6B20']);actions.push(['\u2705','Close at least one SR ticket']);}}
+  if(DATA.resolved===0){{factors.push(['-1 pt','No SR tickets resolved in 30d','#DD6B20']);actions.push(['[SR]','Close at least one SR ticket']);}}
   else{{factors.push(['+0 pts',DATA.resolved+' SR resolved in 30d','#38A169']);}}
   var fEl=document.getElementById('health-factors');
   if(fEl)fEl.innerHTML=factors.map(function(r){{return '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:'+r[2]+'1A;color:'+r[2]+';flex-shrink:0;min-width:44px;text-align:center">'+r[0]+'</span><span style="font-size:11px;color:#172B4D;line-height:1.5">'+r[1]+'</span></div>';}}).join('');
   var aEl=document.getElementById('health-actions');
-  if(aEl)aEl.innerHTML=actions.length===0?'<p style="font-size:11px;color:#38A169;font-weight:600">\u2705 Customer is healthy!</p>':actions.map(function(r){{return '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:13px;flex-shrink:0">'+r[0]+'</span><span style="font-size:11px;color:#172B4D;line-height:1.5">'+r[1]+'</span></div>';}}).join('');
+  if(aEl)aEl.innerHTML=actions.length===0?'<p style="font-size:11px;color:#38A169;font-weight:600">No immediate actions needed</p>':actions.map(function(r){{return '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px"><span style="font-size:10px;font-weight:700;padding:2px 5px;border-radius:3px;background:#E6F1FB;color:#0C447C;flex-shrink:0">'+r[0]+'</span><span style="font-size:11px;color:#172B4D;line-height:1.5">'+r[1]+'</span></div>';}}).join('');
 }}"""
 
     mv_col   = "red"    if len(p0p1) > 0     else "green"
