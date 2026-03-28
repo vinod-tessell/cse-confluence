@@ -96,29 +96,41 @@ tr:last-child td{border-bottom:none}
   </div>
   <a class="nav-back" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/1990557712" target="_parent">← All Customers</a>
 </div>
-<div style="background:#0B1F45;padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid #122752">
-  <div style="display:flex;align-items:center;gap:10px">
-    <div style="width:42px;height:42px;background:#E1F5EE;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#0D6E85">AT</div>
-    <div><div style="font-size:18px;font-weight:700;color:#fff">ATT</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">AWS · us-east-1 · Oracle</div></div>
+<div style="background:#0B1F45;padding:1.1rem 1.5rem 1.25rem;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid #122752">
+  <div style="display:flex;align-items:flex-start;gap:10px">
+    <div style="width:42px;height:42px;background:#E1F5EE;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#0D6E85;flex-shrink:0">AT</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:18px;font-weight:700;color:#fff;line-height:1.2">ATT</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px">AWS · us-east-1 · Oracle</div>
+      <!-- Metadata chips row -->
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center">
+        <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.07);border:.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px 9px">
+          <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:.05em">Exec Sponsor</span>
+          <span style="font-size:11px;font-weight:700;color:#fff;margin-left:4px">Bala</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.07);border:.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px 9px">
+          <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:.05em">TAM / TPM</span>
+          <span style="font-size:11px;font-weight:700;color:#fff;margin-left:4px">Jonathan</span>
+          <span style="font-size:10px;color:rgba(255,255,255,0.35)">· Uday</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.07);border:.5px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px 9px">
+          <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:.05em">Phase</span>
+          <span style="font-size:11px;font-weight:700;color:#fff;margin-left:4px">Onboarding</span>
+        </div>
+        
+        <span style="font-size:10px;color:rgba(255,255,255,0.25);margin-left:2px">Refreshed Mar 27, 2026 22:52 EST</span>
+      </div>
+    </div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px">
+  <!-- Only the health status badge stays right-aligned -->
+  <div style="flex-shrink:0;padding-top:2px">
     <div style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15)" id="health-wrap">
       <div style="width:7px;height:7px;border-radius:50%;background:#68D391" id="health-dot"></div>
       <span id="health-badge" style="color:#68D391">Healthy</span>
     </div>
-    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 27, 2026 22:33 EST</div>
   </div>
 </div>
 <div class="body">
-  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;padding:.75rem 1.5rem;margin-bottom:1rem;display:grid;grid-template-columns:repeat(7,1fr);gap:1rem;align-items:start">
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Account</div><div style="font-size:12px;font-weight:700;color:#172B4D">ATT</div></div>
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Exec Sponsor</div><div style="font-size:12px;font-weight:700;color:#172B4D">Bala</div></div>
-    <div style="grid-column:span 2"><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">TAM / TPM</div><div style="font-size:12px;font-weight:700;color:#172B4D">Jonathan</div><div style="font-size:10px;color:#5E6C84;margin-top:1px">Uday <span style="color:#DFE1E6">·</span> secondary</div></div>
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cloud</div><div style="font-size:12px;font-weight:700;color:#172B4D">AWS · us-east-1</div></div>
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">Onboarding</div></div>
-    <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div>—</div></div>
-  </div>
   <div class="metrics" style="grid-template-columns:repeat(8,1fr)">
     <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval green">0</div><div class="msub">Critical — SR &amp; TS</div></div>
     <div class="metric" id="m-sup"  onclick="toggleDrawer('drawer-sup','m-sup')"><div class="mlabel">Support Tickets</div><div class="mval yellow">1</div><div class="msub">SR project · open</div></div>
@@ -266,7 +278,7 @@ tr:last-child td{border-bottom:none}
             <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
               <div id="health-score-bar" style="height:100%;border-radius:3px;background:#68D391;width:90%;transition:width .6s ease"></div>
             </div>
-            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 27, 2026 22:33 EST</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 27, 2026 22:52 EST</span>
           </div>
         </div>
 
@@ -415,7 +427,7 @@ function initChart(){
     }
   });
 }
-const DATA={"p0p1": 0, "support": 1, "features": 0, "eng_tickets": 0, "resolved": 0, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8302"], "generated": "Mar 27, 2026 22:33 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+const DATA={"p0p1": 0, "support": 1, "features": 0, "eng_tickets": 0, "resolved": 0, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8302"], "generated": "Mar 27, 2026 22:52 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
@@ -454,7 +466,26 @@ function runHealth(DATA) {
   if(sc){sc.textContent=score;sc.style.color=color;}
 }
 
-window.onload=()=>{try{runHealth(DATA);}catch(e){console.error('runHealth error:',e);}try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer error:',e);}try{initChart();}catch(e){console.error('initChart error:',e);}};
+window.onload=()=>{try{runHealth(DATA);}catch(e){console.error('runHealth:',e);}try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer:',e);}};
+// Chart: use IntersectionObserver so it fires when the canvas enters the viewport.
+// This works correctly inside Confluence iframes where window.onload is unreliable.
+(function(){
+  function tryInit(){
+    if(typeof Chart==='undefined'){setTimeout(tryInit,150);return;}
+    initChart();
+  }
+  var canvas=document.getElementById('trendChart');
+  if(!canvas)return;
+  if('IntersectionObserver' in window){
+    var obs=new IntersectionObserver(function(entries,o){
+      if(entries[0].isIntersecting){o.disconnect();tryInit();}
+    },{threshold:0.1});
+    obs.observe(canvas);
+  }else{
+    // Fallback for environments without IntersectionObserver
+    tryInit();
+  }
+})();;
 function toggleDrawer(dId,mId){const d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.metric').forEach(x=>x.classList.remove('active'));if(!open){d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer error:',e);}}}}
 function copyJql(btn,key){const el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(()=>{const orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(()=>{btn.textContent=orig;btn.style.color='';} ,1500);}).catch(()=>{btn.textContent='Failed';setTimeout(()=>btn.textContent='Copy',1500);});}
 function buildHealthDrawer(DATA){
