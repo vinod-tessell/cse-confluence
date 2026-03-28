@@ -162,10 +162,7 @@ if(document.readyState==='loading'){{
 }}else{{
   initChart();
 }}"""
-        chart_block = (f'<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);'
-                       f'text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">'
-                       f'SR Ticket Trend — last 6 months</div>'
-                       f'<div style="position:relative;height:180px;width:100%">'
+        chart_block = (f'<div style="position:relative;height:180px;width:100%">'
                        f'<canvas id="trendChart"></canvas></div>')
     else:
         chart_js    = "function initChart(){}"
@@ -315,12 +312,7 @@ if(document.readyState==='loading'){{
 
     if active_themes:
         analytics_block = f"""
-<div style="padding:.75rem 1rem 1rem">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1rem">
-    <div style="font-size:11px;font-weight:700;color:#172B4D;text-transform:uppercase;letter-spacing:.06em">Recurring Issue Themes</div>
-    <div style="font-size:10px;color:#A0AEC0">last 90d · click to expand</div>
-  </div>
-
+<div style="padding:.5rem 1.25rem 1rem">
   <!-- Month column headers -->
   <div style="display:grid;grid-template-columns:14px 110px 1fr 24px;gap:8px;margin-bottom:6px;align-items:center">
     <div></div><div></div>
@@ -330,30 +322,30 @@ if(document.readyState==='loading'){{
 
   <div id="ta-rows-{cust['id']}"></div>
 
-  <div style="height:.5px;background:#DFE1E6;margin:.75rem 0"></div>
+  <div style="height:.5px;background:rgba(255,255,255,0.08);margin:.6rem 0"></div>
   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#E06355,#B94030)"></div><span style="font-size:10px;color:#5E6C84">Critical</span></div>
-    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#E8A84A,#B97020)"></div><span style="font-size:10px;color:#5E6C84">High</span></div>
-    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#5E9EE8,#2060B0)"></div><span style="font-size:10px;color:#5E6C84">Medium</span></div>
-    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#a0a0a0,#686868)"></div><span style="font-size:10px;color:#5E6C84">Low</span></div>
-    <div style="margin-left:auto;font-size:9px;color:#A0AEC0">lighter=older · darker=recent</div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#E06355,#B94030)"></div><span style="font-size:10px;color:rgba(255,255,255,0.35)">Critical</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#E8A84A,#B97020)"></div><span style="font-size:10px;color:rgba(255,255,255,0.35)">High</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#5E9EE8,#2060B0)"></div><span style="font-size:10px;color:rgba(255,255,255,0.35)">Medium</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#a0a0a0,#686868)"></div><span style="font-size:10px;color:rgba(255,255,255,0.35)">Low</span></div>
+    <div style="margin-left:auto;font-size:9px;color:rgba(255,255,255,0.2)">lighter=older · darker=recent</div>
   </div>
 </div>
 <style>
 .ta-row-{cust['id']} {{display:grid;grid-template-columns:14px 110px 1fr 24px;gap:8px;align-items:center;cursor:pointer;margin-bottom:11px}}
-.ta-row-{cust['id']}:hover .ta-name {{color:#172B4D}}
+.ta-row-{cust['id']}:hover .ta-name {{color:rgba(255,255,255,0.9)!important}}
 .ta-seg-track {{display:flex;gap:2px;height:18px}}
 .ta-seg {{height:100%;border-radius:4px;flex:0 0 0px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}}
 .ta-seg-lbl {{font-size:9px;font-weight:500;color:rgba(255,255,255,.85);opacity:0;transition:opacity .15s;white-space:nowrap}}
 .ta-row-{cust['id']}:hover .ta-seg-lbl {{opacity:1}}
 .ta-detail {{max-height:0;overflow:hidden;transition:max-height .38s cubic-bezier(.4,0,.2,1)}}
 .ta-detail.open {{max-height:160px}}
-.ta-detail-inner {{background:#F8F9FA;border-radius:6px;padding:.6rem .75rem;margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:10px}}
+.ta-detail-inner {{background:rgba(255,255,255,0.05);border-radius:6px;padding:.6rem .75rem;margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:10px}}
 .ta-dp-months {{display:flex;gap:6px}}
 .ta-dp-month {{flex:1;text-align:center}}
 .ta-dp-bar-track {{height:36px;display:flex;align-items:flex-end;justify-content:center}}
 .ta-dp-bar {{width:22px;border-radius:2px 2px 0 0;height:0;transition:height .5s cubic-bezier(.22,1,.36,1)}}
-.ta-dp-examples {{border-left:.5px solid #DFE1E6;padding-left:8px}}
+.ta-dp-examples {{border-left:.5px solid rgba(255,255,255,0.1);padding-left:8px}}
 @keyframes ta-slide-in {{from{{opacity:0;transform:translateX(-5px)}}to{{opacity:1;transform:translateX(0)}}}}
 </style>
 <script>
@@ -385,11 +377,11 @@ if(document.readyState==='loading'){{
     row.className='ta-row-'+custId;
 
     var rank=document.createElement('div');
-    rank.style.cssText='font-size:10px;color:#A0AEC0;text-align:right';
+    rank.style.cssText='font-size:10px;color:rgba(255,255,255,0.25);text-align:right';
     rank.textContent=i+1;
 
     var nameWrap=document.createElement('div');
-    nameWrap.innerHTML='<div class="ta-name" style="font-size:11px;font-weight:500;color:#5E6C84;transition:color .2s">'+t.label+'</div>'
+    nameWrap.innerHTML='<div class="ta-name" style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.55);transition:color .2s">'+t.label+'</div>'
       +'<span style="font-size:8px;font-weight:500;padding:1px 5px;border-radius:10px;color:'+sevColor+';background:'+sevBg+'">'+t.sev+'</span>';
 
     var track=document.createElement('div');
@@ -407,7 +399,7 @@ if(document.readyState==='loading'){{
     }});
 
     var totalEl=document.createElement('div');
-    totalEl.style.cssText='font-size:11px;font-weight:500;color:#5E6C84;text-align:right';
+    totalEl.style.cssText='font-size:11px;font-weight:500;color:rgba(255,255,255,0.45);text-align:right';
     totalEl.textContent=total;
 
     row.appendChild(rank);row.appendChild(nameWrap);row.appendChild(track);row.appendChild(totalEl);
@@ -425,7 +417,7 @@ if(document.readyState==='loading'){{
       var dHtml=diff===null?'':diff>0?'<div style="font-size:9px;color:#B94030;margin-top:1px">▲ +'+diff+'</div>':diff<0?'<div style="font-size:9px;color:#2A7A4A;margin-top:1px">▼ '+diff+'</div>':'<div style="font-size:9px;color:#A0AEC0;margin-top:1px">— same</div>';
       var mMonth=document.createElement('div');
       mMonth.className='ta-dp-month';
-      mMonth.innerHTML='<div style="font-size:9px;color:#A0AEC0;margin-bottom:2px">'+MONTHS[mi]+'</div>'
+      mMonth.innerHTML='<div style="font-size:9px;color:rgba(255,255,255,0.35);margin-bottom:2px">'+MONTHS[mi]+'</div>'
         +'<div class="ta-dp-bar-track"><div class="ta-dp-bar" style="background:'+t.shades[mi]+'" data-h="'+Math.round(v/mMax*34)+'"></div></div>'
         +'<div style="font-size:12px;font-weight:500;color:'+t.shades[2]+';margin-top:2px">'+v+'</div>'+dHtml;
       mDiv.appendChild(mMonth);
@@ -433,8 +425,8 @@ if(document.readyState==='loading'){{
 
     var exDiv=document.createElement('div');
     exDiv.className='ta-dp-examples';
-    exDiv.innerHTML='<div style="font-size:9px;color:#A0AEC0;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Recent tickets</div>'
-      +t.ex.map(function(e){{return '<div style="font-size:10px;color:#5E6C84;margin-bottom:3px">· '+e+'</div>';}}).join('');
+    exDiv.innerHTML='<div style="font-size:9px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Recent tickets</div>'
+      +t.ex.map(function(e){{return '<div style="font-size:10px;color:rgba(255,255,255,0.45);margin-bottom:3px">· '+e+'</div>';}}).join('');
 
     inner.appendChild(mDiv);inner.appendChild(exDiv);panel.appendChild(inner);
     wrap.appendChild(row);wrap.appendChild(panel);
@@ -724,7 +716,18 @@ function buildHealthDrawer(DATA){{
             <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated {now}</span>
           </div>
         </div>
-        <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)">{chart_block}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:.5px solid rgba(255,255,255,0.08)">
+          <!-- SR Ticket Trend -->
+          <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08)">
+            <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div>
+            {chart_block}
+          </div>
+          <!-- Recurring Issue Themes -->
+          <div style="padding:0;overflow:hidden;background:rgba(255,255,255,0.02)">
+            <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.06em;padding:1rem 1.25rem .5rem">Recurring Issue Themes — last 90d</div>
+            {analytics_block}
+          </div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
           <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03)">
             <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>Findings</div>
@@ -741,10 +744,6 @@ function buildHealthDrawer(DATA){{
     </div>
     <div>
       <div class="sb-sec"><div class="sb-head">📅 Recent Activity</div><div class="tl">{timeline}</div></div>
-      <div class="sb-sec" style="overflow:hidden">
-        <div class="sb-head">📊 CS Analytics</div>
-        {analytics_block}
-      </div>
     </div>
   </div>
 </div>
