@@ -29,7 +29,7 @@ def jql(query, max=20):
     r = requests.get(
         f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
         params={"jql": query, "maxResults": max,
-                "fields": "summary,priority,status,created,resolutiondate,issuetype,labels"},
+                "fields": "summary,priority,status,created,resolutiondate,issuetype,labels,fixVersions,duedate,comment"},
     )
     r.raise_for_status()
     body   = r.json()
@@ -96,6 +96,14 @@ def fetch_customer_data(keyword):
     # Fetch SR tickets with higher max to cover 6 months of history for chart
     support     = jql(queries["support"],     max=500)
     resolved    = jql(queries["resolved"],    max=500)
+    features    = jql(queries["features"],    max=100)
+
+    # Debug: print first feature ticket to understand label/version structure
+    if features.issues:
+        f0 = features.issues[0]["fields"]
+        print(f"  [DEBUG] Feature labels: {f0.get('labels', [])}")
+        print(f"  [DEBUG] Feature fixVersions: {[v.get('name') for v in (f0.get('fixVersions') or [])]}")
+        print(f"  [DEBUG] Feature duedate: {f0.get('duedate')}")
 
     print(f"  Building monthly chart from {len(support.issues)} support + {len(resolved.issues)} resolved tickets")
     ticket_history = derive_monthly_buckets(support.issues, resolved.issues)
@@ -103,7 +111,7 @@ def fetch_customer_data(keyword):
     return {
         "p0p1":           jql(queries["p0p1"],        max=100),
         "support":        support,
-        "features":       jql(queries["features"],    max=100),
+        "features":       features,
         "eng_tickets":    jql(queries["eng_tickets"], max=100),
         "resolved":       resolved,
         "recent":         jql(queries["recent"],      max=12),
