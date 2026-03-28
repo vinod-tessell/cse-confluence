@@ -575,6 +575,18 @@ def fetch_active_customers():
     print(f"\n  Total customers: {len(customers)}")
     return customers
 
+class JqlResult:
+    """Wraps Jira search results so callers can access both the fetched issues
+    and the real total count reported by Jira (which may exceed maxResults)."""
+    def __init__(self, issues, total):
+        self.issues = issues
+        self.total  = total
+    # Make it iterable/subscriptable so existing list-style uses still work
+    def __len__(self):        return self.total   # len() = real Jira total
+    def __iter__(self):       return iter(self.issues)
+    def __getitem__(self, s): return self.issues[s]
+    def __bool__(self):       return self.total > 0
+
 def jql(query, max=20):
     r = requests.get(
         f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
@@ -582,7 +594,10 @@ def jql(query, max=20):
                 "fields": "summary,priority,status,created,resolutiondate,issuetype,labels"}
     )
     r.raise_for_status()
-    return r.json().get("issues", [])
+    body   = r.json()
+    issues = body.get("issues", [])
+    total  = body.get("total", len(issues))   # real Jira total
+    return JqlResult(issues, total)
 
 def make_jqls(keyword):
     _feat_types  = 'issuetype in (Feature, Story) OR labels in ("FeatureRequest")'
@@ -661,18 +676,24 @@ def fetch_pulse_from_comments(keyword):
         pulse_items, seen = [], set()
         for issue in issues:
             f       = issue["fields"]
-            summ    = (f.get("summary") or "")[:60]
+            key     = issue["key"]
+            summ    = (f.get("summary") or "")[:55]
             status  = (f.get("status", {}).get("name") or "").lower()
             labels  = [l.upper() for l in (f.get("labels") or [])]
             created = f.get("created", "")
+            ticket_age = age_days(created)
             if ("P0" in labels or "P1" in labels) and "frustrated" not in seen:
-                pulse_items.append({"sentiment":"frustrated","text":f"P{'0' if 'P0' in labels else '1'} open {age_days(created)} — {summ[:40]}"})
+                plabel = 'P0' if 'P0' in labels else 'P1'
+                pulse_items.append({"sentiment":"frustrated","key":key,"age":ticket_age,
+                    "text":summ,"snippet":f"{plabel} incident open for {ticket_age} — needs immediate attention"})
                 seen.add("frustrated"); continue
             if any(x in status for x in ("pending","wait","hold")) and "waiting" not in seen:
-                pulse_items.append({"sentiment":"waiting","text":f"Awaiting response — {summ[:45]}"})
+                pulse_items.append({"sentiment":"waiting","key":key,"age":ticket_age,
+                    "text":summ,"snippet":"Awaiting engineering response"})
                 seen.add("waiting"); continue
             for c in reversed(f.get("comment", {}).get("comments", [])):
                 if "tessell" in (c.get("author", {}).get("emailAddress") or "").lower(): continue
+                author = c.get("author", {}).get("displayName", "Customer")
                 body = c.get("body", {})
                 text = ""
                 if isinstance(body, dict):
@@ -680,10 +701,14 @@ def fetch_pulse_from_comments(keyword):
                         for inline in block.get("content", []):
                             if inline.get("type") == "text": text += inline.get("text", "") + " "
                 elif isinstance(body, str): text = body
+                text = text.strip()
                 tl = text.lower()
+                snippet = (text[:80] + "…") if len(text) > 80 else text
                 for kws, sent in [(frustrated_kw,"frustrated"),(waiting_kw,"waiting"),(positive_kw,"positive"),(concerned_kw,"concerned")]:
                     if any(k in tl for k in kws) and sent not in seen:
-                        pulse_items.append({"sentiment":sent,"text":summ[:55]}); seen.add(sent); break
+                        pulse_items.append({"sentiment":sent,"key":key,"age":ticket_age,
+                            "text":summ,"snippet":f'"{snippet}" — {author}'})
+                        seen.add(sent); break
             if len(pulse_items) >= 5: break
         return pulse_items[:5]
     except Exception as e:
@@ -1010,12 +1035,33 @@ def build_customer_html(cust, data):
     p0_keys   = [i["key"] for i in p0p1[:3]]
     high_keys = [i["key"] for i in support if (i['fields'].get('priority',{}).get('name','') or '').lower() in ('high','p1','highest')][:3]
 
-    p0_rows   = "".join(ticket_row(i) for i in p0p1[:5])   or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr>'
-    sup_rows  = "".join(ticket_row(i) for i in support[:10]) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open support tickets</td></tr>'
-    eng_rows  = "".join(ticket_row(i) for i in eng_tickets[:10]) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open engineering tickets</td></tr>'
+    p0_rows   = "".join(ticket_row(i) for i in p0p1)   or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr>'
+    sup_rows  = "".join(ticket_row(i) for i in support) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open support tickets</td></tr>'
+    eng_rows  = "".join(ticket_row(i) for i in eng_tickets) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open engineering tickets</td></tr>'
+
+    # Truncation notes — shown in drawer footer when Jira total > fetched count
+    def _trunc_note(result, query=""):
+        fetched = len(result.issues)
+        total   = result.total
+        if total > fetched:
+            enc      = query.replace(" ", "+").replace('"', '%22')
+            view_url = f"{JIRA_BASE}/issues/?jql={enc}"
+            return (f'<tr><td colspan="5" style="text-align:center;padding:.6rem 1rem;'
+                    f'font-size:10px;color:#854F0B;background:#FFFAF0;border-top:.5px solid #DFE1E6">'
+                    f'⚠️ Showing {fetched} of {total} tickets · '
+                    f'<a class="tlink" href="{view_url}" target="_blank">View all {total} in Jira →</a>'
+                    f'</td></tr>')
+        return ""
+
+    _jqls     = data.get("jqls", make_jqls(cust["jql_keyword"]))
+    sup_trunc  = _trunc_note(support,     _jqls.get("support",     ""))
+    eng_trunc  = _trunc_note(eng_tickets, _jqls.get("eng_tickets", ""))
+    p0_trunc   = _trunc_note(p0p1,        _jqls.get("p0p1",        ""))
+    res_trunc  = _trunc_note(resolved,    _jqls.get("resolved",    ""))
+    feat_trunc = _trunc_note(features,    _jqls.get("features",    ""))
 
     feat_items = ""
-    for i in features[:5]:
+    for i in features:
         key = i["key"]; summ = (i["fields"].get("summary") or "")[:65]; url = f"{JIRA_BASE}/browse/{key}"
         sc_, sl = status_class(i["fields"].get("status",{}).get("name",""))
         feat_items += (f'<div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡 </div>'
@@ -1037,27 +1083,60 @@ def build_customer_html(cust, data):
     if hist:
         chart_labels      = json.dumps([h["month"][:6] for h in hist])
         chart_data        = json.dumps([h["count"] for h in hist])
-        chart_max         = max(h["count"] for h in hist) + 2
         resolved_by_month = json.dumps([h.get("resolved", 0) for h in hist])
+        chart_max         = max(max(h["count"] for h in hist),
+                                max(h.get("resolved",0) for h in hist), 1) + 3
         timeseries_js = f"""
-new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{chart_labels},datasets:[
-  {{label:'Open',data:{chart_data},backgroundColor:'rgba(26,111,219,0.85)',borderRadius:3,barPercentage:0.7,categoryPercentage:0.6}},
-  {{label:'Resolved',data:{resolved_by_month},backgroundColor:'rgba(56,161,105,0.85)',borderRadius:3,barPercentage:0.7,categoryPercentage:0.6}}
-]}},options:{{responsive:true,maintainAspectRatio:false,
-  plugins:{{legend:{{display:true,position:'top',align:'end',labels:{{font:{{size:9}},color:'rgba(255,255,255,0.5)',boxWidth:8,padding:8}}}}}},
-  scales:{{x:{{grid:{{display:false}},ticks:{{font:{{size:9}},color:'rgba(255,255,255,0.4)'}},border:{{display:false}}}},
-           y:{{min:0,max:{chart_max},grid:{{color:'rgba(255,255,255,0.06)'}},ticks:{{font:{{size:9}},color:'rgba(255,255,255,0.4)',stepSize:2}},border:{{display:false}}}}}}}}}}); """
-        chart_block = f'<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ticket Volume Trend (WIP)</div><div style="position:relative;height:120px"><canvas id="trendChart"></canvas></div>'
+setTimeout(function(){{
+  var ctx=document.getElementById('trendChart');
+  if(!ctx)return;
+  new Chart(ctx,{{type:'bar',data:{{labels:{chart_labels},datasets:[
+    {{label:'Open (SR)',data:{chart_data},backgroundColor:'rgba(26,111,219,0.85)',borderRadius:3,barPercentage:0.6,categoryPercentage:0.7}},
+    {{label:'Resolved',data:{resolved_by_month},backgroundColor:'rgba(56,161,105,0.85)',borderRadius:3,barPercentage:0.6,categoryPercentage:0.7}}
+  ]}},options:{{responsive:true,maintainAspectRatio:false,
+    plugins:{{legend:{{display:true,position:'top',align:'end',labels:{{font:{{size:9}},color:'rgba(255,255,255,0.6)',boxWidth:8,padding:10}}}},
+              tooltip:{{callbacks:{{label:function(c){{return ' '+c.dataset.label+': '+c.parsed.y;}}}}}}}},
+    scales:{{
+      x:{{grid:{{display:false}},ticks:{{font:{{size:10}},color:'rgba(255,255,255,0.5)'}},border:{{display:false}}}},
+      y:{{min:0,max:{chart_max},grid:{{color:'rgba(255,255,255,0.08)'}},
+          ticks:{{font:{{size:10}},color:'rgba(255,255,255,0.5)',stepSize:Math.ceil({chart_max}/5)}},
+          border:{{display:false}}}}
+    }}
+  }}}});
+}}, 100);"""
+        chart_block = (f'<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);'
+                       f'text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">'
+                       f'SR Ticket Trend — last 6 months</div>'
+                       f'<div style="position:relative;height:180px;width:100%">'
+                       f'<canvas id="trendChart"></canvas></div>')
     else:
-        timeseries_js = ""; chart_block = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>'
+        timeseries_js = ""
+        chart_block   = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>'
 
-    pulse_colors = {"frustrated":"#E53E3E","concerned":"#DD6B20","waiting":"#D69E2E","positive":"#38A169","neutral":"#5E6C84"}
-    pulse_html = "".join(
-        f'<div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px">'
-        f'<div class="pdot" style="background:{pulse_colors.get(p["sentiment"],"#5E6C84")}"></div>'
-        f'<div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"><b style="color:#fff">{p["sentiment"].capitalize()}</b> — {p["text"]}</div></div>'
-        for p in data.get("pulse", [])
-    ) or '<div style="font-size:11px;color:rgba(255,255,255,0.3)">No pulse data yet.</div>'
+    pulse_colors  = {"frustrated":"#E53E3E","concerned":"#DD6B20","waiting":"#D69E2E","positive":"#38A169","neutral":"#5E6C84"}
+    pulse_icons   = {"frustrated":"🔴","concerned":"🟠","waiting":"🟡","positive":"🟢","neutral":"⚪"}
+    pulse_items   = data.get("pulse", [])
+    pulse_signals = ""
+    for p in pulse_items:
+        col     = pulse_colors.get(p["sentiment"], "#5E6C84")
+        icon    = pulse_icons.get(p["sentiment"], "⚪")
+        key     = p.get("key", "")
+        age     = p.get("age", "")
+        text    = p.get("text", "")
+        snippet = p.get("snippet", "")
+        key_link = (f'<a href="{JIRA_BASE}/browse/{key}" target="_blank" '
+                    f'style="font-size:10px;font-weight:700;color:{col};text-decoration:none">{key}</a> · '
+                    if key else "")
+        pulse_signals += (
+            f'<div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start">'
+            f'<span style="font-size:11px;flex-shrink:0;margin-top:1px">{icon}</span>'
+            f'<div style="min-width:0">'
+            f'<div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">{text}</div>'
+            f'<div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45">{key_link}{snippet}</div>'
+            f'</div></div>'
+        )
+    if not pulse_signals:
+        pulse_signals = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:.5rem">No recent customer signals detected.</div>'
 
     portal_link = (f'<div class="ir"><span class="ilabel">Portal</span><span class="ival"><a class="tlink" href="{cust["portal_url"]}" target="_blank">{cust["portal_url"]}</a></span></div>') if cust.get("portal_url") else ""
     kw_enc  = cust["jql_keyword"].replace(" ", "+").replace('"', '%22')
@@ -1070,7 +1149,7 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
     nav = NAV_CUSTOMER.format(parent=CONFLUENCE_PARENT)
 
     # ── JQL drawer blocks ──────────────────────────────────────────────────────
-    jqls = data.get("jqls", make_jqls(cust["jql_keyword"]))
+    jqls = _jqls
     _JQL_META = [
         ("p0p1",        "🚨", "#E53E3E", "Open P0 / P1"),
         ("support",     "🎫", "#DD6B20", "Support Tickets (SR)"),
@@ -1145,11 +1224,11 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
       <span style="font-size:10px;color:#5E6C84">· Max deduction: {10-score} pts</span>
     </div>
   </div>
-  <div class="drawer" id="drawer-p0p1"><div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents ({len(p0p1)}) — SR &amp; TS</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{p0_rows}</tbody></table></div>
-  <div class="drawer" id="drawer-sup"><div class="drawer-head"><span class="drawer-title">🎫 Support Tickets ({len(support)}) — SR project</span><button class="drawer-close" onclick="toggleDrawer('drawer-sup','m-sup')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{sup_rows}</tbody></table></div>
-  <div class="drawer" id="drawer-eng"><div class="drawer-head"><span class="drawer-title">⚙️ Engineering Tickets ({len(eng_tickets)}) — TS project · non-feature</span><button class="drawer-close" onclick="toggleDrawer('drawer-eng','m-eng')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{eng_rows}</tbody></table></div>
-  <div class="drawer" id="drawer-feat"><div class="drawer-head"><span class="drawer-title">💡 Feature Requests ({len(features)}) — TS project</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in features) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr>'}</tbody></table></div>
-  <div class="drawer" id="drawer-res"><div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days ({len(resolved)}) — SR project</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in resolved) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr>'}</tbody></table></div>
+  <div class="drawer" id="drawer-p0p1"><div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents ({len(p0p1)}) — SR &amp; TS</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{p0_rows}{p0_trunc}</tbody></table></div>
+  <div class="drawer" id="drawer-sup"><div class="drawer-head"><span class="drawer-title">🎫 Support Tickets ({len(support)}) — SR project</span><button class="drawer-close" onclick="toggleDrawer('drawer-sup','m-sup')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{sup_rows}{sup_trunc}</tbody></table></div>
+  <div class="drawer" id="drawer-eng"><div class="drawer-head"><span class="drawer-title">⚙️ Engineering Tickets ({len(eng_tickets)}) — TS project · non-feature</span><button class="drawer-close" onclick="toggleDrawer('drawer-eng','m-eng')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{eng_rows}{eng_trunc}</tbody></table></div>
+  <div class="drawer" id="drawer-feat"><div class="drawer-head"><span class="drawer-title">💡 Feature Requests ({len(features)}) — TS project</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in features) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr>'}{feat_trunc}</tbody></table></div>
+  <div class="drawer" id="drawer-res"><div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days ({len(resolved)}) — SR project</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in resolved) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr>'}{res_trunc}</tbody></table></div>
   <div class="drawer" id="drawer-jql">
     <div class="drawer-head">
       <span class="drawer-title">🔍 JQL Queries — <span style="font-weight:400;color:#5E6C84">queries executed for {cust['name']}</span></span>
@@ -1209,26 +1288,42 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
   </div>
   <div class="grid2">
     <div>
-      <div class="ai-panel">
-        <div class="ai-eyebrow">✦ Health Analysis</div>
-        <div class="ai-title">Customer Health Assessment</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start">
+      <div class="ai-panel" style="padding:1.25rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
           <div>
+            <div class="ai-eyebrow">✦ Health Analysis</div>
+            <div class="ai-title" style="margin-bottom:0">Customer Health Assessment</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:28px;font-weight:800;color:{health_color};line-height:1">{score}/10</div>
+            <div style="font-size:11px;font-weight:700;color:{health_color};margin-top:2px">{health_label}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Findings & Actions</div>
             <div class="ai-body" id="ai-body">Calculating...</div>
           </div>
-          <div>{chart_block}</div>
-          <div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Customer Pulse</div>{pulse_html}</div>
+          <div>
+            {chart_block}
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Customer Signals <span style="font-weight:400;text-transform:none;letter-spacing:0">· last 21d</span></div>
+            {pulse_signals}
+          </div>
+        </div>
+        <div style="margin-top:1rem;padding-top:.75rem;border-top:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
+            <div style="height:100%;border-radius:3px;background:{health_color};width:{score*10}%;transition:width .6s ease"></div>
+          </div>
+          <span style="font-size:10px;color:rgba(255,255,255,0.35)">Score {score}/10 · Generated {now}</span>
         </div>
       </div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">🚨 Active P0 / P1 Incidents</span><span class="badge br">{len(p0p1)} Open</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{p0_rows}</tbody></table></div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">🎫 Support Tickets</span><span class="badge bo">{len(support)} Open · SR</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{sup_rows}</tbody></table></div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">⚙️ Engineering Tickets</span><span class="badge" style="background:#EEEDFE;color:#3C3489">{len(eng_tickets)} Open · TS</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{eng_rows}</tbody></table></div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">{len(features)} Active · TS</span></div>{feat_items or '<p style="padding:1rem;font-size:12px;color:#5E6C84">No open feature requests.</p>'}</div>
     </div>
     <div>
       <div class="sb-sec"><div class="sb-head">📅 Recent Activity</div><div class="tl">{timeline}</div></div>
       <div class="sb-sec"><div class="sb-head">🔗 Quick Links</div>
-        <div class="ir"><a class="tlink" href="{ql_jira}" target="_blank">All Open Tickets</a></div>
+        <div class="ir"><a class="tlink" href="{ql_jira}" target="_blank">All Open Tickets in Jira</a></div>
         <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/{CONFLUENCE_PARENT}" target="_blank">Customer Portfolio</a></div>
         {portal_link}
       </div>
