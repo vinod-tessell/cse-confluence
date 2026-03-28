@@ -82,7 +82,7 @@ if(document.readyState==='loading'){
   initChart();
 }
 
-var DATA={"p0p1": 0, "support": 1, "features": 0, "eng_tickets": 0, "resolved": 2, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8302"], "generated": "Mar 28, 2026 14:45 EST", "score": 10, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+var DATA={"p0p1": 0, "support": 1, "features": 0, "eng_tickets": 0, "resolved": 2, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8302"], "generated": "Mar 28, 2026 14:59 EST", "score": 10, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
@@ -159,9 +159,9 @@ window.addEventListener('DOMContentLoaded',function(){
   }
 });
 function switchTab(custId,tabId){
-  var tabs=['tab-current','tab-engage'];
+  var tabs=['current','engage'];
   tabs.forEach(function(t){
-    var panel=document.getElementById(t+'-'+custId);
+    var panel=document.getElementById('tab-'+t+'-'+custId);
     var btn=document.getElementById('tab-btn-'+t+'-'+custId);
     if(!panel||!btn)return;
     var active=(t===tabId);

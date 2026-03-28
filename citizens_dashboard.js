@@ -82,7 +82,7 @@ if(document.readyState==='loading'){
   initChart();
 }
 
-var DATA={"p0p1": 0, "support": 25, "features": 83, "eng_tickets": 12, "resolved": 100, "pendingEng": 5, "p0keys": [], "highKeys": ["SR-8547", "SR-8511", "SR-8499"], "generated": "Mar 28, 2026 14:45 EST", "score": 4, "scoreLabel": "Needs Attention", "scoreColor": "#FC8181"};
+var DATA={"p0p1": 0, "support": 25, "features": 83, "eng_tickets": 12, "resolved": 100, "pendingEng": 5, "p0keys": [], "highKeys": ["SR-8547", "SR-8511", "SR-8499"], "generated": "Mar 28, 2026 14:58 EST", "score": 4, "scoreLabel": "Needs Attention", "scoreColor": "#FC8181"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
@@ -159,9 +159,9 @@ window.addEventListener('DOMContentLoaded',function(){
   }
 });
 function switchTab(custId,tabId){
-  var tabs=['tab-current','tab-engage'];
+  var tabs=['current','engage'];
   tabs.forEach(function(t){
-    var panel=document.getElementById(t+'-'+custId);
+    var panel=document.getElementById('tab-'+t+'-'+custId);
     var btn=document.getElementById('tab-btn-'+t+'-'+custId);
     if(!panel||!btn)return;
     var active=(t===tabId);
