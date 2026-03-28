@@ -106,19 +106,23 @@ def fetch_customer_data(keyword):
 
 
 def fetch_monthly_buckets(keyword):
-    """6-month SR open/resolved counts for the trend chart."""
+    """6-month SR ticket counts for the trend chart.
+    open = tickets created in that calendar month (still open or closed).
+    resolved = tickets resolved in that calendar month.
+    Simple created/resolutiondate window — avoids complex WIP logic that returns 0.
+    """
     buckets = []
     today   = date.today()
     for i in range(5, -1, -1):
-        mo_off    = today.month - i
-        yr_off    = today.year + (mo_off - 1) // 12
-        mo_num    = ((mo_off - 1) % 12) + 1
-        first     = date(yr_off, mo_num, 1)
-        last      = date(yr_off + 1, 1, 1) if mo_num == 12 else date(yr_off, mo_num + 1, 1)
+        mo_off = today.month - i
+        yr_off = today.year + (mo_off - 1) // 12
+        mo_num = ((mo_off - 1) % 12) + 1
+        first  = date(yr_off, mo_num, 1)
+        last   = date(yr_off + 1, 1, 1) if mo_num == 12 else date(yr_off, mo_num + 1, 1)
         f_str, l_str = first.strftime("%Y-%m-%d"), last.strftime("%Y-%m-%d")
         try:
             ro = requests.get(f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
-                params={"jql": f'project = SR AND text ~ "{keyword}" AND created <= "{l_str}" AND (resolutiondate is EMPTY OR resolutiondate >= "{f_str}") ORDER BY created DESC',
+                params={"jql": f'project = SR AND text ~ "{keyword}" AND created >= "{f_str}" AND created < "{l_str}" ORDER BY created DESC',
                         "maxResults": 0, "fields": "summary"})
             open_count = ro.json().get("total", 0) if ro.status_code == 200 else 0
         except Exception:
@@ -131,6 +135,7 @@ def fetch_monthly_buckets(keyword):
         except Exception:
             resolved_count = 0
         buckets.append({"month": first.strftime("%b %Y"), "count": open_count, "resolved": resolved_count})
+        print(f"    {first.strftime('%b %Y')}: created={open_count} resolved={resolved_count}")
     return buckets
 
 
