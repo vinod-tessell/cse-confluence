@@ -107,7 +107,7 @@ tr:last-child td{border-bottom:none}
       <div style="width:7px;height:7px;border-radius:50%;background:#68D391" id="health-dot"></div>
       <span id="health-badge" style="color:#68D391">Healthy</span>
     </div>
-    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 27, 2026 21:23 EST</div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.3)">Refreshed: Mar 27, 2026 22:08 EST</div>
   </div>
 </div>
 <div class="body">
@@ -247,21 +247,38 @@ tr:last-child td{border-bottom:none}
   </div>
   <div class="grid2">
     <div>
-      <div class="ai-panel">
-        <div class="ai-eyebrow">✦ Health Analysis</div>
-        <div class="ai-title">Customer Health Assessment</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start">
+      <div class="ai-panel" style="padding:1.25rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
           <div>
+            <div class="ai-eyebrow">✦ Health Analysis</div>
+            <div class="ai-title" style="margin-bottom:0">Customer Health Assessment</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:28px;font-weight:800;color:#68D391;line-height:1">9/10</div>
+            <div style="font-size:11px;font-weight:700;color:#68D391;margin-top:2px">Healthy</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Findings & Actions</div>
             <div class="ai-body" id="ai-body">Calculating...</div>
           </div>
-          <div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Ticket Volume Trend (WIP)</div><div style="position:relative;height:120px"><canvas id="trendChart"></canvas></div></div>
-          <div><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Customer Pulse</div><div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px"><div class="pdot" style="background:#D69E2E"></div><div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"><b style="color:#fff">Waiting</b> — Awaiting response — SMFG- Install the required packages and patch</div></div><div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px"><div class="pdot" style="background:#38A169"></div><div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"><b style="color:#fff">Positive</b> — Execute Mention command</div></div><div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px"><div class="pdot" style="background:#DD6B20"></div><div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"><b style="color:#fff">Concerned</b> — Execute Mention command</div></div><div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:6px"><div class="pdot" style="background:#E53E3E"></div><div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4"><b style="color:#fff">Frustrated</b> — Server stopped reporting to HX/EDR</div></div></div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div><div style="position:relative;height:180px;width:100%"><canvas id="trendChart"></canvas></div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Customer Signals <span style="font-weight:400;text-transform:none;letter-spacing:0">· last 21d</span></div>
+            <div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;flex-shrink:0;margin-top:1px">🟡</span><div style="min-width:0"><div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">SMFG- Install the required packages and patch the serve</div><div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45"><a href="https://tessell.atlassian.net/browse/SR-8271" target="_blank" style="font-size:10px;font-weight:700;color:#D69E2E;text-decoration:none">SR-8271</a> · Awaiting engineering response</div></div></div><div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;flex-shrink:0;margin-top:1px">🟢</span><div style="min-width:0"><div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">Execute Mention command</div><div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45"><a href="https://tessell.atlassian.net/browse/SR-8441" target="_blank" style="font-size:10px;font-weight:700;color:#38A169;text-decoration:none">SR-8441</a> · "RCA Type: Customer Request – Execution of DDL and DML statements on database RCA…" — Navya Gorantla</div></div></div><div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;flex-shrink:0;margin-top:1px">🟠</span><div style="min-width:0"><div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">Execute Mention command</div><div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45"><a href="https://tessell.atlassian.net/browse/SR-8441" target="_blank" style="font-size:10px;font-weight:700;color:#DD6B20;text-decoration:none">SR-8441</a> · "Hi Vishal, Hope you are doing well. This is a follow-up regarding the execution …" — Navya Gorantla</div></div></div><div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;flex-shrink:0;margin-top:1px">🔴</span><div style="min-width:0"><div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">Server stopped reporting to HX/EDR</div><div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45"><a href="https://tessell.atlassian.net/browse/SR-8167" target="_blank" style="font-size:10px;font-weight:700;color:#E53E3E;text-decoration:none">SR-8167</a> · "DR :  [ec2-user@ip-172-28-57-17 ~]$ sudo systemctl status xagt
+● xagt.service - …" — Shravan Kumar Bandi</div></div></div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;padding-top:.75rem;border-top:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
+            <div style="height:100%;border-radius:3px;background:#68D391;width:90%;transition:width .6s ease"></div>
+          </div>
+          <span style="font-size:10px;color:rgba(255,255,255,0.35)">Score 9/10 · Generated Mar 27, 2026 22:08 EST</span>
         </div>
       </div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">🚨 Active P0 / P1 Incidents</span><span class="badge br">0 Open</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr></tbody></table></div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">🎫 Support Tickets</span><span class="badge bo">2 Open · SR</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8271" target="_blank">SR-8271</a></td><td>SMFG- Install the required packages and patch the server</td><td><span class="pb ph">High</span></td><td><span class="sp spe">Pending Eng</span></td><td>18d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/SR-7314" target="_blank">SR-7314</a></td><td>Adding subscription giving an error</td><td><span class="pb ph">High</span></td><td><span class="sp spe">Pending Eng</span></td><td>102d</td></tr></tbody></table></div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">⚙️ Engineering Tickets</span><span class="badge" style="background:#EEEDFE;color:#3C3489">3 Open · TS</span></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37567" target="_blank">TS-37567</a></td><td>[SMFG] - Security Vulnerability - World-Writable Directories Missing Sti</td><td><span class="pb pc">Highest</span></td><td><span class="sp so">Fixed</span></td><td>50d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-31722" target="_blank">TS-31722</a></td><td>Install tools agent</td><td><span class="pb ph">High</span></td><td><span class="sp so">To do</span></td><td>192d</td></tr><tr><td><a class="tlink" href="https://tessell.atlassian.net/browse/TS-31238" target="_blank">TS-31238</a></td><td>the issue while adding encryption key</td><td><span class="pb ph">High</span></td><td><span class="sp so">Fixed</span></td><td>211d</td></tr></tbody></table></div>
-      <div class="sec"><div class="sec-head"><span class="sec-title">💡 Feature Requests</span><span class="badge bb">5 Active · TS</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡 </div><div class="fr-content"><div class="fr-title">SMFG - Feature Requirement : Backup Status– Email Notification/Al</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37536" target="_blank">TS-37536</a></div></div><span class="fr-status so">Requirements gathering</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡 </div><div class="fr-content"><div class="fr-title">Support Hub-and-Spoke Architecture for Data Plane Endpoints</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-35283" target="_blank">TS-35283</a></div></div><span class="fr-status so">Requirements gathering</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡 </div><div class="fr-content"><div class="fr-title">SMFG customer requires new MySQL DB engine image version - MySQL </div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-30307" target="_blank">TS-30307</a></div></div><span class="fr-status so">Requirements gathering</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡 </div><div class="fr-content"><div class="fr-title">To Provide NETIQ Integration as first class support for Tessell L</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-28100" target="_blank">TS-28100</a></div></div><span class="fr-status so">Requirements gathering</span></div><div class="fr-item"><div class="fr-icon" style="background:#E6F1FB">💡 </div><div class="fr-content"><div class="fr-title">MySQL - Support for Switching Back to the Original Primary Node i</div><div class="fr-meta"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-21037" target="_blank">TS-21037</a></div></div><span class="fr-status so">Dev complete</span></div></div>
     </div>
     <div>
       <div class="sb-sec"><div class="sb-head">📅 Recent Activity</div><div class="tl"><div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8271" target="_blank">SR-8271</a> — Update on SR-8271</div><div class="tl-d">Hello Team, Greetings from Tessell Support. This is a gentle follow-up regarding the logs shared earlier, confirming tha — Shubham Fulari</div><div class="tl-dt">Mar 24, 2026</div></div></div>
@@ -273,7 +290,7 @@ tr:last-child td{border-bottom:none}
 <div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/TS-37567" target="_blank">TS-37567</a> — Update on TS-37567</div><div class="tl-d">After discussing with   moving to rel-141. cc; — Sreejith Kesavan</div><div class="tl-dt">Mar 20, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🔄</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8441" target="_blank">SR-8441</a> — SR-8441 status → SRE in Action</div><div class="tl-d">Execute Mention command — Navya Gorantla</div><div class="tl-dt">Mar 20, 2026</div></div></div></div></div>
       <div class="sb-sec"><div class="sb-head">🔗 Quick Links</div>
-        <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/issues/?jql=text+~+%22SMFG%22+AND+statusCategory+%21%3D+Done" target="_blank">All Open Tickets</a></div>
+        <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/issues/?jql=text+~+%22SMFG%22+AND+statusCategory+%21%3D+Done" target="_blank">All Open Tickets in Jira</a></div>
         <div class="ir"><a class="tlink" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/1990557712" target="_blank">Customer Portfolio</a></div>
         <div class="ir"><span class="ilabel">Portal</span><span class="ival"><a class="tlink" href="https://smfg.tessell.com" target="_blank">https://smfg.tessell.com</a></span></div>
       </div>
@@ -283,14 +300,24 @@ tr:last-child td{border-bottom:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 
-new Chart(document.getElementById('trendChart'),{type:'bar',data:{labels:["Oct 20", "Nov 20", "Dec 20", "Jan 20", "Feb 20", "Mar 20"],datasets:[
-  {label:'Open',data:[0, 0, 0, 0, 0, 0],backgroundColor:'rgba(26,111,219,0.85)',borderRadius:3,barPercentage:0.7,categoryPercentage:0.6},
-  {label:'Resolved',data:[0, 0, 0, 0, 0, 0],backgroundColor:'rgba(56,161,105,0.85)',borderRadius:3,barPercentage:0.7,categoryPercentage:0.6}
-]},options:{responsive:true,maintainAspectRatio:false,
-  plugins:{legend:{display:true,position:'top',align:'end',labels:{font:{size:9},color:'rgba(255,255,255,0.5)',boxWidth:8,padding:8}}},
-  scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)'},border:{display:false}},
-           y:{min:0,max:2,grid:{color:'rgba(255,255,255,0.06)'},ticks:{font:{size:9},color:'rgba(255,255,255,0.4)',stepSize:2},border:{display:false}}}}}); 
-const DATA={"p0p1": 0, "support": 2, "features": 5, "eng_tickets": 3, "resolved": 5, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8271", "SR-7314"], "generated": "Mar 27, 2026 21:23 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+setTimeout(function(){
+  var ctx=document.getElementById('trendChart');
+  if(!ctx)return;
+  new Chart(ctx,{type:'bar',data:{labels:["Oct 20", "Nov 20", "Dec 20", "Jan 20", "Feb 20", "Mar 20"],datasets:[
+    {label:'Open (SR)',data:[0, 0, 0, 0, 0, 0],backgroundColor:'rgba(26,111,219,0.85)',borderRadius:3,barPercentage:0.6,categoryPercentage:0.7},
+    {label:'Resolved',data:[0, 0, 0, 0, 0, 0],backgroundColor:'rgba(56,161,105,0.85)',borderRadius:3,barPercentage:0.6,categoryPercentage:0.7}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'top',align:'end',labels:{font:{size:9},color:'rgba(255,255,255,0.6)',boxWidth:8,padding:10}},
+              tooltip:{callbacks:{label:function(c){return ' '+c.dataset.label+': '+c.parsed.y;}}}},
+    scales:{
+      x:{grid:{display:false},ticks:{font:{size:10},color:'rgba(255,255,255,0.5)'},border:{display:false}},
+      y:{min:0,max:4,grid:{color:'rgba(255,255,255,0.08)'},
+          ticks:{font:{size:10},color:'rgba(255,255,255,0.5)',stepSize:Math.ceil(4/5)},
+          border:{display:false}}
+    }
+  }});
+}, 100);
+const DATA={"p0p1": 0, "support": 2, "features": 5, "eng_tickets": 3, "resolved": 5, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8271", "SR-7314"], "generated": "Mar 27, 2026 22:08 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const el=document.getElementById('ai-body'),sc=document.getElementById('ai-score');
