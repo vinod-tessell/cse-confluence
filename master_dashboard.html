@@ -164,6 +164,17 @@ tr:last-child td{border-bottom:none}
 .filter-btn{font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:.5px solid #DFE1E6;background:#fff;color:#5E6C84;cursor:pointer}
 .filter-btn.active{background:#0B1F45;color:#fff;border-color:#0B1F45}
 .search-input{flex:1;max-width:220px;padding:5px 12px;border-radius:20px;border:.5px solid #DFE1E6;font-size:12px;outline:none;background:#fff;color:#172B4D}
+.tam-row{padding:.75rem 1rem;border-bottom:.5px solid #DFE1E6}
+.tam-row:last-child{border-bottom:none}
+.tam-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.tam-info{display:flex;align-items:center;gap:8px;min-width:0}
+.tam-bar-wrap{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.tam-bar-track{flex:1;height:7px;background:#F4F5F7;border-radius:4px;overflow:hidden}
+.tam-bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.tam-pct{font-size:11px;font-weight:700;width:32px;text-align:right;flex-shrink:0}
+.tam-breakdown{font-size:10px;color:#A0AEC0;line-height:1.4}
+.master-logic-drawer{display:none;border-top:.5px solid #DFE1E6;background:#FAFBFC}
+.master-logic-drawer.open{display:block}
 </style></head><body>
 <div class="nav">
   <div class="nav-links">
@@ -181,7 +192,7 @@ tr:last-child td{border-bottom:none}
     </div>
     <div style="text-align:right">
       <div style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.55)">March 27, 2026</div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px">Mar 27, 2026 20:26 EST</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px">Mar 27, 2026 21:25 EST</div>
     </div>
   </div>
   <div class="kpi-strip">
@@ -206,9 +217,239 @@ tr:last-child td{border-bottom:none}
       <div class="sec"><div class="sec-head"><span class="sec-title">Implementation pipeline</span><span style="font-size:10px;color:#5E6C84">23 total</span></div><div class="pipeline"><div class="phase-row"><span class="phase-label">Onboarding</span><div class="phase-track"><div class="phase-fill" style="width:89%;background:#378ADD;color:#E6F1FB">8</div></div><span class="phase-count" style="color:#378ADD">8</span></div><div class="phase-row"><span class="phase-label">Implementation</span><div class="phase-track"><div class="phase-fill" style="width:100%;background:#BA7517;color:#FAEEDA">9</div></div><span class="phase-count" style="color:#BA7517">9</span></div><div class="phase-row"><span class="phase-label">Stabilisation</span><div class="phase-track"><div class="phase-fill" style="width:67%;background:#E24B4A;color:#FCEBEB">6</div></div><span class="phase-count" style="color:#E24B4A">6</span></div><div class="phase-row"><span class="phase-label">Production</span><div class="phase-track"><div class="phase-fill" style="width:8%;background:#1D9E75;color:#E1F5EE"></div></div><span class="phase-count" style="color:#1D9E75">0</span></div><div class="phase-row"><span class="phase-label">Steady State</span><div class="phase-track"><div class="phase-fill" style="width:8%;background:#5F5E5A;color:#F1EFE8"></div></div><span class="phase-count" style="color:#5F5E5A">0</span></div></div></div>
       <div class="sec"><div class="sec-head"><span class="sec-title">Open SR ticket load by customer</span><span style="font-size:10px;color:#5E6C84">Top 5</span></div><div style="padding:6px 0 4px"><div class="trend-row"><span class="trend-label">Equinor</span><div class="trend-bar-wrap"><div class="trend-bar" style="width:100%;background:#DD6B20"></div></div><span class="trend-val" style="color:#DD6B20">36</span></div><div class="trend-row"><span class="trend-label">Citizens</span><div class="trend-bar-wrap"><div class="trend-bar" style="width:69%;background:#DD6B20"></div></div><span class="trend-val" style="color:#DD6B20">25</span></div><div class="trend-row"><span class="trend-label">AON</span><div class="trend-bar-wrap"><div class="trend-bar" style="width:36%;background:#E53E3E"></div></div><span class="trend-val" style="color:#E53E3E">13</span></div><div class="trend-row"><span class="trend-label">Williams</span><div class="trend-bar-wrap"><div class="trend-bar" style="width:25%;background:#DD6B20"></div></div><span class="trend-val" style="color:#DD6B20">9</span></div><div class="trend-row"><span class="trend-label">Collectors</span><div class="trend-bar-wrap"><div class="trend-bar" style="width:19%;background:#DD6B20"></div></div><span class="trend-val" style="color:#DD6B20">7</span></div></div></div>
     </div>
-    <div><div class="sec"><div class="sec-head"><span class="sec-title">Customer health heatmap</span><span style="font-size:10px;color:#5E6C84">Click any cell to drill in</span></div><div class="heatmap"><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165309452" target="_parent"><div class="hm-name">Brocacef-NL</div><div class="hm-stat">0 SR · 1 TS</div></a><a class="hm-cell hm-stable" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165702658" target="_parent"><div class="hm-name">Collectors</div><div class="hm-stat">7 SR · 67 TS</div></a><a class="hm-cell hm-risk" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165407755" target="_parent"><div class="hm-name">AON</div><div class="hm-stat">2 P0s · 13 SR</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165800962" target="_parent"><div class="hm-name">Boost Mobile</div><div class="hm-stat">0 SR · 0 TS</div></a><a class="hm-cell hm-stable" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165932033" target="_parent"><div class="hm-name">Darlingii</div><div class="hm-stat">7 SR · 4 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165800982" target="_parent"><div class="hm-name">Onity Group - Phas</div><div class="hm-stat">2 SR · 0 TS</div></a><a class="hm-cell hm-warn" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165243907" target="_parent"><div class="hm-name">Williams</div><div class="hm-stat">9 SR · 69 TS</div></a><a class="hm-cell hm-warn" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165604354" target="_parent"><div class="hm-name">Equinor</div><div class="hm-stat">36 SR · 100 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165964801" target="_parent"><div class="hm-name">BHFL</div><div class="hm-stat">4 SR · 9 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165538818" target="_parent"><div class="hm-name">SMFG</div><div class="hm-stat">2 SR · 3 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165243927" target="_parent"><div class="hm-name">USDA Exadata & Sol</div><div class="hm-stat">0 SR · 0 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165178370" target="_parent"><div class="hm-name">Atlas Airlines</div><div class="hm-stat">0 SR · 1 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165866507" target="_parent"><div class="hm-name">Duncan Solutions -</div><div class="hm-stat">2 SR · 1 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165899266" target="_parent"><div class="hm-name">Advizex Solutions</div><div class="hm-stat">0 SR · 3 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165997569" target="_parent"><div class="hm-name">USSS</div><div class="hm-stat">0 SR · 1 TS</div></a><a class="hm-cell hm-warn" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2164948993" target="_parent"><div class="hm-name">Citizens</div><div class="hm-stat">25 SR · 100 TS</div></a><a class="hm-cell hm-stable" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2164916227" target="_parent"><div class="hm-name">Levis Phase-1</div><div class="hm-stat">6 SR · 17 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2166030337" target="_parent"><div class="hm-name">Customer Implement</div><div class="hm-stat">0 SR · 1 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165080066" target="_parent"><div class="hm-name">Sallie Mae</div><div class="hm-stat">1 SR · 2 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165243947" target="_parent"><div class="hm-name">ATT</div><div class="hm-stat">1 SR · 0 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165604374" target="_parent"><div class="hm-name">PWC - Services</div><div class="hm-stat">0 SR · 1 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165768194" target="_parent"><div class="hm-name">LandisGyr</div><div class="hm-stat">2 SR · 81 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2164719623" target="_parent"><div class="hm-name">Magaya</div><div class="hm-stat">0 SR · 28 TS</div></a></div></div></div>
+    <div><div class="sec"><div class="sec-head"><span class="sec-title">Customer health heatmap</span><span style="font-size:10px;color:#5E6C84">Click any cell to drill in</span></div><div class="heatmap"><a class="hm-cell hm-risk" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165407755" target="_parent"><div class="hm-name">AON</div><div class="hm-stat">2 P0s · 13 SR</div></a><a class="hm-cell hm-warn" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165604354" target="_parent"><div class="hm-name">Equinor</div><div class="hm-stat">36 SR · 100 TS</div></a><a class="hm-cell hm-warn" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2164948993" target="_parent"><div class="hm-name">Citizens</div><div class="hm-stat">25 SR · 100 TS</div></a><a class="hm-cell hm-warn" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165243907" target="_parent"><div class="hm-name">Williams</div><div class="hm-stat">9 SR · 69 TS</div></a><a class="hm-cell hm-stable" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165702658" target="_parent"><div class="hm-name">Collectors</div><div class="hm-stat">7 SR · 67 TS</div></a><a class="hm-cell hm-stable" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165932033" target="_parent"><div class="hm-name">Darlingii</div><div class="hm-stat">7 SR · 4 TS</div></a><a class="hm-cell hm-stable" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2164916227" target="_parent"><div class="hm-name">Levis Phase-1</div><div class="hm-stat">6 SR · 17 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165964801" target="_parent"><div class="hm-name">BHFL</div><div class="hm-stat">4 SR · 9 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165800982" target="_parent"><div class="hm-name">Onity Group - Phas</div><div class="hm-stat">2 SR · 0 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165538818" target="_parent"><div class="hm-name">SMFG</div><div class="hm-stat">2 SR · 3 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165866507" target="_parent"><div class="hm-name">Duncan Solutions -</div><div class="hm-stat">2 SR · 1 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165768194" target="_parent"><div class="hm-name">LandisGyr</div><div class="hm-stat">2 SR · 81 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165080066" target="_parent"><div class="hm-name">Sallie Mae</div><div class="hm-stat">1 SR · 2 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165243947" target="_parent"><div class="hm-name">ATT</div><div class="hm-stat">1 SR · 0 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165309452" target="_parent"><div class="hm-name">Brocacef-NL</div><div class="hm-stat">0 SR · 1 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165800962" target="_parent"><div class="hm-name">Boost Mobile</div><div class="hm-stat">0 SR · 0 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165243927" target="_parent"><div class="hm-name">USDA Exadata & Sol</div><div class="hm-stat">0 SR · 0 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165178370" target="_parent"><div class="hm-name">Atlas Airlines</div><div class="hm-stat">0 SR · 1 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165899266" target="_parent"><div class="hm-name">Advizex Solutions</div><div class="hm-stat">0 SR · 3 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165997569" target="_parent"><div class="hm-name">USSS</div><div class="hm-stat">0 SR · 1 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2166030337" target="_parent"><div class="hm-name">Customer Implement</div><div class="hm-stat">0 SR · 1 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2165604374" target="_parent"><div class="hm-name">PWC - Services</div><div class="hm-stat">0 SR · 1 TS</div></a><a class="hm-cell hm-good" href="https://tessell.atlassian.net/wiki/spaces/CSE/pages/2164719623" target="_parent"><div class="hm-name">Magaya</div><div class="hm-stat">0 SR · 28 TS</div></a></div></div></div>
     <div>
-      <div class="sb-sec"><div class="sb-head">CSE ownership summary</div><div class="owner-row"><div class="owner-info"><div class="owner-avatar" style="background:#E6F1FB;color:#0C447C">MH</div><div><div class="owner-name">Maneesh</div><div class="owner-meta">Brocacef-NL, AON, Equinor…</div></div></div><div class="owner-counts"><div class="oc"><div class="oc-val" style="color:#E53E3E">2</div><div class="oc-label">P0s</div></div><div class="oc"><div class="oc-val" style="color:#DD6B20">58</div><div class="oc-label">SR</div></div></div></div><div class="owner-row"><div class="owner-info"><div class="owner-avatar" style="background:#EEEDFE;color:#3C3489">UY</div><div><div class="owner-name">Uday</div><div class="owner-meta">Collectors, Boost, Darlingii…</div></div></div><div class="owner-counts"><div class="oc"><div class="oc-val" style="color:#D69E2E">0</div><div class="oc-label">P0s</div></div><div class="oc"><div class="oc-val" style="color:#DD6B20">18</div><div class="oc-label">SR</div></div></div></div><div class="owner-row"><div class="owner-info"><div class="owner-avatar" style="background:#EAF3DE;color:#27500A">K&</div><div><div class="owner-name">Kamal & Maneesh</div><div class="owner-meta">Williams</div></div></div><div class="owner-counts"><div class="oc"><div class="oc-val" style="color:#D69E2E">0</div><div class="oc-label">P0s</div></div><div class="oc"><div class="oc-val" style="color:#DD6B20">9</div><div class="oc-label">SR</div></div></div></div><div class="owner-row"><div class="owner-info"><div class="owner-avatar" style="background:#FAEEDA;color:#633806">——</div><div><div class="owner-name">—</div><div class="owner-meta">USDA, Customer</div></div></div><div class="owner-counts"><div class="oc"><div class="oc-val" style="color:#D69E2E">0</div><div class="oc-label">P0s</div></div><div class="oc"><div class="oc-val" style="color:#38A169">0</div><div class="oc-label">SR</div></div></div></div><div class="owner-row"><div class="owner-info"><div class="owner-avatar" style="background:#FBEAF0;color:#72243E">BA</div><div><div class="owner-name">Bala</div><div class="owner-meta">Atlas, USSS, ATT</div></div></div><div class="owner-counts"><div class="oc"><div class="oc-val" style="color:#D69E2E">0</div><div class="oc-label">P0s</div></div><div class="oc"><div class="oc-val" style="color:#38A169">1</div><div class="oc-label">SR</div></div></div></div></div>
+      <div class="sb-sec">
+        <div class="sb-head" style="display:flex;align-items:center;justify-content:space-between">
+          <span>TAM / TPM capacity</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;color:#5E6C84;font-weight:400">sorted by load</span>
+            <button onclick="toggleMasterLogic()" id="master-logic-btn"
+              style="font-size:10px;font-weight:600;color:#7B2FBE;background:#EEEDFE;border:.5px solid #C4B9F5;
+                     border-radius:10px;padding:2px 9px;cursor:pointer;line-height:1.6">⚙️ Logic</button>
+          </div>
+        </div>
+        <div class="master-logic-drawer" id="master-logic-drawer">
+          <div style="padding:.75rem 1rem .25rem;font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em">TAM Load Scoring Formula</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:.5rem 1rem 1rem">
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#E53E3E"></span>🚨 P0/P1 Account</span></div>
+              <div class="jql-code">+8 pts per account with active P0/P1
+Rationale: active fire — daily calls,
+escalations, executive pressure</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FC8181"></span>⚠️ At Risk Account</span></div>
+              <div class="jql-code">+4 pts per At Risk account (no P0)
+Rationale: high watch load — imminent
+escalation risk, needs close monitoring</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FFC107"></span>👀 Needs Attention Account</span></div>
+              <div class="jql-code">+2 pts per Needs Attention account
+Rationale: regular check-ins required,
+moderate monitoring overhead</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 Open SR Tickets</span></div>
+              <div class="jql-code">+0.5 pts each · capped at 15 pts
+Rationale: direct customer-facing
+workload across all accounts</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ Open TS Eng Tickets</span></div>
+              <div class="jql-code">+0.3 pts each · capped at 8 pts
+Rationale: engineering coordination
+and follow-up overhead</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#1A6FDB"></span>📋 Accounts Managed</span></div>
+              <div class="jql-code">+3 pts per account · capped at 10 pts
+Rationale: base management overhead
+per account regardless of activity</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#0D6E85"></span>🔄 Impl / Onboarding</span></div>
+              <div class="jql-code">+3 pts per active impl account
+Rationale: highest-touch phase —
+onboarding is effectively a second job</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#38A169"></span>📊 Capacity Thresholds</span></div>
+              <div class="jql-code">≥ 85%  →  Over capacity  🔴
+65–84% →  Busy           🟠
+35–64% →  Available      🟡
+&lt;  35%  →  Has bandwidth 🟢
+Soft cap: raw score 80 = 100%</div>
+            </div>
+          </div>
+          <div class="jql-footer" style="border-top:.5px solid #DFE1E6">⚙️ Raw score = sum of all factors above · divided by soft cap (80) · clamped to 100% &nbsp;·&nbsp; Recommendation = least-loaded TAM under 70%</div>
+        </div>
+        <div style="margin:0 1rem .75rem;padding:.6rem .75rem;background:#EAF3DE;border-radius:6px;border:.5px solid #97C459;display:flex;align-items:center;gap:8px"><span style="font-size:13px">✅</span><div><div style="font-size:11px;font-weight:700;color:#27500A">Recommended for next account: Abdul</div><div style="font-size:10px;color:#3A6E1F;margin-top:1px">1 accounts · 4% capacity · 0 SR open</div></div></div>
+        <div class="tam-row">
+  <div class="tam-top">
+    <div class="tam-info">
+      <div class="owner-avatar" style="background:#E6F1FB;color:#0C447C;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">VD</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#172B4D;line-height:1.2">Vinod</div>
+        <div style="font-size:10px;color:#5E6C84;margin-top:1px">USDA, Atlas, Duncan, Advizex…</div>
+      </div>
+    </div>
+    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#FFFDF0;color:#7A5A00;flex-shrink:0">Available</span>
+  </div>
+  <div class="tam-bar-wrap">
+    <div class="tam-bar-track">
+      <div class="tam-bar-fill" style="width:61%;background:#D69E2E"></div>
+    </div>
+    <span class="tam-pct" style="color:#D69E2E">61%</span>
+  </div>
+  <div class="tam-breakdown">7 accts · 0 P0s · 27 SR · 134 TS eng · 🔄 5 impl</div>
+</div><div class="tam-row">
+  <div class="tam-top">
+    <div class="tam-info">
+      <div class="owner-avatar" style="background:#EEEDFE;color:#3C3489;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">SI</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#172B4D;line-height:1.2">Soumi</div>
+        <div style="font-size:10px;color:#5E6C84;margin-top:1px">Collectors, AON</div>
+      </div>
+    </div>
+    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#FFFDF0;color:#7A5A00;flex-shrink:0">Available</span>
+  </div>
+  <div class="tam-bar-wrap">
+    <div class="tam-bar-track">
+      <div class="tam-bar-fill" style="width:55%;background:#D69E2E"></div>
+    </div>
+    <span class="tam-pct" style="color:#D69E2E">55%</span>
+  </div>
+  <div class="tam-breakdown">2 accts · 2 P0s · 20 SR · 167 TS eng · 🚨 AON</div>
+</div><div class="tam-row">
+  <div class="tam-top">
+    <div class="tam-info">
+      <div class="owner-avatar" style="background:#EAF3DE;color:#27500A;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">PP</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#172B4D;line-height:1.2">Pradeep</div>
+        <div style="font-size:10px;color:#5E6C84;margin-top:1px">Boost, Darlingii, Onity, Williams…</div>
+      </div>
+    </div>
+    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#FFFDF0;color:#7A5A00;flex-shrink:0">Available</span>
+  </div>
+  <div class="tam-bar-wrap">
+    <div class="tam-bar-track">
+      <div class="tam-bar-fill" style="width:55%;background:#D69E2E"></div>
+    </div>
+    <span class="tam-pct" style="color:#D69E2E">55%</span>
+  </div>
+  <div class="tam-breakdown">5 accts · 0 P0s · 24 SR · 90 TS eng · 🔄 4 impl</div>
+</div><div class="tam-row">
+  <div class="tam-top">
+    <div class="tam-info">
+      <div class="owner-avatar" style="background:#FAEEDA;color:#633806;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">AH</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#172B4D;line-height:1.2">Ankush</div>
+        <div style="font-size:10px;color:#5E6C84;margin-top:1px">Equinor</div>
+      </div>
+    </div>
+    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#FFFDF0;color:#7A5A00;flex-shrink:0">Available</span>
+  </div>
+  <div class="tam-bar-wrap">
+    <div class="tam-bar-track">
+      <div class="tam-bar-fill" style="width:39%;background:#D69E2E"></div>
+    </div>
+    <span class="tam-pct" style="color:#D69E2E">39%</span>
+  </div>
+  <div class="tam-breakdown">1 accts · 0 P0s · 36 SR · 100 TS eng · 🔄 1 impl</div>
+</div><div class="tam-row">
+  <div class="tam-top">
+    <div class="tam-info">
+      <div class="owner-avatar" style="background:#FBEAF0;color:#72243E;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">SH</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#172B4D;line-height:1.2">Sajesh</div>
+        <div style="font-size:10px;color:#5E6C84;margin-top:1px">Brocacef-NL, LandisGyr</div>
+      </div>
+    </div>
+    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#EAF3DE;color:#27500A;flex-shrink:0">Has bandwidth</span>
+  </div>
+  <div class="tam-bar-wrap">
+    <div class="tam-bar-track">
+      <div class="tam-bar-fill" style="width:26%;background:#38A169"></div>
+    </div>
+    <span class="tam-pct" style="color:#38A169">26%</span>
+  </div>
+  <div class="tam-breakdown">2 accts · 0 P0s · 2 SR · 82 TS eng · 🔄 2 impl</div>
+</div><div class="tam-row">
+  <div class="tam-top">
+    <div class="tam-info">
+      <div class="owner-avatar" style="background:#E1F5EE;color:#085041;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">SM</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#172B4D;line-height:1.2">Srivasram</div>
+        <div style="font-size:10px;color:#5E6C84;margin-top:1px">BHFL, SMFG</div>
+      </div>
+    </div>
+    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#EAF3DE;color:#27500A;flex-shrink:0">Has bandwidth</span>
+  </div>
+  <div class="tam-bar-wrap">
+    <div class="tam-bar-track">
+      <div class="tam-bar-fill" style="width:23%;background:#38A169"></div>
+    </div>
+    <span class="tam-pct" style="color:#38A169">23%</span>
+  </div>
+  <div class="tam-breakdown">2 accts · 0 P0s · 6 SR · 12 TS eng · 🔄 2 impl</div>
+</div><div class="tam-row">
+  <div class="tam-top">
+    <div class="tam-info">
+      <div class="owner-avatar" style="background:#E6F1FB;color:#0C447C;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">UY</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#172B4D;line-height:1.2">Uday</div>
+        <div style="font-size:10px;color:#5E6C84;margin-top:1px">Sallie</div>
+      </div>
+    </div>
+    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#EAF3DE;color:#27500A;flex-shrink:0">Has bandwidth</span>
+  </div>
+  <div class="tam-bar-wrap">
+    <div class="tam-bar-track">
+      <div class="tam-bar-fill" style="width:9%;background:#38A169"></div>
+    </div>
+    <span class="tam-pct" style="color:#38A169">9%</span>
+  </div>
+  <div class="tam-breakdown">1 accts · 0 P0s · 1 SR · 2 TS eng · 🔄 1 impl</div>
+</div><div class="tam-row">
+  <div class="tam-top">
+    <div class="tam-info">
+      <div class="owner-avatar" style="background:#EEEDFE;color:#3C3489;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">JN</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#172B4D;line-height:1.2">Jonathan</div>
+        <div style="font-size:10px;color:#5E6C84;margin-top:1px">ATT</div>
+      </div>
+    </div>
+    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#EAF3DE;color:#27500A;flex-shrink:0">Has bandwidth</span>
+  </div>
+  <div class="tam-bar-wrap">
+    <div class="tam-bar-track">
+      <div class="tam-bar-fill" style="width:8%;background:#38A169"></div>
+    </div>
+    <span class="tam-pct" style="color:#38A169">8%</span>
+  </div>
+  <div class="tam-breakdown">1 accts · 0 P0s · 1 SR · 0 TS eng · 🔄 1 impl</div>
+</div><div class="tam-row">
+  <div class="tam-top">
+    <div class="tam-info">
+      <div class="owner-avatar" style="background:#EAF3DE;color:#27500A;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">AL</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#172B4D;line-height:1.2">Abdul</div>
+        <div style="font-size:10px;color:#5E6C84;margin-top:1px">PWC</div>
+      </div>
+    </div>
+    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#EAF3DE;color:#27500A;flex-shrink:0">Has bandwidth</span>
+  </div>
+  <div class="tam-bar-wrap">
+    <div class="tam-bar-track">
+      <div class="tam-bar-fill" style="width:4%;background:#38A169"></div>
+    </div>
+    <span class="tam-pct" style="color:#38A169">4%</span>
+  </div>
+  <div class="tam-breakdown">1 accts · 0 P0s · 0 SR · 1 TS eng</div>
+</div>
+      </div>
       <div class="sb-sec"><div class="sb-head">This week's highlights</div><div style="padding:.75rem 1rem"><div style="font-size:11px;color:#5E6C84;line-height:1.7;border-bottom:.5px solid #F4F5F7;padding-bottom:.6rem;margin-bottom:.6rem">🚨 <span style="color:#172B4D;font-weight:600">2 P0/P1s open</span> — AON need immediate attention</div><div style="font-size:11px;color:#5E6C84;line-height:1.7;border-bottom:.5px solid #F4F5F7;padding-bottom:.6rem;margin-bottom:.6rem">🔄 <span style="color:#172B4D;font-weight:600">17 customers</span> actively in implementation</div><div style="font-size:11px;color:#5E6C84;line-height:1.7;border-bottom:.5px solid #F4F5F7;padding-bottom:.6rem;margin-bottom:.6rem">📋 <span style="color:#172B4D;font-weight:600">23 customers</span> — 117 SR open · 589 TS eng open · 19 healthy</div></div></div>
     </div>
   </div>
@@ -595,4 +836,5 @@ tr:last-child td{border-bottom:none}
 <script>
 function filterCards(h,btn){document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.cust-card').forEach(el=>{el.style.display=h==='all'||el.dataset.health===h?'':'none';});}
 function searchCards(q){q=q.toLowerCase();document.querySelectorAll('.cust-card').forEach(el=>{el.style.display=(el.dataset.name||'').includes(q)?'':'none';});}
+function toggleMasterLogic(){const d=document.getElementById('master-logic-drawer'),btn=document.getElementById('master-logic-btn'),open=d.classList.contains('open');d.classList.toggle('open');btn.textContent=open?'⚙️ Logic':'⚙️ Hide';btn.style.background=open?'#EEEDFE':'#7B2FBE';btn.style.color=open?'#7B2FBE':'#fff';btn.style.borderColor=open?'#C4B9F5':'#7B2FBE';}
 </script></body></html>
