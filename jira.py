@@ -80,7 +80,7 @@ def make_jqls(keyword):
         "support":     f'project = SR AND text ~ "{keyword}" AND statusCategory != Done ORDER BY created DESC',
         "features":    f'project = TS AND ("Customers[Labels]" IN ("{keyword}") OR text ~ "{keyword}") AND ({_feat}) AND statusCategory != Done ORDER BY created DESC',
         "eng_tickets": f'project = TS AND text ~ "{keyword}" AND issuetype = Bug AND reporter IN ({_eng_reporters}) AND created >= "2026-01-01" AND statusCategory != Done ORDER BY created DESC',
-        "resolved":    f'project = SR AND text ~ "{keyword}" AND statusCategory = Done AND resolutiondate >= -30d ORDER BY resolutiondate DESC',
+        "resolved":    f'project = SR AND text ~ "{keyword}" AND statusCategory = Done AND resolutiondate >= -180d ORDER BY resolutiondate DESC',
         "recent":      f'project in (TS, SR) AND text ~ "{keyword}" AND updated >= -30d ORDER BY updated DESC',
     }
 
@@ -92,50 +92,65 @@ def fetch_customer_data(keyword):
     print(f"  Support query:     {queries['support']}")
     print(f"  Eng tickets query: {queries['eng_tickets']}")
     print(f"  Features query:    {queries['features']}")
+
+    # Fetch SR tickets with higher max to cover 6 months of history for chart
+    support     = jql(queries["support"],     max=500)
+    resolved    = jql(queries["resolved"],    max=500)
+
+    print(f"  Building monthly chart from {len(support.issues)} support + {len(resolved.issues)} resolved tickets")
+    ticket_history = derive_monthly_buckets(support.issues, resolved.issues)
+
     return {
         "p0p1":           jql(queries["p0p1"],        max=100),
-        "support":        jql(queries["support"],     max=200),
+        "support":        support,
         "features":       jql(queries["features"],    max=100),
         "eng_tickets":    jql(queries["eng_tickets"], max=100),
-        "resolved":       jql(queries["resolved"],    max=500),
+        "resolved":       resolved,
         "recent":         jql(queries["recent"],      max=12),
-        "ticket_history": fetch_monthly_buckets(keyword),
+        "ticket_history": ticket_history,
         "pulse":          fetch_pulse_from_comments(keyword),
         "jqls":           queries,
     }
 
 
-def fetch_monthly_buckets(keyword):
-    """6-month SR ticket counts for the trend chart.
-    open = tickets created in that calendar month (still open or closed).
-    resolved = tickets resolved in that calendar month.
-    Simple created/resolutiondate window — avoids complex WIP logic that returns 0.
+def derive_monthly_buckets(support_tickets, resolved_tickets):
     """
-    buckets = []
-    today   = date.today()
+    Build 6-month chart data from tickets already fetched — no extra API calls,
+    no text~ matching issues.
+    - open bars  = SR tickets CREATED in that month (from support query, all open tickets)
+    - green bars = SR tickets RESOLVED in that month (from resolved query, last 30d)
+    """
+    from collections import defaultdict
+    today = date.today()
+
+    # Build month labels for last 6 months
+    months = []
     for i in range(5, -1, -1):
         mo_off = today.month - i
         yr_off = today.year + (mo_off - 1) // 12
         mo_num = ((mo_off - 1) % 12) + 1
-        first  = date(yr_off, mo_num, 1)
-        last   = date(yr_off + 1, 1, 1) if mo_num == 12 else date(yr_off, mo_num + 1, 1)
-        f_str, l_str = first.strftime("%Y-%m-%d"), last.strftime("%Y-%m-%d")
-        try:
-            ro = requests.get(f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
-                params={"jql": f'project = SR AND text ~ "{keyword}" AND created >= "{f_str}" AND created < "{l_str}" ORDER BY created DESC',
-                        "maxResults": 0, "fields": "summary"})
-            open_count = ro.json().get("total", 0) if ro.status_code == 200 else 0
-        except Exception:
-            open_count = 0
-        try:
-            rr = requests.get(f"{JIRA_BASE}/rest/api/3/search/jql", auth=auth, headers=headers,
-                params={"jql": f'project = SR AND text ~ "{keyword}" AND statusCategory = Done AND resolutiondate >= "{f_str}" AND resolutiondate < "{l_str}" ORDER BY resolutiondate DESC',
-                        "maxResults": 0, "fields": "summary"})
-            resolved_count = rr.json().get("total", 0) if rr.status_code == 200 else 0
-        except Exception:
-            resolved_count = 0
-        buckets.append({"month": first.strftime("%b %Y"), "count": open_count, "resolved": resolved_count})
-        print(f"    {first.strftime('%b %Y')}: created={open_count} resolved={resolved_count}")
+        months.append(date(yr_off, mo_num, 1))
+
+    created_by_month  = defaultdict(int)
+    resolved_by_month = defaultdict(int)
+
+    for issue in support_tickets:
+        created = (issue["fields"].get("created") or "")[:7]  # "YYYY-MM"
+        if created:
+            created_by_month[created] += 1
+
+    for issue in resolved_tickets:
+        resdate = (issue["fields"].get("resolutiondate") or "")[:7]
+        if resdate:
+            resolved_by_month[resdate] += 1
+
+    buckets = []
+    for m in months:
+        key = m.strftime("%Y-%m")
+        c   = created_by_month.get(key, 0)
+        r   = resolved_by_month.get(key, 0)
+        buckets.append({"month": m.strftime("%b %Y"), "count": c, "resolved": r})
+        print(f"    {m.strftime('%b %Y')}: created={c} resolved={r}")
     return buckets
 
 
