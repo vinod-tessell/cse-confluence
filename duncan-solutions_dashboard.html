@@ -3,6 +3,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <title>Duncan Solutions -  Phase 2 — Customer Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 body{background:#F4F5F7}
@@ -117,8 +118,6 @@ tr:last-child td{border-bottom:none}
           <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:.05em">Phase</span>
           <span style="font-size:11px;font-weight:700;color:#fff;margin-left:4px">Implementation</span>
         </div>
-        <a href="https://duncansolutions.tessell.com/" target="_blank" style="display:flex;align-items:center;gap:5px;background:rgba(0,194,224,0.1);border:.5px solid rgba(0,194,224,0.25);border-radius:6px;padding:4px 9px;text-decoration:none"><span style="font-size:9px;font-weight:600;color:rgba(0,194,224,0.6);text-transform:uppercase;letter-spacing:.05em">Portal</span><span style="font-size:11px;font-weight:700;color:#00C2E0;margin-left:4px">↗ Open</span></a>
-        <span style="font-size:10px;color:rgba(255,255,255,0.25);margin-left:2px">Refreshed Mar 27, 2026 22:51 EST</span>
       </div>
     </div>
   </div>
@@ -129,6 +128,10 @@ tr:last-child td{border-bottom:none}
       <span id="health-badge" style="color:#68D391">Healthy</span>
     </div>
   </div>
+</div>
+<div style="background:#0D2252;border-bottom:1px solid #122752;padding:.35rem 1.5rem;display:flex;align-items:center;gap:1.5rem">
+  <a href="https://duncansolutions.tessell.com/" target="_blank" style="font-size:11px;color:#00C2E0;text-decoration:none;font-weight:600">↗ https://duncansolutions.tessell.com/</a>
+  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">Mar 27, 2026 23:09 EST</span></span>
 </div>
 <div class="body">
   <div class="metrics" style="grid-template-columns:repeat(8,1fr)">
@@ -278,13 +281,13 @@ tr:last-child td{border-bottom:none}
             <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
               <div id="health-score-bar" style="height:100%;border-radius:3px;background:#68D391;width:90%;transition:width .6s ease"></div>
             </div>
-            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 27, 2026 22:51 EST</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 27, 2026 23:09 EST</span>
           </div>
         </div>
 
         <!-- ── Row 1: Chart full width ──────────────────────────────────────── -->
         <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
-          <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div><div style="position:relative;height:180px;width:100%;animation:chartFadeIn .4s ease forwards;opacity:0"><canvas id="trendChart"></canvas></div><style>@keyframes chartFadeIn{to{opacity:1}}</style>
+          <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div><div style="position:relative;height:180px;width:100%"><canvas id="trendChart"></canvas></div><script>(function poll(){if(typeof Chart!=="undefined"){initChart();}else{setTimeout(poll,80);}})();</script>
         </div>
 
         <!-- ── Row 2: Findings+Actions | Customer Signals ───────────────────── -->
@@ -293,13 +296,23 @@ tr:last-child td{border-bottom:none}
           <!-- Findings & Recommended Actions -->
           <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08);
                       background:rgba(255,255,255,0.03)">
-            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);
-                        text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Findings</div>
-            <div id="ai-findings" style="margin-bottom:1rem">
+            <div style="font-size:11px;font-weight:800;color:#fff;
+                        text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;
+                        padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);
+                        display:flex;align-items:center;gap:6px">
+              <span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>
+              Findings
+            </div>
+            <div id="ai-findings" style="margin-bottom:1.25rem">
               <p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p>
             </div>
-            <div style="font-size:10px;font-weight:700;color:#00C2E0;
-                        text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Recommended Actions</div>
+            <div style="font-size:11px;font-weight:800;color:#00C2E0;
+                        text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;
+                        padding-bottom:8px;border-bottom:.5px solid rgba(0,194,224,0.2);
+                        display:flex;align-items:center;gap:6px">
+              <span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>
+              Recommended Actions
+            </div>
             <div id="ai-actions">
               <p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p>
             </div>
@@ -307,9 +320,14 @@ tr:last-child td{border-bottom:none}
 
           <!-- Customer Signals -->
           <div style="padding:1rem 1.25rem;background:rgba(0,194,224,0.04)">
-            <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);
-                        text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">
-              Customer Signals <span style="font-weight:400;text-transform:none;letter-spacing:0;color:rgba(255,255,255,0.25)">· last 21d</span>
+            <div style="font-size:11px;font-weight:800;color:#fff;
+                        text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;
+                        padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);
+                        display:flex;align-items:center;gap:6px">
+              <span style="width:3px;height:14px;background:#7B2FBE;border-radius:2px;display:inline-block"></span>
+              Customer Signals
+              <span style="font-size:9px;font-weight:500;text-transform:none;letter-spacing:0;
+                           color:rgba(255,255,255,0.3);margin-left:2px">· last 21d</span>
             </div>
             <div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;flex-shrink:0;margin-top:1px">🟡</span><div style="min-width:0"><div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">Can we modify the port number of slq_exporter from TCP </div><div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45"><a href="https://tessell.atlassian.net/browse/SR-8034" target="_blank" style="font-size:10px;font-weight:700;color:#D69E2E;text-decoration:none">SR-8034</a> · Awaiting engineering response</div></div></div><div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;flex-shrink:0;margin-top:1px">🟠</span><div style="min-width:0"><div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">Service Refresh failed</div><div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45"><a href="https://tessell.atlassian.net/browse/SR-7853" target="_blank" style="font-size:10px;font-weight:700;color:#DD6B20;text-decoration:none">SR-7853</a> · "@Vivekanandan Nataraj  → Yes,  @samit.sathe  its supported. but we haven't teste…" — Shubham Fulari</div></div></div><div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;flex-shrink:0;margin-top:1px">🔴</span><div style="min-width:0"><div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">Service Refresh failed</div><div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45"><a href="https://tessell.atlassian.net/browse/SR-7853" target="_blank" style="font-size:10px;font-weight:700;color:#E53E3E;text-decoration:none">SR-7853</a> · "@sre-shift-leads   @Rahul Daliya  — If the customer is unblocked and we are only…" — Vivek Gupta</div></div></div><div style="padding:8px 0;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;gap:9px;align-items:flex-start"><span style="font-size:11px;flex-shrink:0;margin-top:1px">🟢</span><div style="min-width:0"><div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:2px">Service Refresh failed</div><div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.45"><a href="https://tessell.atlassian.net/browse/SR-7853" target="_blank" style="font-size:10px;font-weight:700;color:#38A169;text-decoration:none">SR-7853</a> · "Hi Team, Hope this message finds you well. Warm greetings from SRE – Tessell. My…" — Raveendra Dodda</div></div></div>
           </div>
@@ -329,7 +347,6 @@ tr:last-child td{border-bottom:none}
     </div>
   </div>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 
 var CHART_DATA={
@@ -427,7 +444,7 @@ function initChart(){
     }
   });
 }
-const DATA={"p0p1": 0, "support": 2, "features": 0, "eng_tickets": 1, "resolved": 3, "pendingEng": 2, "p0keys": [], "highKeys": ["SR-7853"], "generated": "Mar 27, 2026 22:51 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+const DATA={"p0p1": 0, "support": 2, "features": 0, "eng_tickets": 1, "resolved": 3, "pendingEng": 2, "p0keys": [], "highKeys": ["SR-7853"], "generated": "Mar 27, 2026 23:09 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
@@ -467,25 +484,6 @@ function runHealth(DATA) {
 }
 
 window.onload=()=>{try{runHealth(DATA);}catch(e){console.error('runHealth:',e);}try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer:',e);}};
-// Chart: use IntersectionObserver so it fires when the canvas enters the viewport.
-// This works correctly inside Confluence iframes where window.onload is unreliable.
-(function(){
-  function tryInit(){
-    if(typeof Chart==='undefined'){setTimeout(tryInit,150);return;}
-    initChart();
-  }
-  var canvas=document.getElementById('trendChart');
-  if(!canvas)return;
-  if('IntersectionObserver' in window){
-    var obs=new IntersectionObserver(function(entries,o){
-      if(entries[0].isIntersecting){o.disconnect();tryInit();}
-    },{threshold:0.1});
-    obs.observe(canvas);
-  }else{
-    // Fallback for environments without IntersectionObserver
-    tryInit();
-  }
-})();;
 function toggleDrawer(dId,mId){const d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.metric').forEach(x=>x.classList.remove('active'));if(!open){d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer error:',e);}}}}
 function copyJql(btn,key){const el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(()=>{const orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(()=>{btn.textContent=orig;btn.style.color='';} ,1500);}).catch(()=>{btn.textContent='Failed';setTimeout(()=>btn.textContent='Copy',1500);});}
 function buildHealthDrawer(DATA){
