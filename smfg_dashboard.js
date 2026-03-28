@@ -82,7 +82,7 @@ if(document.readyState==='loading'){
   initChart();
 }
 
-var DATA={"p0p1": 0, "support": 2, "features": 5, "eng_tickets": 1, "resolved": 36, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8271", "SR-7314"], "generated": "Mar 28, 2026 17:32 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+var DATA={"p0p1": 0, "support": 2, "features": 5, "eng_tickets": 1, "resolved": 36, "pendingEng": 1, "p0keys": [], "highKeys": ["SR-8271", "SR-7314"], "generated": "Mar 28, 2026 18:34 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
