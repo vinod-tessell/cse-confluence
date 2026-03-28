@@ -91,8 +91,12 @@ var CHART_DATA={{
 function initChart(){{
   var canvas=document.getElementById('trendChart');
   if(!canvas)return;
-  var W=canvas.offsetWidth||canvas.parentElement&&canvas.parentElement.offsetWidth||0;
-  if(W<10){{requestAnimationFrame(initChart);return;}}
+  // In Confluence iframes offsetWidth is often 0 — walk up the DOM for a real width,
+  // then fall back to a fixed 600px so bars always render.
+  var W=0;
+  var el=canvas;
+  while(el&&W<10){{W=el.offsetWidth||0;el=el.parentElement;}}
+  if(W<10)W=600;
   var H=180;
   var dpr=window.devicePixelRatio||1;
   canvas.width=W*dpr; canvas.height=H*dpr;
@@ -167,6 +171,312 @@ if(document.readyState==='loading'){{
         chart_js    = "function initChart(){}"
         chart_block = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>'
 
+    # ── Recurring Theme Analysis — keyword matching against Tessell taxonomy ──────
+    # Looks at SR tickets created in the last 90 days
+    THEME_TAXONOMY = [
+        {
+            "id": "connectivity",
+            "label": "Connectivity",
+            "sev": "Critical",
+            "shades": ["#F4AFA9", "#E06355", "#B94030"],
+            "keywords": ["connect","connection","timeout","unreachable","network","port","firewall","ssh","unable to reach","not accessible","down","unavailable"],
+        },
+        {
+            "id": "performance",
+            "label": "Performance",
+            "sev": "Critical",
+            "shades": ["#F4AFA9", "#E06355", "#B94030"],
+            "keywords": ["slow","performance","latency","lag","cpu","memory","iops","throughput","degraded","response time","high load","overload"],
+        },
+        {
+            "id": "monitoring",
+            "label": "Monitoring & Alerts",
+            "sev": "High",
+            "shades": ["#FAD9A8", "#E8A84A", "#B97020"],
+            "keywords": ["alert","monitor","metric","alarm","datadog","cloudwatch","not firing","missing","observability","grafana","notification","pager"],
+        },
+        {
+            "id": "backup",
+            "label": "Backup & DR",
+            "sev": "High",
+            "shades": ["#FAD9A8", "#E8A84A", "#B97020"],
+            "keywords": ["backup","restore","recovery","snapshot","dr","disaster","rpo","rto","point-in-time","pitr","replication","failover"],
+        },
+        {
+            "id": "auth",
+            "label": "Auth & Access",
+            "sev": "High",
+            "shades": ["#FAD9A8", "#E8A84A", "#B97020"],
+            "keywords": ["auth","login","password","credential","permission","access denied","role","privilege","ssl","certificate","iam","token","unauthorized"],
+        },
+        {
+            "id": "patching",
+            "label": "Patching & Upgrades",
+            "sev": "Medium",
+            "shades": ["#AECAF4", "#5E9EE8", "#2060B0"],
+            "keywords": ["patch","upgrade","version","update","migration","downtime","maintenance","window","rollback","release"],
+        },
+        {
+            "id": "provisioning",
+            "label": "Provisioning",
+            "sev": "Medium",
+            "shades": ["#AECAF4", "#5E9EE8", "#2060B0"],
+            "keywords": ["provision","creat","deploy","spin up","instance","new db","clone","terraform","infra","setup","onboard"],
+        },
+        {
+            "id": "config",
+            "label": "Configuration",
+            "sev": "Low",
+            "shades": ["#d0d0d0", "#a0a0a0", "#686868"],
+            "keywords": ["config","parameter","setting","tuning","charset","collation","timezone","init","pg_hba","my.cnf","variable","property"],
+        },
+    ]
+
+    # Classify each SR ticket from the last 90 days into a theme + month bucket
+    from datetime import date as _date
+    today_d = _date.today()
+
+    def _month_bucket(iso_str):
+        """Return 0=oldest, 1=mid, 2=newest month bucket for a created date."""
+        if not iso_str:
+            return None
+        try:
+            d = datetime.fromisoformat(iso_str[:10]).date()
+            days_ago = (today_d - d).days
+            if days_ago > 90:
+                return None
+            if days_ago > 60:
+                return 0
+            elif days_ago > 30:
+                return 1
+            else:
+                return 2
+        except Exception:
+            return None
+
+    def _classify(summary):
+        """Return theme id or None."""
+        sl = (summary or "").lower()
+        for theme in THEME_TAXONOMY:
+            if any(k in sl for k in theme["keywords"]):
+                return theme["id"]
+        return None
+
+    # Build month labels (oldest → newest)
+    month_labels = []
+    for offset in [2, 1, 0]:
+        mo = today_d.month - offset
+        yr = today_d.year + (mo - 1) // 12
+        mo = ((mo - 1) % 12) + 1
+        month_labels.append(_date(yr, mo, 1).strftime("%b"))
+
+    # Tally theme hits
+    theme_counts = {t["id"]: [0, 0, 0] for t in THEME_TAXONOMY}
+    theme_examples = {t["id"]: [] for t in THEME_TAXONOMY}
+
+    for issue in support.issues:
+        created_str = issue["fields"].get("created", "")
+        bucket = _month_bucket(created_str)
+        if bucket is None:
+            continue
+        summary = (issue["fields"].get("summary") or "")
+        tid = _classify(summary)
+        if tid:
+            theme_counts[tid][bucket] += 1
+            if len(theme_examples[tid]) < 3:
+                key = issue["key"]
+                theme_examples[tid].append(f"{key}: {summary[:55]}")
+
+    # Filter to themes with at least 1 ticket, sort by total desc
+    active_themes = []
+    for theme in THEME_TAXONOMY:
+        counts = theme_counts[theme["id"]]
+        total  = sum(counts)
+        if total > 0:
+            active_themes.append({**theme, "monthly": counts, "total": total,
+                                   "examples": theme_examples[theme["id"]]})
+    active_themes.sort(key=lambda x: x["total"], reverse=True)
+
+    grand_max = max((t["total"] for t in active_themes), default=1)
+
+    # Build JS data array for the animated widget
+    import json as _json
+    themes_js = _json.dumps([{
+        "label":   t["label"],
+        "sev":     t["sev"],
+        "shades":  t["shades"],
+        "monthly": t["monthly"],
+        "total":   t["total"],
+        "ex":      t["examples"] or [f"No example tickets found"],
+    } for t in active_themes])
+
+    months_js   = _json.dumps(month_labels)
+    grandmax_js = grand_max
+
+    if active_themes:
+        analytics_block = f"""
+<div style="padding:.75rem 1rem 1rem">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1rem">
+    <div style="font-size:11px;font-weight:700;color:#172B4D;text-transform:uppercase;letter-spacing:.06em">Recurring Issue Themes</div>
+    <div style="font-size:10px;color:#A0AEC0">last 90d · click to expand</div>
+  </div>
+
+  <!-- Month column headers -->
+  <div style="display:grid;grid-template-columns:14px 110px 1fr 24px;gap:8px;margin-bottom:6px;align-items:center">
+    <div></div><div></div>
+    <div id="ta-mh-{cust['id']}" style="display:flex;gap:2px"></div>
+    <div></div>
+  </div>
+
+  <div id="ta-rows-{cust['id']}"></div>
+
+  <div style="height:.5px;background:#DFE1E6;margin:.75rem 0"></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#E06355,#B94030)"></div><span style="font-size:10px;color:#5E6C84">Critical</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#E8A84A,#B97020)"></div><span style="font-size:10px;color:#5E6C84">High</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#5E9EE8,#2060B0)"></div><span style="font-size:10px;color:#5E6C84">Medium</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#a0a0a0,#686868)"></div><span style="font-size:10px;color:#5E6C84">Low</span></div>
+    <div style="margin-left:auto;font-size:9px;color:#A0AEC0">lighter=older · darker=recent</div>
+  </div>
+</div>
+<style>
+.ta-row-{cust['id']} {{display:grid;grid-template-columns:14px 110px 1fr 24px;gap:8px;align-items:center;cursor:pointer;margin-bottom:11px}}
+.ta-row-{cust['id']}:hover .ta-name {{color:#172B4D}}
+.ta-seg-track {{display:flex;gap:2px;height:18px}}
+.ta-seg {{height:100%;border-radius:4px;flex:0 0 0px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}}
+.ta-seg-lbl {{font-size:9px;font-weight:500;color:rgba(255,255,255,.85);opacity:0;transition:opacity .15s;white-space:nowrap}}
+.ta-row-{cust['id']}:hover .ta-seg-lbl {{opacity:1}}
+.ta-detail {{max-height:0;overflow:hidden;transition:max-height .38s cubic-bezier(.4,0,.2,1)}}
+.ta-detail.open {{max-height:160px}}
+.ta-detail-inner {{background:#F8F9FA;border-radius:6px;padding:.6rem .75rem;margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:10px}}
+.ta-dp-months {{display:flex;gap:6px}}
+.ta-dp-month {{flex:1;text-align:center}}
+.ta-dp-bar-track {{height:36px;display:flex;align-items:flex-end;justify-content:center}}
+.ta-dp-bar {{width:22px;border-radius:2px 2px 0 0;height:0;transition:height .5s cubic-bezier(.22,1,.36,1)}}
+.ta-dp-examples {{border-left:.5px solid #DFE1E6;padding-left:8px}}
+@keyframes ta-slide-in {{from{{opacity:0;transform:translateX(-5px)}}to{{opacity:1;transform:translateX(0)}}}}
+</style>
+<script>
+(function(){{
+  var THEMES={themes_js};
+  var MONTHS={months_js};
+  var GMAX={grandmax_js};
+  var custId='{cust['id']}';
+  var openIdx=null;
+
+  // Month headers
+  var mhEl=document.getElementById('ta-mh-'+custId);
+  if(mhEl){{MONTHS.forEach(function(m){{var d=document.createElement('div');d.style.cssText='flex:1;text-align:center;font-size:9px;color:#A0AEC0;letter-spacing:.04em';d.textContent=m.toUpperCase();mhEl.appendChild(d);}});}}
+
+  var rowsEl=document.getElementById('ta-rows-'+custId);
+  if(!rowsEl)return;
+
+  THEMES.forEach(function(t,i){{
+    var total=t.total;
+    var mMax=Math.max.apply(null,t.monthly)||1;
+    var sevColor=t.sev==='Critical'?'#B94030':t.sev==='High'?'#B97020':t.sev==='Medium'?'#2060B0':'#686868';
+    var sevBg=t.sev==='Critical'?'#FDECEA':t.sev==='High'?'#FEF3E2':t.sev==='Medium'?'#E8F0FC':'#F4F4F4';
+
+    var wrap=document.createElement('div');
+    wrap.style.animation='ta-slide-in .35s ease '+(i*.06)+'s both';
+
+    // Row
+    var row=document.createElement('div');
+    row.className='ta-row-'+custId;
+
+    var rank=document.createElement('div');
+    rank.style.cssText='font-size:10px;color:#A0AEC0;text-align:right';
+    rank.textContent=i+1;
+
+    var nameWrap=document.createElement('div');
+    nameWrap.innerHTML='<div class="ta-name" style="font-size:11px;font-weight:500;color:#5E6C84;transition:color .2s">'+t.label+'</div>'
+      +'<span style="font-size:8px;font-weight:500;padding:1px 5px;border-radius:10px;color:'+sevColor+';background:'+sevBg+'">'+t.sev+'</span>';
+
+    var track=document.createElement('div');
+    track.className='ta-seg-track';
+    t.monthly.forEach(function(v,mi){{
+      var seg=document.createElement('div');
+      seg.className='ta-seg';
+      seg.style.background=t.shades[mi];
+      seg.dataset.target=v;
+      var lbl=document.createElement('div');
+      lbl.className='ta-seg-lbl';
+      lbl.textContent=v||'';
+      seg.appendChild(lbl);
+      track.appendChild(seg);
+    }});
+
+    var totalEl=document.createElement('div');
+    totalEl.style.cssText='font-size:11px;font-weight:500;color:#5E6C84;text-align:right';
+    totalEl.textContent=total;
+
+    row.appendChild(rank);row.appendChild(nameWrap);row.appendChild(track);row.appendChild(totalEl);
+
+    // Detail panel
+    var panel=document.createElement('div');
+    panel.className='ta-detail';
+    var inner=document.createElement('div');
+    inner.className='ta-detail-inner';
+
+    var mDiv=document.createElement('div');
+    mDiv.className='ta-dp-months';
+    t.monthly.forEach(function(v,mi){{
+      var diff=mi>0?v-t.monthly[mi-1]:null;
+      var dHtml=diff===null?'':diff>0?'<div style="font-size:9px;color:#B94030;margin-top:1px">▲ +'+diff+'</div>':diff<0?'<div style="font-size:9px;color:#2A7A4A;margin-top:1px">▼ '+diff+'</div>':'<div style="font-size:9px;color:#A0AEC0;margin-top:1px">— same</div>';
+      var mMonth=document.createElement('div');
+      mMonth.className='ta-dp-month';
+      mMonth.innerHTML='<div style="font-size:9px;color:#A0AEC0;margin-bottom:2px">'+MONTHS[mi]+'</div>'
+        +'<div class="ta-dp-bar-track"><div class="ta-dp-bar" style="background:'+t.shades[mi]+'" data-h="'+Math.round(v/mMax*34)+'"></div></div>'
+        +'<div style="font-size:12px;font-weight:500;color:'+t.shades[2]+';margin-top:2px">'+v+'</div>'+dHtml;
+      mDiv.appendChild(mMonth);
+    }});
+
+    var exDiv=document.createElement('div');
+    exDiv.className='ta-dp-examples';
+    exDiv.innerHTML='<div style="font-size:9px;color:#A0AEC0;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Recent tickets</div>'
+      +t.ex.map(function(e){{return '<div style="font-size:10px;color:#5E6C84;margin-bottom:3px">· '+e+'</div>';}}).join('');
+
+    inner.appendChild(mDiv);inner.appendChild(exDiv);panel.appendChild(inner);
+    wrap.appendChild(row);wrap.appendChild(panel);
+    rowsEl.appendChild(wrap);
+
+    row.addEventListener('click',function(){{
+      var isOpen=panel.classList.contains('open');
+      document.querySelectorAll('.ta-detail.open').forEach(function(p){{
+        p.classList.remove('open');
+        p.querySelectorAll('.ta-dp-bar').forEach(function(b){{b.style.height='0';}});
+      }});
+      if(!isOpen){{
+        panel.classList.add('open');
+        openIdx=i;
+        setTimeout(function(){{
+          panel.querySelectorAll('.ta-dp-bar[data-h]').forEach(function(b){{
+            b.style.height=b.dataset.h+'px';
+          }});
+        }},50);
+      }} else {{ openIdx=null; }}
+    }});
+  }});
+
+  // Animate segments in after row entrance
+  setTimeout(function(){{
+    rowsEl.querySelectorAll('.ta-seg-track').forEach(function(track,ri){{
+      var segs=track.querySelectorAll('.ta-seg');
+      var delay=ri*70;
+      segs.forEach(function(seg,mi){{
+        var v=parseInt(seg.dataset.target)||0;
+        setTimeout(function(){{
+          seg.style.transition='flex-basis .7s cubic-bezier(.22,1,.36,1)';
+          seg.style.flexBasis=Math.round(v/GMAX*100)+'%';
+        }},delay+mi*55);
+      }});
+    }});
+  }},180);
+}})();
+</script>"""
+    else:
+        analytics_block = '<div style="padding:.75rem 1rem;font-size:11px;color:#A0AEC0">No recurring themes detected in the last 90 days.</div>'
+
     pulse_colors  = {"frustrated":"#E53E3E","concerned":"#DD6B20","waiting":"#D69E2E","positive":"#38A169","neutral":"#5E6C84"}
     pulse_icons   = {"frustrated":"🔴","concerned":"🟠","waiting":"🟡","positive":"🟢","neutral":"⚪"}
     pulse_items   = data.get("pulse", [])
@@ -209,6 +519,40 @@ var DATA={data_js};
 window.addEventListener('DOMContentLoaded',function(){{
   try{{runHealth(DATA);}}catch(e){{console.error('runHealth:',e);}}
   try{{buildHealthDrawer(DATA);}}catch(e){{console.error('buildHealthDrawer:',e);}}
+
+  // ── Health bar + score count-up animation ──────────────────────────────────
+  var targetScore=DATA.score;
+  var targetPct=targetScore*10;
+
+  // Animate the main panel bar
+  var bar=document.getElementById('health-score-bar');
+  if(bar){{
+    setTimeout(function(){{bar.style.width=targetPct+'%';}},120);
+  }}
+
+  // Animate the drawer bar (only exists once drawer is opened,
+  // but set it preemptively in case drawer is already open)
+  var dbar=document.getElementById('health-drawer-bar');
+  if(dbar){{
+    setTimeout(function(){{dbar.style.width=targetPct+'%';}},120);
+  }}
+
+  // Count-up the score number 0 → score over 700ms with easeOutQuart
+  var numEl=document.getElementById('health-score-num');
+  if(numEl){{
+    var start=null;
+    var dur=700;
+    function countUp(ts){{
+      if(!start)start=ts;
+      var prog=Math.min((ts-start)/dur,1);
+      var ease=1-Math.pow(1-prog,4);
+      var cur=Math.round(ease*targetScore);
+      numEl.textContent=cur+'/10';
+      if(prog<1)requestAnimationFrame(countUp);
+      else numEl.textContent=targetScore+'/10';
+    }}
+    setTimeout(function(){{requestAnimationFrame(countUp);}},80);
+  }}
 }});
 function toggleDrawer(dId,mId){{var d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(function(x){{x.classList.remove('open');}});document.querySelectorAll('.metric').forEach(function(x){{x.classList.remove('active');}});if(!open){{d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){{try{{buildHealthDrawer(DATA);}}catch(e){{console.error('buildHealthDrawer:',e);}}}};}}}}
 function copyJql(btn,key){{var el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(function(){{var orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(function(){{btn.textContent=orig;btn.style.color='';}},1500);}}).catch(function(){{btn.textContent='Failed';setTimeout(function(){{btn.textContent='Copy';}},1500);}});}}
@@ -328,8 +672,8 @@ function buildHealthDrawer(DATA){{
       <div style="padding:1rem 1.25rem;border-right:.5px solid #DFE1E6"><div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">Impacting Factors</div><div id="health-factors"></div></div>
       <div style="padding:1rem 1.25rem"><div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">How to Improve</div><div id="health-actions"></div></div>
     </div>
-    <div style="padding:.75rem 1.25rem;background:#FAFBFC;display:flex;align-items:center;gap:6px">
-      <div style="flex:1;height:8px;background:#F4F5F7;border-radius:4px;overflow:hidden"><div style="height:100%;border-radius:4px;background:{health_color};width:{score*10}%;transition:width .6s ease"></div></div>
+      <div style="padding:.75rem 1.25rem;background:#FAFBFC;display:flex;align-items:center;gap:6px">
+      <div style="flex:1;height:8px;background:#F4F5F7;border-radius:4px;overflow:hidden"><div id="health-drawer-bar" style="height:100%;border-radius:4px;background:{health_color};width:0%;transition:width .9s cubic-bezier(.22,1,.36,1)"></div></div>
       <span style="font-size:11px;font-weight:700;color:{health_color}">{score}/10</span>
       <span style="font-size:10px;color:#5E6C84">· Max deduction: {10-score} pts</span>
     </div>
@@ -369,13 +713,13 @@ function buildHealthDrawer(DATA){{
           <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.75rem">
             <div><div class="ai-eyebrow">✦ Health Analysis</div><div class="ai-title" style="margin-bottom:0">Customer Health Assessment</div></div>
             <div style="text-align:right;flex-shrink:0;margin-left:1rem">
-              <div id="health-score-num" style="font-size:32px;font-weight:800;color:{health_color};line-height:1">{score}/10</div>
+              <div id="health-score-num" style="font-size:32px;font-weight:800;color:{health_color};line-height:1">0/10</div>
               <div id="health-score-label" style="font-size:11px;font-weight:700;color:{health_color};margin-top:2px">{health_label}</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
-              <div id="health-score-bar" style="height:100%;border-radius:3px;background:{health_color};width:{score*10}%;transition:width .6s ease"></div>
+              <div id="health-score-bar" style="height:100%;border-radius:3px;background:{health_color};width:0%;transition:width .9s cubic-bezier(.22,1,.36,1)"></div>
             </div>
             <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated {now}</span>
           </div>
@@ -397,6 +741,10 @@ function buildHealthDrawer(DATA){{
     </div>
     <div>
       <div class="sb-sec"><div class="sb-head">📅 Recent Activity</div><div class="tl">{timeline}</div></div>
+      <div class="sb-sec" style="overflow:hidden">
+        <div class="sb-head">📊 CS Analytics</div>
+        {analytics_block}
+      </div>
     </div>
   </div>
 </div>
