@@ -1104,50 +1104,87 @@ var CHART_DATA={{
   yMax:{chart_max}
 }};
 function initChart(){{
-  var ctx=document.getElementById('trendChart');
-  if(!ctx)return;
-  if(typeof Chart==='undefined'){{setTimeout(initChart,150);return;}}
-  new Chart(ctx,{{
-    type:'bar',
-    data:{{
-      labels:CHART_DATA.labels,
-      datasets:[
-        {{label:'Open (SR)',data:CHART_DATA.open,backgroundColor:'rgba(26,111,219,0.85)',borderRadius:4,barPercentage:0.6,categoryPercentage:0.7}},
-        {{label:'Resolved',data:CHART_DATA.resolved,backgroundColor:'rgba(56,161,105,0.85)',borderRadius:4,barPercentage:0.6,categoryPercentage:0.7}}
-      ]
-    }},
-    options:{{
-      responsive:true,
-      maintainAspectRatio:false,
-      animation:{{
-        duration:800,
-        easing:'easeOutQuart',
-        delay:function(context){{
-          return context.type==='data'?context.dataIndex*100+context.datasetIndex*50:0;
-        }}
-      }},
-      animations:{{y:{{from:0}}}},
-      plugins:{{
-        legend:{{display:true,position:'top',align:'end',labels:{{font:{{size:9}},color:'rgba(255,255,255,0.6)',boxWidth:8,padding:10}}}},
-        tooltip:{{callbacks:{{label:function(c){{return ' '+c.dataset.label+': '+c.parsed.y;}}}}}}
-      }},
-      scales:{{
-        x:{{grid:{{display:false}},ticks:{{font:{{size:10}},color:'rgba(255,255,255,0.5)'}},border:{{display:false}}}},
-        y:{{min:0,max:CHART_DATA.yMax,grid:{{color:'rgba(255,255,255,0.08)'}},ticks:{{font:{{size:10}},color:'rgba(255,255,255,0.5)',stepSize:Math.ceil(CHART_DATA.yMax/5)}},border:{{display:false}}}}
-      }}
+  var canvas=document.getElementById('trendChart');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  var W=canvas.offsetWidth||canvas.parentElement.offsetWidth||600;
+  var H=canvas.offsetHeight||180;
+  canvas.width=W; canvas.height=H;
+  var PAD={{top:28,right:12,bottom:36,left:32}};
+  var n=CHART_DATA.labels.length;
+  var chartW=W-PAD.left-PAD.right;
+  var chartH=H-PAD.top-PAD.bottom;
+  var yMax=CHART_DATA.yMax;
+  var groupW=chartW/n;
+  var barW=groupW*0.32;
+  var gap=groupW*0.04;
+  var startTime=null;
+  var DUR=900;
+  function ease(t){{return t<1?1-Math.pow(1-t,4):1;}}
+  function draw(ts){{
+    if(!startTime)startTime=ts;
+    var prog=Math.min((ts-startTime)/DUR,1);
+    ctx.clearRect(0,0,W,H);
+    // Grid lines
+    ctx.strokeStyle='rgba(255,255,255,0.07)';
+    ctx.lineWidth=0.5;
+    var steps=5;
+    for(var i=0;i<=steps;i++){{
+      var y=PAD.top+chartH-(i/steps)*chartH;
+      ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(W-PAD.right,y);ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.45)';
+      ctx.font='9px system-ui,sans-serif';
+      ctx.textAlign='right';
+      ctx.fillText(Math.round(yMax*i/steps),PAD.left-4,y+3);
     }}
-  }});
+    // Bars with stagger
+    for(var gi=0;gi<n;gi++){{
+      var cx=PAD.left+gi*groupW+groupW/2;
+      // Open bar — stagger by column index
+      var delay0=gi*0.12;
+      var p0=ease(Math.max(0,Math.min(1,(prog-delay0)/(1-delay0||0.01))));
+      var h0=(CHART_DATA.open[gi]/yMax)*chartH*p0;
+      ctx.fillStyle='rgba(26,111,219,0.88)';
+      ctx.beginPath();
+      ctx.roundRect(cx-barW-gap/2,PAD.top+chartH-h0,barW,h0,2);
+      ctx.fill();
+      // Resolved bar — stagger slightly after open
+      var delay1=gi*0.12+0.05;
+      var p1=ease(Math.max(0,Math.min(1,(prog-delay1)/(1-delay1||0.01))));
+      var h1=(CHART_DATA.resolved[gi]/yMax)*chartH*p1;
+      ctx.fillStyle='rgba(56,161,105,0.88)';
+      ctx.beginPath();
+      ctx.roundRect(cx+gap/2,PAD.top+chartH-h1,barW,h1,2);
+      ctx.fill();
+      // X-axis labels
+      ctx.fillStyle='rgba(255,255,255,0.5)';
+      ctx.font='9px system-ui,sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(CHART_DATA.labels[gi],cx,H-8);
+    }}
+    // Legend
+    ctx.fillStyle='rgba(26,111,219,0.88)';
+    ctx.fillRect(W-PAD.right-90,6,8,8);
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.font='9px system-ui,sans-serif';
+    ctx.textAlign='left';
+    ctx.fillText('Open (SR)',W-PAD.right-79,14);
+    ctx.fillStyle='rgba(56,161,105,0.88)';
+    ctx.fillRect(W-PAD.right-35,6,8,8);
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.fillText('Resolved',W-PAD.right-24,14);
+    if(prog<1)requestAnimationFrame(draw);
+  }}
+  requestAnimationFrame(draw);
 }}"""
         chart_block = (f'<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);'
                        f'text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">'
                        f'SR Ticket Trend — last 6 months</div>'
                        f'<div style="position:relative;height:180px;width:100%">'
                        f'<canvas id="trendChart"></canvas></div>'
-                       f'<script>'
-                       f'(function poll(){{if(typeof Chart!=="undefined"){{initChart();}}else{{setTimeout(poll,80);}}}})();'
-                       f'</scr' + f'ipt>')
+                       f'<script>initChart();</sc' + f'ipt>')
     else:
-        timeseries_js = "function initChart(){{}}"
+        timeseries_js = "function initChart(){}"
         chart_block   = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding-top:1rem">No ticket history available.</div>'
 
     pulse_colors  = {"frustrated":"#E53E3E","concerned":"#DD6B20","waiting":"#D69E2E","positive":"#38A169","neutral":"#5E6C84"}
@@ -1214,7 +1251,6 @@ function initChart(){{
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <title>{cust['name']} — Customer Dashboard</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>{timeseries_js}</script>
 <style>{SHARED_CSS}</style></head><body>
 {nav}
