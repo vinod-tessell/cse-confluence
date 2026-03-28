@@ -43,12 +43,43 @@ def jql(query, max=20):
 def make_jqls(keyword):
     """Return the six named JQL queries for a customer keyword."""
     _feat   = 'issuetype in (Feature, Story) OR labels in ("FeatureRequest")'
-    _nofeat = f'NOT ({_feat})'
+    _eng_reporters = (
+        '557058:f58131cb-b67d-43c7-b30d-6b58d40bd077,'
+        '712020:569ba7d2-5644-4040-b7ec-b984474cdc6e,'
+        '637b00bc9341d1f13604f140,'
+        '712020:46ee67dd-c0d7-490d-80b0-cd603c83dd2e,'
+        '712020:3e2bfdfb-b3ec-408c-a1aa-21cb19fc0669,'
+        '712020:a339dba8-745e-419d-be44-b182a67e9536,'
+        '712020:a205c27e-f5a5-4f90-bdda-c991ea3e0ab8,'
+        '712020:ff5ca9e1-f488-4707-8bbf-5feaed42559a,'
+        '712020:b6ba7c99-d0be-44d5-b650-bcce3210b37d,'
+        '712020:70e6670c-814d-4ec3-8487-cadb0ab2bf62,'
+        '63e5f43b491b20ef64bdd15b,'
+        '712020:d727070e-8816-43ce-80a2-8acf0dc9c10b,'
+        '712020:f8dc1e59-faaa-476c-9f18-08310002a804,'
+        '712020:294747b1-e4d0-4cf7-b816-fed9fe283cf1,'
+        '712020:96502e4a-e268-4e30-acb9-511995241dc5,'
+        '712020:f0281b29-4237-4ea0-ae67-acf3e8c6d181,'
+        '712020:5e36ffe3-81f6-4f40-810c-e42161e350f7,'
+        '712020:48de8606-2a4c-4dc2-a4a0-31f0b86e9b24,'
+        '712020:15baf6e5-f96a-40bd-9338-31f9d73b2d8c,'
+        '712020:e808166e-a6ad-4298-afcc-d88b8b6d8024,'
+        '712020:fd609670-975f-4185-857b-21243f83ba90,'
+        '712020:74267074-99ea-48d6-9d34-5362aa868c5a,'
+        '712020:ed20bfd5-32e9-44ce-bef7-9ab53ea474e2,'
+        '712020:2dc87765-31b1-4a79-8591-6cbc8b9a93db,'
+        '712020:6eda01f3-f094-4f4e-86e6-749b54b5bdc3,'
+        '712020:ab0af858-b79b-4bfd-b3e7-89be0b35e391,'
+        '712020:a4e5b996-469f-4572-aa1f-f7704f09df33,'
+        '712020:a9d23dd6-5254-4580-924e-0f3734ed2e17,'
+        '712020:f7d4fcc5-f015-4d5c-a41e-99482b3ef30e,'
+        '712020:44572c2a-2166-4401-9052-c7b4f1d3fd28'
+    )
     return {
         "p0p1":        f'project in (TS, SR) AND text ~ "{keyword}" AND (labels = P0 OR labels = P1) AND statusCategory != Done ORDER BY created DESC',
         "support":     f'project = SR AND text ~ "{keyword}" AND statusCategory != Done ORDER BY created DESC',
         "features":    f'project = TS AND ("Customers[Labels]" IN ("{keyword}") OR text ~ "{keyword}") AND ({_feat}) AND statusCategory != Done ORDER BY created DESC',
-        "eng_tickets": f'project = TS AND text ~ "{keyword}" AND {_nofeat} AND statusCategory != Done ORDER BY created DESC',
+        "eng_tickets": f'project = TS AND text ~ "{keyword}" AND issuetype = Bug AND reporter IN ({_eng_reporters}) AND created >= "2026-01-01" AND statusCategory != Done ORDER BY created DESC',
         "resolved":    f'project = SR AND text ~ "{keyword}" AND statusCategory = Done AND resolutiondate >= -30d ORDER BY resolutiondate DESC',
         "recent":      f'project in (TS, SR) AND text ~ "{keyword}" AND updated >= -30d ORDER BY updated DESC',
     }
