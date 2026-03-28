@@ -118,7 +118,7 @@ tr:last-child td{border-bottom:none}
 </div>
 <div style="background:#0D2252;border-bottom:1px solid #122752;padding:.35rem 1.5rem;display:flex;align-items:center;gap:1.5rem">
   <a href="https://advizex.tessell.com/" target="_blank" style="font-size:11px;color:#00C2E0;text-decoration:none;font-weight:600">↗ https://advizex.tessell.com/</a>
-  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">Mar 28, 2026 14:58 EST</span></span>
+  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">Mar 28, 2026 15:10 EST</span></span>
 </div>
 <div class="body">
   <div class="metrics" style="grid-template-columns:repeat(8,1fr)">
@@ -172,8 +172,8 @@ tr:last-child td{border-bottom:none}
     <span class="jql-label"><span class="jql-label-dot" style="background:#1A6FDB"></span>💡 Feature Requests (TS)</span>
     <button class="jql-copy" onclick="copyJql(this,'features')">Copy</button>
   </div>
-  <div class="jql-code" id="jql-features">project = TS AND ("Customers[Labels]" IN ("Advizex") OR text ~ "Advizex") AND (issuetype in (Feature, Story) OR labels in ("FeatureRequest")) AND statusCategory != Done ORDER BY created DESC</div>
-  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+=+TS+AND+(%22Customers[Labels]%22+IN+(%22Advizex%22)+OR+text+~+%22Advizex%22)+AND+(issuetype+in+(Feature,+Story)+OR+labels+in+(%22FeatureRequest%22))+AND+statusCategory+!=+Done+ORDER+BY+created+DESC" target="_blank">↗ Run in Jira</a>
+  <div class="jql-code" id="jql-features">project = TS AND ("Customers[Labels]" IN ("Advizex") OR text ~ "Advizex") AND (issuetype in (Feature, Story) OR labels in ("FeatureRequest")) AND statusCategory != Done AND created >= "2024-03-01" ORDER BY created DESC</div>
+  <a class="jql-open-link" href="https://tessell.atlassian.net/issues/?jql=project+=+TS+AND+(%22Customers[Labels]%22+IN+(%22Advizex%22)+OR+text+~+%22Advizex%22)+AND+(issuetype+in+(Feature,+Story)+OR+labels+in+(%22FeatureRequest%22))+AND+statusCategory+!=+Done+AND+created+>=+%222024-03-01%22+ORDER+BY+created+DESC" target="_blank">↗ Run in Jira</a>
 </div><div class="jql-block">
   <div class="jql-block-head">
     <span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ Engineering Tickets (TS)</span>
@@ -230,7 +230,7 @@ tr:last-child td{border-bottom:none}
             <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
               <div id="health-score-bar" style="height:100%;border-radius:3px;background:#68D391;width:0%;transition:width .9s cubic-bezier(.22,1,.36,1)"></div>
             </div>
-            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 28, 2026 14:58 EST</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 28, 2026 15:10 EST</span>
           </div>
         </div>
 
