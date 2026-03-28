@@ -992,7 +992,8 @@ function runHealth(DATA) {
   if(badge&&badge.parentElement){badge.parentElement.style.borderColor=color+'4D';badge.parentElement.style.background=color+'1A';}
   let html=findings.map(f=>`<p style="margin-bottom:6px">• ${f}</p>`).join('');
   if(actions.length)html+=`<div style="margin-top:8px;padding-top:8px;border-top:.5px solid rgba(255,255,255,0.1)"><p style="font-size:10px;font-weight:700;color:#00C2E0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Recommended Actions</p>${actions.map(a=>`<p style="margin-bottom:4px">→ ${a}</p>`).join('')}</div>`;
-  el.innerHTML=html;sc.textContent=score;sc.style.color=color;
+  if(el){el.innerHTML=html;}
+  if(sc){sc.textContent=score;sc.style.color=color;}
 }
 """
 
@@ -1122,7 +1123,7 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Phase</div><div style="font-size:12px;font-weight:700;color:#172B4D">{cust['phase']}</div></div>
     <div><div style="font-size:10px;color:#5E6C84;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Portal</div><div>{portal_html}</div></div>
   </div>
-  <div class="metrics" style="grid-template-columns:repeat(7,1fr)">
+  <div class="metrics" style="grid-template-columns:repeat(8,1fr)">
     <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval {mv_col}">{len(p0p1)}</div><div class="msub">Critical — SR &amp; TS</div></div>
     <div class="metric" id="m-sup"  onclick="toggleDrawer('drawer-sup','m-sup')"><div class="mlabel">Support Tickets</div><div class="mval {sup_col}">{len(support)}</div><div class="msub">SR project · open</div></div>
     <div class="metric" id="m-eng"  onclick="toggleDrawer('drawer-eng','m-eng')"><div class="mlabel">Eng Tickets</div><div class="mval {eng_col}">{len(eng_tickets)}</div><div class="msub">TS project · non-feature</div></div>
@@ -1130,6 +1131,7 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
     <div class="metric" id="m-res"  onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">{len(resolved)}</div><div class="msub">SR · last 30 days</div></div>
     <div class="metric" id="m-health" onclick="toggleDrawer('drawer-health','m-health')"><div class="mlabel">Health Score (WIP)</div><div class="mval" style="color:{health_color}">{score}/10</div><div class="msub">Rule-based</div></div>
     <div class="metric" id="m-jql" onclick="toggleDrawer('drawer-jql','m-jql')" style="border-left:2px solid #E6F1FB"><div class="mlabel">JQL Queries</div><div class="mval" style="font-size:16px;padding-top:3px">🔍</div><div class="msub">Show / hide</div></div>
+    <div class="metric" id="m-logic" onclick="toggleDrawer('drawer-logic','m-logic')" style="border-left:2px solid #EEEDFE"><div class="mlabel">Business Logic</div><div class="mval" style="font-size:16px;padding-top:3px">⚙️</div><div class="msub">Show / hide</div></div>
   </div>
   <div class="drawer" id="drawer-health">
     <div class="drawer-head"><span class="drawer-title">🧮 Health Score — {score}/10 · <span style="color:{health_color}">{health_label}</span></span><button class="drawer-close" onclick="toggleDrawer('drawer-health','m-health')">✕</button></div>
@@ -1155,6 +1157,55 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
     </div>
     <div class="jql-grid">{jql_blocks_html}</div>
     <div class="jql-footer">💡 Keyword used: <b style="color:#172B4D;margin-left:3px">{cust['jql_keyword']}</b> &nbsp;·&nbsp; SR = customer support · TS = engineering &nbsp;·&nbsp; Click "Run in Jira" to open results live</div>
+  </div>
+  <div class="drawer" id="drawer-logic">
+    <div class="drawer-head">
+      <span class="drawer-title">⚙️ Business Logic — <span style="font-weight:400;color:#5E6C84">scoring rules applied to this dashboard</span></span>
+      <button class="drawer-close" onclick="toggleDrawer('drawer-logic','m-logic')">✕</button>
+    </div>
+    <div class="jql-grid" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="jql-block">
+        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#E53E3E"></span>🚨 P0 / P1 Incidents</span></div>
+        <div class="jql-code">≥ 3 open  →  −4 pts
+2 open   →  −3 pts
+1 open   →  −2 pts
+0 open   →   no deduction</div>
+        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: SR + TS · P0 or P1 label</div>
+      </div>
+      <div class="jql-block">
+        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 SR Support Backlog</span></div>
+        <div class="jql-code">≥ 10 open  →  −2 pts
+≥  6 open  →  −1 pt
+&lt;  6 open  →   no deduction</div>
+        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: SR project · open tickets</div>
+      </div>
+      <div class="jql-block">
+        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#D69E2E"></span>⏳ Pending Engineering</span></div>
+        <div class="jql-code">≥ 4 SR pending eng  →  −2 pts
+≥ 2 SR pending eng  →  −1 pt
+&lt; 2                →   no deduction</div>
+        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">SR tickets with status "Pending Eng"</div>
+      </div>
+      <div class="jql-block">
+        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ TS Engineering Backlog</span></div>
+        <div class="jql-code">≥ 5 open TS eng tickets  →  −1 pt
+&lt; 5                      →   no deduction</div>
+        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: TS project · non-feature issues</div>
+      </div>
+      <div class="jql-block">
+        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#1A6FDB"></span>💡 Feature Request Backlog</span></div>
+        <div class="jql-code">≥ 5 open feature requests  →  −1 pt
+&lt; 5                        →   no deduction</div>
+        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: TS project · Feature / Story type</div>
+      </div>
+      <div class="jql-block">
+        <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#38A169"></span>✅ SR Resolution Cadence</span></div>
+        <div class="jql-code">0 SR resolved in last 30d  →  −1 pt
+≥ 1 SR resolved            →   no deduction</div>
+        <div style="padding:6px 10px 8px;font-size:10px;color:#5E6C84">Source: SR project · resolved ≥ −30d</div>
+      </div>
+    </div>
+    <div class="jql-footer">⚙️ Health score starts at 10 · deductions are cumulative · floor is 1 &nbsp;·&nbsp; Score ≥ 8 = Healthy · ≥ 6 = Stable · ≥ 4 = Needs Attention · &lt; 4 = At Risk</div>
   </div>
   <div class="grid2">
     <div>
@@ -1189,8 +1240,8 @@ new Chart(document.getElementById('trendChart'),{{type:'bar',data:{{labels:{char
 {timeseries_js}
 const DATA={data_js};
 {HEALTH_JS}
-window.onload=()=>{{runHealth(DATA);buildHealthDrawer(DATA);}};
-function toggleDrawer(dId,mId){{const d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.metric').forEach(x=>x.classList.remove('active'));if(!open){{d.classList.add('open');m.classList.add('active');}}}}
+window.onload=()=>{{try{{runHealth(DATA);}}catch(e){{console.error('runHealth error:',e);}}try{{buildHealthDrawer(DATA);}}catch(e){{console.error('buildHealthDrawer error:',e);}}}};
+function toggleDrawer(dId,mId){{const d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.metric').forEach(x=>x.classList.remove('active'));if(!open){{d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){{try{{buildHealthDrawer(DATA);}}catch(e){{console.error('buildHealthDrawer error:',e);}}}}}}}}
 function copyJql(btn,key){{const el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(()=>{{const orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(()=>{{btn.textContent=orig;btn.style.color='';}} ,1500);}}).catch(()=>{{btn.textContent='Failed';setTimeout(()=>btn.textContent='Copy',1500);}});}}
 function buildHealthDrawer(DATA){{
   const factors=[],actions=[];
@@ -1291,33 +1342,124 @@ def build_master_html(customer_results):
                      pipe_row("Production",phase_counts["Production"],"#1D9E75","#E1F5EE")+
                      pipe_row("Steady State",phase_counts["Steady State"],"#5F5E5A","#F1EFE8"))
 
+    _HEALTH_ORDER = {"atrisk": 0, "attention": 1, "stable": 2, "healthy": 3}
     heatmap_cells = ""
-    for cr in customer_results:
+    for cr in sorted(customer_results, key=lambda x: (_HEALTH_ORDER.get(x["health_key"], 2), -x["p0_count"], -x["sup_count"])):
         c   = cr["config"]
         cls = {"atrisk":"hm-risk","attention":"hm-warn","stable":"hm-stable","healthy":"hm-good"}.get(cr["health_key"],"hm-stable")
         stat= f"{cr['p0_count']} P0s · {cr['sup_count']} SR" if cr["p0_count"]>0 else f"{cr['sup_count']} SR · {cr['eng_count']} TS"
         url = cr.get("dashboard_url","#")
         heatmap_cells += f'<a class="hm-cell {cls}" href="{url}" target="_parent"><div class="hm-name">{c["name"][:18]}</div><div class="hm-stat">{stat}</div></a>'
 
-    owner_map = {}
+    # ── TAM load scoring ───────────────────────────────────────────────────────
+    # Accumulate raw signals per TAM then normalise to a 0-100 capacity score.
+    # Factors (with rationale):
+    #   P0/P1 account     +8  — active fire, demands daily TAM attention
+    #   At Risk account   +4  — health=atrisk but no P0 yet; high watch load
+    #   Needs Attention   +2  — health=attention; moderate monitoring overhead
+    #   Open SR tickets   +0.5 each (cap 15) — direct customer-facing workload
+    #   Open Eng tickets  +0.3 each (cap 8)  — coordination with engineering
+    #   Accounts managed  +3 each (cap 10)   — base management overhead
+    #   Impl/Onboarding   +3 per account     — highest-touch lifecycle phase
+    # Raw scores are clamped to 0-100 via a soft cap of 80 = "full".
+    LOAD_SOFT_CAP = 80   # raw score at which capacity reads 100 %
+
+    tam_map = {}
     for cr in customer_results:
-        owner = cr["config"].get("exec_sponsor","—") or "—"
-        if owner not in owner_map: owner_map[owner]={"p0":0,"sup":0,"customers":[]}
-        owner_map[owner]["p0"]  += cr["p0_count"]
-        owner_map[owner]["sup"] += cr["sup_count"]
-        owner_map[owner]["customers"].append(cr["config"]["name"].split()[0])
-    avatar_colors=[{"bg":"#E6F1FB","col":"#0C447C"},{"bg":"#EEEDFE","col":"#3C3489"},{"bg":"#EAF3DE","col":"#27500A"},{"bg":"#FAEEDA","col":"#633806"},{"bg":"#FBEAF0","col":"#72243E"},{"bg":"#E1F5EE","col":"#085041"}]
-    owner_rows=""
-    for idx,(owner,d) in enumerate(sorted(owner_map.items(),key=lambda x:-x[1]["p0"])[:5]):
-        ac=avatar_colors[idx%len(avatar_colors)]; parts=owner.split()
-        initials=(parts[0][0]+(parts[1][0] if len(parts)>1 else parts[0][-1])).upper() if parts else "—"
-        custs=", ".join(d["customers"][:3])+("…" if len(d["customers"])>3 else "")
-        p0col="#E53E3E" if d["p0"]>0 else "#D69E2E"
-        supcol="#DD6B20" if d["sup"]>5 else "#D69E2E" if d["sup"]>2 else "#38A169"
-        owner_rows+=(f'<div class="owner-row"><div class="owner-info"><div class="owner-avatar" style="background:{ac["bg"]};color:{ac["col"]}">{initials}</div>'
-                     f'<div><div class="owner-name">{owner}</div><div class="owner-meta">{custs}</div></div></div>'
-                     f'<div class="owner-counts"><div class="oc"><div class="oc-val" style="color:{p0col}">{d["p0"]}</div><div class="oc-label">P0s</div></div>'
-                     f'<div class="oc"><div class="oc-val" style="color:{supcol}">{d["sup"]}</div><div class="oc-label">SR</div></div></div></div>')
+        tam = cr["config"].get("tam_primary","—") or "—"
+        if tam == "—": continue
+        if tam not in tam_map:
+            tam_map[tam] = {"p0":0,"sup":0,"eng":0,"accounts":0,
+                            "atrisk":0,"attention":0,"impl":0,
+                            "raw_load":0,"customers":[],"crits":[]}
+        d = tam_map[tam]
+        d["accounts"]  += 1
+        d["p0"]        += cr["p0_count"]
+        d["sup"]       += cr["sup_count"]
+        d["eng"]       += cr["eng_count"]
+        d["customers"].append(cr["config"]["name"].split()[0])
+        hk = cr["health_key"]
+        if hk == "atrisk":    d["atrisk"]    += 1
+        if hk == "attention": d["attention"] += 1
+        if cr["config"].get("phase") in ("Onboarding","Implementation"): d["impl"] += 1
+        if cr["p0_count"] > 0: d["crits"].append(cr["config"]["name"].split()[0])
+
+    for tam, d in tam_map.items():
+        raw = (d["p0"]        * 8 +
+               d["atrisk"]    * 4 +
+               d["attention"] * 2 +
+               min(d["sup"] * 0.5, 15) +
+               min(d["eng"] * 0.3,  8) +
+               min(d["accounts"] * 3, 10) +
+               d["impl"]      * 3)
+        d["raw_load"] = raw
+        d["pct"]      = min(round(raw / LOAD_SOFT_CAP * 100), 100)
+
+    avatar_colors=[{"bg":"#E6F1FB","col":"#0C447C"},{"bg":"#EEEDFE","col":"#3C3489"},
+                   {"bg":"#EAF3DE","col":"#27500A"},{"bg":"#FAEEDA","col":"#633806"},
+                   {"bg":"#FBEAF0","col":"#72243E"},{"bg":"#E1F5EE","col":"#085041"}]
+
+    # Sort by load descending so most-loaded TAM shows first
+    sorted_tams = sorted(tam_map.items(), key=lambda x: -x[1]["pct"])
+
+    # Recommendation: least-loaded TAM who is not over capacity
+    best_tam     = next((t for t,d in reversed(sorted_tams) if d["pct"] < 70), None)
+    best_tam_row = ""
+    if best_tam:
+        bd = tam_map[best_tam]
+        best_tam_row = (f'<div style="margin:0 1rem .75rem;padding:.6rem .75rem;background:#EAF3DE;'
+                        f'border-radius:6px;border:.5px solid #97C459;display:flex;align-items:center;gap:8px">'
+                        f'<span style="font-size:13px">✅</span>'
+                        f'<div><div style="font-size:11px;font-weight:700;color:#27500A">Recommended for next account: {best_tam}</div>'
+                        f'<div style="font-size:10px;color:#3A6E1F;margin-top:1px">'
+                        f'{bd["accounts"]} accounts · {bd["pct"]}% capacity · {bd["sup"]} SR open</div></div></div>')
+
+    owner_rows = ""
+    for idx, (tam, d) in enumerate(sorted_tams):
+        ac      = avatar_colors[idx % len(avatar_colors)]
+        parts   = tam.split()
+        initials= (parts[0][0]+(parts[1][0] if len(parts)>1 else parts[0][-1])).upper() if parts else "—"
+        pct     = d["pct"]
+        # Bar colour and status label
+        if pct >= 85:
+            bar_col, status, status_bg, status_col = "#E53E3E", "Over capacity", "#FFF5F5", "#A32D2D"
+        elif pct >= 65:
+            bar_col, status, status_bg, status_col = "#DD6B20", "Busy",          "#FFFAF0", "#854F0B"
+        elif pct >= 35:
+            bar_col, status, status_bg, status_col = "#D69E2E", "Available",     "#FFFDF0", "#7A5A00"
+        else:
+            bar_col, status, status_bg, status_col = "#38A169", "Has bandwidth", "#EAF3DE", "#27500A"
+
+        custs   = ", ".join(d["customers"][:4]) + ("…" if len(d["customers"]) > 4 else "")
+        crit_note = (f' · 🚨 {", ".join(d["crits"][:2])}' if d["crits"] else "")
+        impl_note = (f' · 🔄 {d["impl"]} impl' if d["impl"] else "")
+
+        # Breakdown tooltip text
+        breakdown = (f'{d["accounts"]} accts'
+                     f' · {d["p0"]} P0s'
+                     f' · {d["sup"]} SR'
+                     f' · {d["eng"]} TS eng'
+                     f'{crit_note}{impl_note}')
+
+        owner_rows += f"""<div class="tam-row">
+  <div class="tam-top">
+    <div class="tam-info">
+      <div class="owner-avatar" style="background:{ac['bg']};color:{ac['col']};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">{initials}</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#172B4D;line-height:1.2">{tam}</div>
+        <div style="font-size:10px;color:#5E6C84;margin-top:1px">{custs}</div>
+      </div>
+    </div>
+    <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:{status_bg};color:{status_col};flex-shrink:0">{status}</span>
+  </div>
+  <div class="tam-bar-wrap">
+    <div class="tam-bar-track">
+      <div class="tam-bar-fill" style="width:{pct}%;background:{bar_col}"></div>
+    </div>
+    <span class="tam-pct" style="color:{bar_col}">{pct}%</span>
+  </div>
+  <div class="tam-breakdown">{breakdown}</div>
+</div>"""
 
     top5 = sorted([cr for cr in customer_results if cr["sup_count"]>0],key=lambda x:-x["sup_count"])[:5]
     trend_max = top5[0]["sup_count"] if top5 else 1
@@ -1421,6 +1563,17 @@ def build_master_html(customer_results):
 .filter-btn{{font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:.5px solid #DFE1E6;background:#fff;color:#5E6C84;cursor:pointer}}
 .filter-btn.active{{background:#0B1F45;color:#fff;border-color:#0B1F45}}
 .search-input{{flex:1;max-width:220px;padding:5px 12px;border-radius:20px;border:.5px solid #DFE1E6;font-size:12px;outline:none;background:#fff;color:#172B4D}}
+.tam-row{{padding:.75rem 1rem;border-bottom:.5px solid #DFE1E6}}
+.tam-row:last-child{{border-bottom:none}}
+.tam-top{{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}}
+.tam-info{{display:flex;align-items:center;gap:8px;min-width:0}}
+.tam-bar-wrap{{display:flex;align-items:center;gap:7px;margin-bottom:4px}}
+.tam-bar-track{{flex:1;height:7px;background:#F4F5F7;border-radius:4px;overflow:hidden}}
+.tam-bar-fill{{height:100%;border-radius:4px;transition:width .4s ease}}
+.tam-pct{{font-size:11px;font-weight:700;width:32px;text-align:right;flex-shrink:0}}
+.tam-breakdown{{font-size:10px;color:#A0AEC0;line-height:1.4}}
+.master-logic-drawer{{display:none;border-top:.5px solid #DFE1E6;background:#FAFBFC}}
+.master-logic-drawer.open{{display:block}}
 </style></head><body>
 {NAV_MASTER}
 <div class="hero">
@@ -1459,7 +1612,75 @@ def build_master_html(customer_results):
     </div>
     <div><div class="sec"><div class="sec-head"><span class="sec-title">Customer health heatmap</span><span style="font-size:10px;color:#5E6C84">Click any cell to drill in</span></div><div class="heatmap">{heatmap_cells}</div></div></div>
     <div>
-      <div class="sb-sec"><div class="sb-head">CSE ownership summary</div>{owner_rows}</div>
+      <div class="sb-sec">
+        <div class="sb-head" style="display:flex;align-items:center;justify-content:space-between">
+          <span>TAM / TPM capacity</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;color:#5E6C84;font-weight:400">sorted by load</span>
+            <button onclick="toggleMasterLogic()" id="master-logic-btn"
+              style="font-size:10px;font-weight:600;color:#7B2FBE;background:#EEEDFE;border:.5px solid #C4B9F5;
+                     border-radius:10px;padding:2px 9px;cursor:pointer;line-height:1.6">⚙️ Logic</button>
+          </div>
+        </div>
+        <div class="master-logic-drawer" id="master-logic-drawer">
+          <div style="padding:.75rem 1rem .25rem;font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em">TAM Load Scoring Formula</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:.5rem 1rem 1rem">
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#E53E3E"></span>🚨 P0/P1 Account</span></div>
+              <div class="jql-code">+8 pts per account with active P0/P1
+Rationale: active fire — daily calls,
+escalations, executive pressure</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FC8181"></span>⚠️ At Risk Account</span></div>
+              <div class="jql-code">+4 pts per At Risk account (no P0)
+Rationale: high watch load — imminent
+escalation risk, needs close monitoring</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FFC107"></span>👀 Needs Attention Account</span></div>
+              <div class="jql-code">+2 pts per Needs Attention account
+Rationale: regular check-ins required,
+moderate monitoring overhead</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 Open SR Tickets</span></div>
+              <div class="jql-code">+0.5 pts each · capped at 15 pts
+Rationale: direct customer-facing
+workload across all accounts</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ Open TS Eng Tickets</span></div>
+              <div class="jql-code">+0.3 pts each · capped at 8 pts
+Rationale: engineering coordination
+and follow-up overhead</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#1A6FDB"></span>📋 Accounts Managed</span></div>
+              <div class="jql-code">+3 pts per account · capped at 10 pts
+Rationale: base management overhead
+per account regardless of activity</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#0D6E85"></span>🔄 Impl / Onboarding</span></div>
+              <div class="jql-code">+3 pts per active impl account
+Rationale: highest-touch phase —
+onboarding is effectively a second job</div>
+            </div>
+            <div class="jql-block">
+              <div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#38A169"></span>📊 Capacity Thresholds</span></div>
+              <div class="jql-code">≥ 85%  →  Over capacity  🔴
+65–84% →  Busy           🟠
+35–64% →  Available      🟡
+&lt;  35%  →  Has bandwidth 🟢
+Soft cap: raw score 80 = 100%</div>
+            </div>
+          </div>
+          <div class="jql-footer" style="border-top:.5px solid #DFE1E6">⚙️ Raw score = sum of all factors above · divided by soft cap (80) · clamped to 100% &nbsp;·&nbsp; Recommendation = least-loaded TAM under 70%</div>
+        </div>
+        {best_tam_row}
+        {owner_rows}
+      </div>
       <div class="sb-sec"><div class="sb-head">This week's highlights</div><div style="padding:.75rem 1rem">{highlights_html}</div></div>
     </div>
   </div>
@@ -1478,6 +1699,7 @@ def build_master_html(customer_results):
 <script>
 function filterCards(h,btn){{document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.cust-card').forEach(el=>{{el.style.display=h==='all'||el.dataset.health===h?'':'none';}});}}
 function searchCards(q){{q=q.toLowerCase();document.querySelectorAll('.cust-card').forEach(el=>{{el.style.display=(el.dataset.name||'').includes(q)?'':'none';}});}}
+function toggleMasterLogic(){{const d=document.getElementById('master-logic-drawer'),btn=document.getElementById('master-logic-btn'),open=d.classList.contains('open');d.classList.toggle('open');btn.textContent=open?'⚙️ Logic':'⚙️ Hide';btn.style.background=open?'#EEEDFE':'#7B2FBE';btn.style.color=open?'#7B2FBE':'#fff';btn.style.borderColor=open?'#C4B9F5':'#7B2FBE';}}
 </script></body></html>"""
 
 
