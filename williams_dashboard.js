@@ -1,9 +1,9 @@
 
 var CHART_DATA={
   labels:["Oct 20", "Nov 20", "Dec 20", "Jan 20", "Feb 20", "Mar 20"],
-  open:[0, 0, 0, 0, 0, 0],
-  resolved:[0, 0, 0, 0, 0, 0],
-  yMax:4
+  open:[0, 0, 0, 3, 0, 7],
+  resolved:[8, 4, 13, 18, 13, 27],
+  yMax:30
 };
 function initChart(){
   var canvas=document.getElementById('trendChart');
@@ -76,7 +76,7 @@ if(document.readyState==='loading'){
   initChart();
 }
 
-var DATA={"p0p1": 0, "support": 10, "features": 10, "eng_tickets": 5, "resolved": 27, "pendingEng": 4, "p0keys": [], "highKeys": ["SR-8520", "SR-8414", "SR-8220"], "generated": "Mar 28, 2026 11:56 EST", "score": 4, "scoreLabel": "Needs Attention", "scoreColor": "#FC8181"};
+var DATA={"p0p1": 0, "support": 10, "features": 10, "eng_tickets": 5, "resolved": 84, "pendingEng": 4, "p0keys": [], "highKeys": ["SR-8520", "SR-8414", "SR-8220"], "generated": "Mar 28, 2026 12:08 EST", "score": 4, "scoreLabel": "Needs Attention", "scoreColor": "#FC8181"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
