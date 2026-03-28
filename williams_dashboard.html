@@ -118,7 +118,7 @@ tr:last-child td{border-bottom:none}
 </div>
 <div style="background:#0D2252;border-bottom:1px solid #122752;padding:.35rem 1.5rem;display:flex;align-items:center;gap:1.5rem">
   <a href="https://williams.tessell.com/" target="_blank" style="font-size:11px;color:#00C2E0;text-decoration:none;font-weight:600">↗ https://williams.tessell.com/</a>
-  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">Mar 28, 2026 12:31 EST</span></span>
+  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">Mar 28, 2026 12:52 EST</span></span>
 </div>
 <div class="body">
   <div class="metrics" style="grid-template-columns:repeat(8,1fr)">
@@ -137,8 +137,8 @@ tr:last-child td{border-bottom:none}
       <div style="padding:1rem 1.25rem;border-right:.5px solid #DFE1E6"><div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">Impacting Factors</div><div id="health-factors"></div></div>
       <div style="padding:1rem 1.25rem"><div style="font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem">How to Improve</div><div id="health-actions"></div></div>
     </div>
-    <div style="padding:.75rem 1.25rem;background:#FAFBFC;display:flex;align-items:center;gap:6px">
-      <div style="flex:1;height:8px;background:#F4F5F7;border-radius:4px;overflow:hidden"><div style="height:100%;border-radius:4px;background:#FC8181;width:40%;transition:width .6s ease"></div></div>
+      <div style="padding:.75rem 1.25rem;background:#FAFBFC;display:flex;align-items:center;gap:6px">
+      <div style="flex:1;height:8px;background:#F4F5F7;border-radius:4px;overflow:hidden"><div id="health-drawer-bar" style="height:100%;border-radius:4px;background:#FC8181;width:0%;transition:width .9s cubic-bezier(.22,1,.36,1)"></div></div>
       <span style="font-size:11px;font-weight:700;color:#FC8181">4/10</span>
       <span style="font-size:10px;color:#5E6C84">· Max deduction: 6 pts</span>
     </div>
@@ -220,15 +220,15 @@ tr:last-child td{border-bottom:none}
           <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.75rem">
             <div><div class="ai-eyebrow">✦ Health Analysis</div><div class="ai-title" style="margin-bottom:0">Customer Health Assessment</div></div>
             <div style="text-align:right;flex-shrink:0;margin-left:1rem">
-              <div id="health-score-num" style="font-size:32px;font-weight:800;color:#FC8181;line-height:1">4/10</div>
+              <div id="health-score-num" style="font-size:32px;font-weight:800;color:#FC8181;line-height:1">0/10</div>
               <div id="health-score-label" style="font-size:11px;font-weight:700;color:#FC8181;margin-top:2px">Needs Attention</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
-              <div id="health-score-bar" style="height:100%;border-radius:3px;background:#FC8181;width:40%;transition:width .6s ease"></div>
+              <div id="health-score-bar" style="height:100%;border-radius:3px;background:#FC8181;width:0%;transition:width .9s cubic-bezier(.22,1,.36,1)"></div>
             </div>
-            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 28, 2026 12:31 EST</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 28, 2026 12:52 EST</span>
           </div>
         </div>
         <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)"><div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div><div style="position:relative;height:180px;width:100%"><canvas id="trendChart"></canvas></div></div>
@@ -255,6 +255,169 @@ tr:last-child td{border-bottom:none}
 <div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8514" target="_blank">SR-8514</a> — Update on SR-8514</div><div class="tl-d">Hi Thomas, Warm greetings from SRE – Tessell. My name is RK.Bandaru and I am assisting your ticket today. Thank you for  — RK Bandaru</div><div class="tl-dt">Mar 27, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#E6F1FB">💬</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8532" target="_blank">SR-8532</a> — Update on SR-8532</div><div class="tl-d">/   Please take care of this — Raveendra Dodda</div><div class="tl-dt">Mar 26, 2026</div></div></div>
 <div class="tl-item"><div class="tl-ic" style="background:#F4F5F7">🔄</div><div class="tl-content"><div class="tl-t"><a class="tlink" href="https://tessell.atlassian.net/browse/SR-8532" target="_blank">SR-8532</a> — SR-8532 status → Scheduled Activity</div><div class="tl-d">Can you apply latest OS patches to the servers in the attached list?   — Raveendra Dodda</div><div class="tl-dt">Mar 26, 2026</div></div></div></div></div>
+      <div class="sb-sec" style="overflow:hidden">
+        <div class="sb-head">📊 CS Analytics</div>
+        
+<div style="padding:.75rem 1rem 1rem">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1rem">
+    <div style="font-size:11px;font-weight:700;color:#172B4D;text-transform:uppercase;letter-spacing:.06em">Recurring Issue Themes</div>
+    <div style="font-size:10px;color:#A0AEC0">last 90d · click to expand</div>
+  </div>
+
+  <!-- Month column headers -->
+  <div style="display:grid;grid-template-columns:14px 110px 1fr 24px;gap:8px;margin-bottom:6px;align-items:center">
+    <div></div><div></div>
+    <div id="ta-mh-williams" style="display:flex;gap:2px"></div>
+    <div></div>
+  </div>
+
+  <div id="ta-rows-williams"></div>
+
+  <div style="height:.5px;background:#DFE1E6;margin:.75rem 0"></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#E06355,#B94030)"></div><span style="font-size:10px;color:#5E6C84">Critical</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#E8A84A,#B97020)"></div><span style="font-size:10px;color:#5E6C84">High</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#5E9EE8,#2060B0)"></div><span style="font-size:10px;color:#5E6C84">Medium</span></div>
+    <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;height:6px;border-radius:2px;background:linear-gradient(90deg,#a0a0a0,#686868)"></div><span style="font-size:10px;color:#5E6C84">Low</span></div>
+    <div style="margin-left:auto;font-size:9px;color:#A0AEC0">lighter=older · darker=recent</div>
+  </div>
+</div>
+<style>
+.ta-row-williams {display:grid;grid-template-columns:14px 110px 1fr 24px;gap:8px;align-items:center;cursor:pointer;margin-bottom:11px}
+.ta-row-williams:hover .ta-name {color:#172B4D}
+.ta-seg-track {display:flex;gap:2px;height:18px}
+.ta-seg {height:100%;border-radius:4px;flex:0 0 0px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.ta-seg-lbl {font-size:9px;font-weight:500;color:rgba(255,255,255,.85);opacity:0;transition:opacity .15s;white-space:nowrap}
+.ta-row-williams:hover .ta-seg-lbl {opacity:1}
+.ta-detail {max-height:0;overflow:hidden;transition:max-height .38s cubic-bezier(.4,0,.2,1)}
+.ta-detail.open {max-height:160px}
+.ta-detail-inner {background:#F8F9FA;border-radius:6px;padding:.6rem .75rem;margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ta-dp-months {display:flex;gap:6px}
+.ta-dp-month {flex:1;text-align:center}
+.ta-dp-bar-track {height:36px;display:flex;align-items:flex-end;justify-content:center}
+.ta-dp-bar {width:22px;border-radius:2px 2px 0 0;height:0;transition:height .5s cubic-bezier(.22,1,.36,1)}
+.ta-dp-examples {border-left:.5px solid #DFE1E6;padding-left:8px}
+@keyframes ta-slide-in {from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:translateX(0)}}
+</style>
+<script>
+(function(){
+  var THEMES=[{"label": "Connectivity", "sev": "Critical", "shades": ["#F4AFA9", "#E06355", "#B94030"], "monthly": [0, 1, 1], "total": 2, "ex": ["SR-8520: CIDR ranges on azure portal for tessell servers.", "SR-7767: Node Down alert (Does not have info. about service name"]}, {"label": "Patching & Upgrades", "sev": "Medium", "shades": ["#AECAF4", "#5E9EE8", "#2060B0"], "monthly": [0, 0, 2], "total": 2, "ex": ["SR-8532: Can you apply latest OS patches to the servers in the a", "SR-8377: Requesting latest OS patches for third week of March sc"]}, {"label": "Provisioning", "sev": "Medium", "shades": ["#AECAF4", "#5E9EE8", "#2060B0"], "monthly": [1, 0, 1], "total": 2, "ex": ["SR-8414: Clone refresh failed for service sn-or-pp-gpapp  on 3/1", "SR-7650: sn-pg-qa-quotemaster3 creation failed in Google Cloud P"]}, {"label": "Auth & Access", "sev": "High", "shades": ["#FAD9A8", "#E8A84A", "#B97020"], "monthly": [0, 0, 1], "total": 1, "ex": ["SR-8220: Unable to add Williams logins to the SQL Servers in GCP"]}];
+  var MONTHS=["Jan", "Feb", "Mar"];
+  var GMAX=2;
+  var custId='williams';
+  var openIdx=null;
+
+  // Month headers
+  var mhEl=document.getElementById('ta-mh-'+custId);
+  if(mhEl){MONTHS.forEach(function(m){var d=document.createElement('div');d.style.cssText='flex:1;text-align:center;font-size:9px;color:#A0AEC0;letter-spacing:.04em';d.textContent=m.toUpperCase();mhEl.appendChild(d);});}
+
+  var rowsEl=document.getElementById('ta-rows-'+custId);
+  if(!rowsEl)return;
+
+  THEMES.forEach(function(t,i){
+    var total=t.total;
+    var mMax=Math.max.apply(null,t.monthly)||1;
+    var sevColor=t.sev==='Critical'?'#B94030':t.sev==='High'?'#B97020':t.sev==='Medium'?'#2060B0':'#686868';
+    var sevBg=t.sev==='Critical'?'#FDECEA':t.sev==='High'?'#FEF3E2':t.sev==='Medium'?'#E8F0FC':'#F4F4F4';
+
+    var wrap=document.createElement('div');
+    wrap.style.animation='ta-slide-in .35s ease '+(i*.06)+'s both';
+
+    // Row
+    var row=document.createElement('div');
+    row.className='ta-row-'+custId;
+
+    var rank=document.createElement('div');
+    rank.style.cssText='font-size:10px;color:#A0AEC0;text-align:right';
+    rank.textContent=i+1;
+
+    var nameWrap=document.createElement('div');
+    nameWrap.innerHTML='<div class="ta-name" style="font-size:11px;font-weight:500;color:#5E6C84;transition:color .2s">'+t.label+'</div>'
+      +'<span style="font-size:8px;font-weight:500;padding:1px 5px;border-radius:10px;color:'+sevColor+';background:'+sevBg+'">'+t.sev+'</span>';
+
+    var track=document.createElement('div');
+    track.className='ta-seg-track';
+    t.monthly.forEach(function(v,mi){
+      var seg=document.createElement('div');
+      seg.className='ta-seg';
+      seg.style.background=t.shades[mi];
+      seg.dataset.target=v;
+      var lbl=document.createElement('div');
+      lbl.className='ta-seg-lbl';
+      lbl.textContent=v||'';
+      seg.appendChild(lbl);
+      track.appendChild(seg);
+    });
+
+    var totalEl=document.createElement('div');
+    totalEl.style.cssText='font-size:11px;font-weight:500;color:#5E6C84;text-align:right';
+    totalEl.textContent=total;
+
+    row.appendChild(rank);row.appendChild(nameWrap);row.appendChild(track);row.appendChild(totalEl);
+
+    // Detail panel
+    var panel=document.createElement('div');
+    panel.className='ta-detail';
+    var inner=document.createElement('div');
+    inner.className='ta-detail-inner';
+
+    var mDiv=document.createElement('div');
+    mDiv.className='ta-dp-months';
+    t.monthly.forEach(function(v,mi){
+      var diff=mi>0?v-t.monthly[mi-1]:null;
+      var dHtml=diff===null?'':diff>0?'<div style="font-size:9px;color:#B94030;margin-top:1px">▲ +'+diff+'</div>':diff<0?'<div style="font-size:9px;color:#2A7A4A;margin-top:1px">▼ '+diff+'</div>':'<div style="font-size:9px;color:#A0AEC0;margin-top:1px">— same</div>';
+      var mMonth=document.createElement('div');
+      mMonth.className='ta-dp-month';
+      mMonth.innerHTML='<div style="font-size:9px;color:#A0AEC0;margin-bottom:2px">'+MONTHS[mi]+'</div>'
+        +'<div class="ta-dp-bar-track"><div class="ta-dp-bar" style="background:'+t.shades[mi]+'" data-h="'+Math.round(v/mMax*34)+'"></div></div>'
+        +'<div style="font-size:12px;font-weight:500;color:'+t.shades[2]+';margin-top:2px">'+v+'</div>'+dHtml;
+      mDiv.appendChild(mMonth);
+    });
+
+    var exDiv=document.createElement('div');
+    exDiv.className='ta-dp-examples';
+    exDiv.innerHTML='<div style="font-size:9px;color:#A0AEC0;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px">Recent tickets</div>'
+      +t.ex.map(function(e){return '<div style="font-size:10px;color:#5E6C84;margin-bottom:3px">· '+e+'</div>';}).join('');
+
+    inner.appendChild(mDiv);inner.appendChild(exDiv);panel.appendChild(inner);
+    wrap.appendChild(row);wrap.appendChild(panel);
+    rowsEl.appendChild(wrap);
+
+    row.addEventListener('click',function(){
+      var isOpen=panel.classList.contains('open');
+      document.querySelectorAll('.ta-detail.open').forEach(function(p){
+        p.classList.remove('open');
+        p.querySelectorAll('.ta-dp-bar').forEach(function(b){b.style.height='0';});
+      });
+      if(!isOpen){
+        panel.classList.add('open');
+        openIdx=i;
+        setTimeout(function(){
+          panel.querySelectorAll('.ta-dp-bar[data-h]').forEach(function(b){
+            b.style.height=b.dataset.h+'px';
+          });
+        },50);
+      } else { openIdx=null; }
+    });
+  });
+
+  // Animate segments in after row entrance
+  setTimeout(function(){
+    rowsEl.querySelectorAll('.ta-seg-track').forEach(function(track,ri){
+      var segs=track.querySelectorAll('.ta-seg');
+      var delay=ri*70;
+      segs.forEach(function(seg,mi){
+        var v=parseInt(seg.dataset.target)||0;
+        setTimeout(function(){
+          seg.style.transition='flex-basis .7s cubic-bezier(.22,1,.36,1)';
+          seg.style.flexBasis=Math.round(v/GMAX*100)+'%';
+        },delay+mi*55);
+      });
+    });
+  },180);
+})();
+</script>
+      </div>
     </div>
   </div>
 </div>

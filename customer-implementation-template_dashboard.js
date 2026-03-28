@@ -8,8 +8,12 @@ var CHART_DATA={
 function initChart(){
   var canvas=document.getElementById('trendChart');
   if(!canvas)return;
-  var W=canvas.offsetWidth||canvas.parentElement&&canvas.parentElement.offsetWidth||0;
-  if(W<10){requestAnimationFrame(initChart);return;}
+  // In Confluence iframes offsetWidth is often 0 — walk up the DOM for a real width,
+  // then fall back to a fixed 600px so bars always render.
+  var W=0;
+  var el=canvas;
+  while(el&&W<10){W=el.offsetWidth||0;el=el.parentElement;}
+  if(W<10)W=600;
   var H=180;
   var dpr=window.devicePixelRatio||1;
   canvas.width=W*dpr; canvas.height=H*dpr;
@@ -76,7 +80,7 @@ if(document.readyState==='loading'){
   initChart();
 }
 
-var DATA={"p0p1": 0, "support": 0, "features": 1, "eng_tickets": 1, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 28, 2026 12:33 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+var DATA={"p0p1": 0, "support": 0, "features": 1, "eng_tickets": 1, "resolved": 0, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 28, 2026 12:53 EST", "score": 9, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
@@ -117,6 +121,40 @@ function runHealth(DATA) {
 window.addEventListener('DOMContentLoaded',function(){
   try{runHealth(DATA);}catch(e){console.error('runHealth:',e);}
   try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer:',e);}
+
+  // ── Health bar + score count-up animation ──────────────────────────────────
+  var targetScore=DATA.score;
+  var targetPct=targetScore*10;
+
+  // Animate the main panel bar
+  var bar=document.getElementById('health-score-bar');
+  if(bar){
+    setTimeout(function(){bar.style.width=targetPct+'%';},120);
+  }
+
+  // Animate the drawer bar (only exists once drawer is opened,
+  // but set it preemptively in case drawer is already open)
+  var dbar=document.getElementById('health-drawer-bar');
+  if(dbar){
+    setTimeout(function(){dbar.style.width=targetPct+'%';},120);
+  }
+
+  // Count-up the score number 0 → score over 700ms with easeOutQuart
+  var numEl=document.getElementById('health-score-num');
+  if(numEl){
+    var start=null;
+    var dur=700;
+    function countUp(ts){
+      if(!start)start=ts;
+      var prog=Math.min((ts-start)/dur,1);
+      var ease=1-Math.pow(1-prog,4);
+      var cur=Math.round(ease*targetScore);
+      numEl.textContent=cur+'/10';
+      if(prog<1)requestAnimationFrame(countUp);
+      else numEl.textContent=targetScore+'/10';
+    }
+    setTimeout(function(){requestAnimationFrame(countUp);},80);
+  }
 });
 function toggleDrawer(dId,mId){var d=document.getElementById(dId),m=document.getElementById(mId),open=d.classList.contains('open');document.querySelectorAll('.drawer').forEach(function(x){x.classList.remove('open');});document.querySelectorAll('.metric').forEach(function(x){x.classList.remove('active');});if(!open){d.classList.add('open');m.classList.add('active');if(dId==='drawer-health'){try{buildHealthDrawer(DATA);}catch(e){console.error('buildHealthDrawer:',e);}};}}
 function copyJql(btn,key){var el=document.getElementById('jql-'+key);if(!el)return;navigator.clipboard.writeText(el.textContent.trim()).then(function(){var orig=btn.textContent;btn.textContent='Copied!';btn.style.color='#38A169';setTimeout(function(){btn.textContent=orig;btn.style.color='';},1500);}).catch(function(){btn.textContent='Failed';setTimeout(function(){btn.textContent='Copy';},1500);});}
