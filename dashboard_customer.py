@@ -148,10 +148,11 @@ function initChart(){{
         ctx.textAlign='center';
         ctx.fillText(CHART_DATA.labels[gi],cx,H-8);
       }}
-      ctx.fillStyle='rgba(26,111,219,0.88)';ctx.fillRect(W-PAD.right-90,6,8,8);
-      ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font='9px system-ui,sans-serif';ctx.textAlign='left';ctx.fillText('Open (SR)',W-PAD.right-79,14);
-      ctx.fillStyle='rgba(56,161,105,0.88)';ctx.fillRect(W-PAD.right-35,6,8,8);
-      ctx.fillStyle='rgba(255,255,255,0.6)';ctx.fillText('Resolved',W-PAD.right-24,14);
+      // Legend — top left, clear of bars
+      ctx.fillStyle='rgba(26,111,219,0.88)';ctx.fillRect(PAD.left,5,8,8);
+      ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font='9px system-ui,sans-serif';ctx.textAlign='left';ctx.fillText('Open (SR)',PAD.left+11,13);
+      ctx.fillStyle='rgba(56,161,105,0.88)';ctx.fillRect(PAD.left+68,5,8,8);
+      ctx.fillStyle='rgba(255,255,255,0.55)';ctx.fillText('Resolved',PAD.left+79,13);
       if(prog<1)requestAnimationFrame(draw);
     }}catch(e){{console.error('chart draw error:',e);}}
   }}
@@ -529,25 +530,29 @@ if(document.readyState==='loading'){{
         return ""
 
     def _ticket_row_eng(issue, tag_color="#00C2E0"):
-        key  = issue["key"]
-        f    = issue["fields"]
-        summ = (f.get("summary") or "")[:60]
-        tag  = _extract_release_tag(f)
+        key    = issue["key"]
+        f      = issue["fields"]
+        summ   = (f.get("summary") or "")[:60]
+        tag    = _extract_release_tag(f)
         status = (f.get("status", {}).get("name") or "Open")
-        url  = f"{JIRA_BASE}/browse/{key}"
+        url    = f"{JIRA_BASE}/browse/{key}"
         tag_html = (f'<span style="font-size:9px;background:rgba(0,194,224,0.15);color:{tag_color};'
                     f'padding:1px 6px;border-radius:10px;white-space:nowrap">{tag}</span>') if tag else ""
-        return (f'<div style="padding:7px 0;border-bottom:.5px solid rgba(255,255,255,0.07);'
-                f'display:flex;align-items:flex-start;gap:8px">'
-                f'<div style="min-width:0;flex:1">'
-                f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'
-                f'<a href="{url}" target="_blank" style="font-size:10px;font-weight:700;'
-                f'color:#00C2E0;text-decoration:none;flex-shrink:0">{key}</a>'
-                f'{tag_html}</div>'
-                f'<div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4">{summ}</div>'
-                f'</div>'
-                f'<span style="font-size:9px;color:rgba(255,255,255,0.3);flex-shrink:0;margin-top:2px">{status}</span>'
-                f'</div>')
+        return (
+            f'<a href="{url}" target="_blank" style="display:flex;align-items:flex-start;gap:8px;'
+            f'padding:7px 0;border-bottom:.5px solid rgba(255,255,255,0.07);text-decoration:none;'
+            f'cursor:pointer;transition:background .15s;border-radius:4px;padding-left:4px;padding-right:4px"'
+            f' onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'"'
+            f' onmouseout="this.style.background=\'transparent\'">'
+            f'<div style="min-width:0;flex:1">'
+            f'<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'
+            f'<span style="font-size:10px;font-weight:700;color:#00C2E0;flex-shrink:0">{key}</span>'
+            f'{tag_html}</div>'
+            f'<div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4">{summ}</div>'
+            f'</div>'
+            f'<span style="font-size:9px;color:rgba(255,255,255,0.3);flex-shrink:0;margin-top:2px">{status}</span>'
+            f'</a>'
+        )
 
     # Features with release tags (committed/upcoming)
     committed_features = []
@@ -598,15 +603,19 @@ if(document.readyState==='loading'){{
             expand_items.append({"key": key, "summ": summ, "url": url})
 
     def _signal_row(item, color):
-        return (f'<div style="padding:6px 0;border-bottom:.5px solid rgba(255,255,255,0.07)'
-                f';display:flex;align-items:flex-start;gap:7px">'
-                f'<div style="width:5px;height:5px;border-radius:50%;background:{color}'
-                f';flex-shrink:0;margin-top:5px"></div>'
-                f'<div style="min-width:0">'
-                f'<a href="{item["url"]}" target="_blank" style="font-size:10px;font-weight:700'
-                f';color:{color};text-decoration:none">{item["key"]}</a>'
-                f'<span style="font-size:11px;color:rgba(255,255,255,0.65);margin-left:6px">{item["summ"]}</span>'
-                f'</div></div>')
+        return (
+            f'<a href="{item["url"]}" target="_blank" style="display:flex;align-items:flex-start;'
+            f'gap:7px;padding:6px 4px;border-bottom:.5px solid rgba(255,255,255,0.07);'
+            f'text-decoration:none;border-radius:4px;transition:background .15s"'
+            f' onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'"'
+            f' onmouseout="this.style.background=\'transparent\'">'
+            f'<div style="width:5px;height:5px;border-radius:50%;background:{color};'
+            f'flex-shrink:0;margin-top:5px"></div>'
+            f'<div style="min-width:0">'
+            f'<span style="font-size:10px;font-weight:700;color:{color}">{item["key"]}</span>'
+            f'<span style="font-size:11px;color:rgba(255,255,255,0.65);margin-left:6px">{item["summ"]}</span>'
+            f'</div></a>'
+        )
 
     maint_html  = "".join(_signal_row(i, "#FFA94D") for i in maint_items[:6]) or \
                   '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No maintenance signals found.</div>'
