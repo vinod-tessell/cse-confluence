@@ -92,8 +92,6 @@ body{background:#F4F5F7}
 .nl{font-size:12px;font-weight:500;color:rgba(255,255,255,0.45);text-decoration:none;padding-bottom:2px;border-bottom:2px solid transparent}
 .nl.active{color:#fff;border-color:#00C2E0}
 .nav-back{font-size:11px;color:#00C2E0;text-decoration:none}
-.nav-status{display:flex;align-items:center;gap:5px;font-size:11px;color:#7DDBA3;background:rgba(125,219,163,0.12);padding:3px 10px;border-radius:20px;border:.5px solid rgba(125,219,163,0.25)}
-.sdot{width:6px;height:6px;border-radius:50%;background:#7DDBA3}
 .body{padding:1.25rem 1.5rem}
 .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:1.25rem}
 .metric{background:#fff;border-radius:8px;padding:.9rem 1rem;border:.5px solid #DFE1E6;cursor:pointer;transition:box-shadow .15s}
@@ -122,20 +120,11 @@ tr:last-child td{border-bottom:none}
 .ai-eyebrow{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#00C2E0;margin-bottom:3px}
 .ai-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:8px}
 .ai-body{font-size:11px;color:rgba(255,255,255,0.75);line-height:1.7}
-.ai-footer{margin-top:8px;padding-top:8px;border-top:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between}
-.ai-score-label{font-size:10px;color:rgba(255,255,255,0.4)}
-.ai-score-val{font-size:22px;font-weight:800}
-.ai-score-max{font-size:11px;color:rgba(255,255,255,0.3)}
-.ai-ts{font-size:10px;color:rgba(255,255,255,0.3)}
 .sb-sec{background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1rem}
 .sb-head{padding:.7rem 1rem;border-bottom:.5px solid #DFE1E6;font-size:12px;font-weight:700;color:#172B4D}
 .ir{display:flex;align-items:center;justify-content:space-between;padding:7px 1rem;border-bottom:.5px solid #DFE1E6}
 .ir:last-child{border-bottom:none}
 .ilabel{font-size:11px;color:#5E6C84}.ival{font-size:11px;font-weight:600;color:#172B4D}
-.pulse-row{padding:7px 1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:flex-start;gap:7px}
-.pulse-row:last-child{border-bottom:none}
-.pdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:3px}
-.ptext{font-size:11px;color:#5E6C84;line-height:1.4}
 .fr-item{padding:9px 1.1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:flex-start;gap:8px}
 .fr-item:last-child{border-bottom:none}
 .fr-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;margin-top:1px}
@@ -211,7 +200,7 @@ tr:last-child td{border-bottom:none}
 </div>
 <div style="background:#0D2252;border-bottom:1px solid #122752;padding:.35rem 1.5rem;display:flex;align-items:center;gap:1.5rem">
   <a href="https://brocacef.tessell.com/" target="_blank" style="font-size:11px;color:#00C2E0;text-decoration:none;font-weight:600">↗ https://brocacef.tessell.com/</a>
-  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">Mar 27, 2026 23:49 EST</span></span>
+  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">Mar 28, 2026 00:16 EST</span></span>
 </div>
 <div class="body">
   <div class="metrics" style="grid-template-columns:repeat(8,1fr)">
@@ -361,13 +350,13 @@ tr:last-child td{border-bottom:none}
             <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
               <div id="health-score-bar" style="height:100%;border-radius:3px;background:#68D391;width:100%;transition:width .6s ease"></div>
             </div>
-            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 27, 2026 23:49 EST</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 28, 2026 00:16 EST</span>
           </div>
         </div>
 
         <!-- ── Row 1: Chart full width ──────────────────────────────────────── -->
         <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
-          <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div><div style="position:relative;height:180px;width:100%"><canvas id="trendChart"></canvas></div><script>initChart();</scipt>
+          <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SR Ticket Trend — last 6 months</div><div style="position:relative;height:180px;width:100%"><canvas id="trendChart"></canvas></div><script>initChart();</script>
         </div>
 
         <!-- ── Row 2: Findings+Actions | Customer Signals ───────────────────── -->
@@ -428,7 +417,7 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 <script>
-const DATA={"p0p1": 0, "support": 0, "features": 0, "eng_tickets": 1, "resolved": 1, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 27, 2026 23:49 EST", "score": 10, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
+const DATA={"p0p1": 0, "support": 0, "features": 0, "eng_tickets": 1, "resolved": 1, "pendingEng": 0, "p0keys": [], "highKeys": [], "generated": "Mar 28, 2026 00:16 EST", "score": 10, "scoreLabel": "Healthy", "scoreColor": "#68D391"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
@@ -454,7 +443,6 @@ function runHealth(DATA) {
   if(badge){badge.textContent=label;badge.style.color=color;}
   if(dot){dot.style.background=color;}
   if(badge&&badge.parentElement){badge.parentElement.style.borderColor=color+'4D';badge.parentElement.style.background=color+'1A';}
-  // Update score bar in health panel
   const bar=document.getElementById('health-score-bar'),barWrap=document.getElementById('health-score-label');
   if(bar){bar.style.width=(score*10)+'%';bar.style.background=color;}
   if(barWrap){barWrap.textContent=label;barWrap.style.color=color;}
