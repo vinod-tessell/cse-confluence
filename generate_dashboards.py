@@ -89,10 +89,10 @@ if __name__ == "__main__":
             data["resolved"], data["eng_tickets"],
         )
         html, page_js = build_customer_html(cust, data)
-        with open(filename, "w") as f:
+        with open(filename, "w", encoding="utf-8") as f:
                f.write(html)
         js_filename = filename.replace(".html", ".js")
-        with open(js_filename, "w") as f:
+        with open(js_filename, "w", encoding="utf-8") as f:
                f.write(page_js)
         print(f"  ✅ Written {filename} + {js_filename}")
 
@@ -136,7 +136,7 @@ if __name__ == "__main__":
     # ── Master dashboard — always rebuilt (no Jira calls) ─────────────────────
     print("\n── Master Dashboard (always rebuilt) ───────────────────────────")
     master = build_master_html(customer_results)
-    with open("master_dashboard.html", "w") as f:
+    with open("master_dashboard.html", "w", encoding="utf-8") as f:
         f.write(master)
     print("✅ master_dashboard.html written")
 
