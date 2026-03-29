@@ -75,10 +75,17 @@ def make_jqls(keyword):
         '712020:f7d4fcc5-f015-4d5c-a41e-99482b3ef30e,'
         '712020:44572c2a-2166-4401-9052-c7b4f1d3fd28'
     )
+    _feat_types  = 'issuetype in (Feature, Story) OR labels in ("FeatureRequest")'
+    _not_feat    = f'NOT ({_feat_types})'
     return {
         "p0p1":        f'project in (TS, SR) AND text ~ "{keyword}" AND (labels = P0 OR labels = P1) AND statusCategory != Done ORDER BY created DESC',
         "support":     f'project = SR AND text ~ "{keyword}" AND statusCategory != Done ORDER BY created DESC',
-        "features":    f'project = TS AND ("Customers[Labels]" IN ("{keyword}") OR text ~ "{keyword}") AND ({_feat}) AND statusCategory != Done AND created >= "2024-03-01" ORDER BY created DESC',
+        "features":    f'project = TS AND ("Customers[Labels]" IN ("{keyword}") OR text ~ "{keyword}") AND ({_feat_types}) AND statusCategory != Done AND created >= "2024-03-01" ORDER BY created DESC',
+        # Bugs filed by internal engineers since Jan 2026 — product defects
+        "eng_bugs":    f'project = TS AND text ~ "{keyword}" AND issuetype = Bug AND reporter IN ({_eng_reporters}) AND created >= "2026-01-01" AND statusCategory != Done ORDER BY created DESC',
+        # Non-feature, non-bug TS work — Tasks, Sub-tasks, Support, Spike, etc (engineering effort required)
+        "eng_tasks":   f'project = TS AND text ~ "{keyword}" AND {_not_feat} AND issuetype != Bug AND statusCategory != Done AND created >= "2024-03-01" ORDER BY created DESC',
+        # Keep eng_tickets as combined alias for health score computation (bugs + tasks)
         "eng_tickets": f'project = TS AND text ~ "{keyword}" AND issuetype = Bug AND reporter IN ({_eng_reporters}) AND created >= "2026-01-01" AND statusCategory != Done ORDER BY created DESC',
         "resolved":    f'project = SR AND text ~ "{keyword}" AND statusCategory = Done AND resolutiondate >= -180d ORDER BY resolutiondate DESC',
         "recent":      f'project in (TS, SR) AND text ~ "{keyword}" AND updated >= -30d ORDER BY updated DESC',
@@ -97,6 +104,8 @@ def fetch_customer_data(keyword):
     support     = jql(queries["support"],     max=500)
     resolved    = jql(queries["resolved"],    max=500)
     features    = jql(queries["features"],    max=100)
+    eng_bugs    = jql(queries["eng_bugs"],    max=100)
+    eng_tasks   = jql(queries["eng_tasks"],   max=100)
 
     # Debug: print first feature ticket to understand label/version structure
     if features.issues:
@@ -109,12 +118,14 @@ def fetch_customer_data(keyword):
     ticket_history = derive_monthly_buckets(support.issues, resolved.issues)
 
     return {
-        "p0p1":           jql(queries["p0p1"],        max=100),
+        "p0p1":           jql(queries["p0p1"],      max=100),
         "support":        support,
         "features":       features,
-        "eng_tickets":    jql(queries["eng_tickets"], max=100),
+        "eng_bugs":       eng_bugs,
+        "eng_tasks":      eng_tasks,
+        "eng_tickets":    jql(queries["eng_tickets"], max=100),  # kept for health score
         "resolved":       resolved,
-        "recent":         jql(queries["recent"],      max=12),
+        "recent":         jql(queries["recent"],    max=12),
         "ticket_history": ticket_history,
         "pulse":          fetch_pulse_from_comments(keyword),
         "jqls":           queries,
