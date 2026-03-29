@@ -76,10 +76,12 @@ if __name__ == "__main__":
             })
             continue
 
+        eng_total = len(data.get("eng_bugs", data["eng_tickets"])) + len(data.get("eng_tasks", []))
         print(
             f"  P0/P1:{len(data['p0p1'])}  "
             f"Support(SR):{len(data['support'])}  "
-            f"Eng(TS):{len(data['eng_tickets'])}  "
+            f"Eng(TS bugs):{len(data.get('eng_bugs', data['eng_tickets']))}  "
+            f"Eng(TS tasks):{len(data.get('eng_tasks', []))}  "
             f"Features:{len(data['features'])}  "
             f"Resolved(30d):{len(data['resolved'])}"
         )
@@ -88,14 +90,13 @@ if __name__ == "__main__":
             data["p0p1"], data["support"], data["features"],
             data["resolved"], data["eng_tickets"],
         )
+
         html, page_js = build_customer_html(cust, data)
-        with open(filename, "w", encoding="utf-8") as f:
-               f.write(html)
+        with open(filename, "w") as f:
+            f.write(html)
         js_filename = filename.replace(".html", ".js")
-        # Sanitise surrogate characters that some Python builds produce from emoji
-        page_js_clean = page_js.encode("utf-8", errors="replace").decode("utf-8")
-        with open(js_filename, "w", encoding="utf-8") as f:
-               f.write(page_js)
+        with open(js_filename, "w") as f:
+            f.write(page_js)
         print(f"  ✅ Written {filename} + {js_filename}")
 
         page_id = ensure_confluence_page(cust, gh_url)
@@ -110,7 +111,7 @@ if __name__ == "__main__":
             "health_key":   hk,    "health_label": label, "health_color": color,
             "p0_count":     len(data["p0p1"]),
             "sup_count":    len(data["support"]),
-            "eng_count":    len(data["eng_tickets"]),
+            "eng_count":    eng_total,
             "feat_count":   len(data["features"]),
             "dashboard_url": conf_url,
         })
@@ -121,7 +122,7 @@ if __name__ == "__main__":
             "health_key":  hk,    "health_label": label, "health_color": color,
             "p0_count":    len(data["p0p1"]),
             "sup_count":   len(data["support"]),
-            "eng_count":   len(data["eng_tickets"]),
+            "eng_count":   eng_total,
             "feat_count":  len(data["features"]),
         }
         save_build_state(build_state)   # crash-safe incremental save
@@ -138,7 +139,7 @@ if __name__ == "__main__":
     # ── Master dashboard — always rebuilt (no Jira calls) ─────────────────────
     print("\n── Master Dashboard (always rebuilt) ───────────────────────────")
     master = build_master_html(customer_results)
-    with open("master_dashboard.html", "w", encoding="utf-8") as f:
+    with open("master_dashboard.html", "w") as f:
         f.write(master)
     print("✅ master_dashboard.html written")
 
