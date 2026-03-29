@@ -106,14 +106,22 @@ if __name__ == "__main__":
 
         conf_url = confluence_page_url(cust.get("confluence_page_id", ""))
 
+        # Collect raw summaries for master dashboard theme/gap analysis
+        sup_summaries  = [(i["key"], i["fields"].get("summary","")) for i in data["support"].issues[:20]]
+        feat_summaries = [(i["key"], i["fields"].get("summary","")) for i in data["features"].issues[:20]]
+        eng_summaries  = [(i["key"], i["fields"].get("summary","")) for i in data.get("eng_bugs", data["eng_tickets"]).issues[:10]]
+
         customer_results.append({
-            "config":       cust,
-            "health_key":   hk,    "health_label": label, "health_color": color,
-            "p0_count":     len(data["p0p1"]),
-            "sup_count":    len(data["support"]),
-            "eng_count":    eng_total,
-            "feat_count":   len(data["features"]),
+            "config":        cust,
+            "health_key":    hk,    "health_label": label, "health_color": color,
+            "p0_count":      len(data["p0p1"]),
+            "sup_count":     len(data["support"]),
+            "eng_count":     eng_total,
+            "feat_count":    len(data["features"]),
             "dashboard_url": conf_url,
+            "sup_summaries":  sup_summaries,
+            "feat_summaries": feat_summaries,
+            "eng_summaries":  eng_summaries,
         })
         rebuilt.append(cust["name"])
 
