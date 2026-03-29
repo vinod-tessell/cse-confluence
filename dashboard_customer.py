@@ -663,6 +663,26 @@ if(document.readyState==='loading'){{
     if not features_html:
         features_html = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No open feature requests found.</div>'
 
+    # ── Maintenance / expansion signals from SR tickets ──────────────────────
+    # (must be computed before all_buckets so we can add them to unscheduled)
+    MAINT_KW = ["upgrade","patch","maintenance","scheduled","planned","migration",
+                "window","cutover","go-live","rollout","downtime","activity"]
+    EXPAND_KW = ["new environment","additional instance","new region","scale",
+                 "expand","additional db","new db","production setup","poc",
+                 "evaluation","pilot","onboard","new schema","new database"]
+
+    maint_items   = []
+    expand_items  = []
+    for issue in list(support.issues) + list(resolved.issues[:50]):
+        summ_l = (issue["fields"].get("summary") or "").lower()
+        key    = issue["key"]
+        summ   = (issue["fields"].get("summary") or "")[:65]
+        url    = f"{JIRA_BASE}/browse/{key}"
+        if any(k in summ_l for k in MAINT_KW) and key not in [x["key"] for x in maint_items]:
+            maint_items.append({"key": key, "summ": summ, "url": url})
+        if any(k in summ_l for k in EXPAND_KW) and key not in [x["key"] for x in expand_items]:
+            expand_items.append({"key": key, "summ": summ, "url": url})
+
     # ── Pool ALL ticket types into shared time buckets ───────────────────────
     # Each item: {issue, type: 'feature'|'bug'|'maint'|'expand'}
     all_buckets = {"week": [], "month": [], "quarter": [], "beyond": [], "unscheduled": []}
@@ -792,25 +812,6 @@ if(document.readyState==='loading'){{
         _timeline_section(bk, lbl, acc, bg)
         for bk, lbl, acc, bg in TIMELINE_BUCKETS
     ) or '<div style="padding:1.5rem;font-size:11px;color:rgba(255,255,255,0.3)">No upcoming items found for this customer.</div>'
-
-    # Maintenance / upgrade signals from SR tickets
-    MAINT_KW = ["upgrade","patch","maintenance","scheduled","planned","migration",
-                "window","cutover","go-live","rollout","downtime","activity"]
-    EXPAND_KW = ["new environment","additional instance","new region","scale",
-                 "expand","additional db","new db","production setup","poc",
-                 "evaluation","pilot","onboard","new schema","new database"]
-
-    maint_items   = []
-    expand_items  = []
-    for issue in list(support.issues) + list(resolved.issues[:50]):
-        summ_l = (issue["fields"].get("summary") or "").lower()
-        key    = issue["key"]
-        summ   = (issue["fields"].get("summary") or "")[:65]
-        url    = f"{JIRA_BASE}/browse/{key}"
-        if any(k in summ_l for k in MAINT_KW) and key not in [x["key"] for x in maint_items]:
-            maint_items.append({"key": key, "summ": summ, "url": url})
-        if any(k in summ_l for k in EXPAND_KW) and key not in [x["key"] for x in expand_items]:
-            expand_items.append({"key": key, "summ": summ, "url": url})
 
     def _signal_row(item, color):
         return (
