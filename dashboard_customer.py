@@ -344,7 +344,7 @@ if(document.readyState==='loading'){{
 .ta-row-{cust['id']}:hover .ta-name {{color:rgba(255,255,255,0.9)!important}}
 .ta-seg-track {{display:flex;gap:2px;height:18px}}
 .ta-seg {{height:100%;border-radius:4px;flex:0 0 0px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}}
-.ta-seg-lbl {{font-size:9px;font-weight:500;color:rgba(255,255,255,.85);opacity:0;transition:opacity .15s;white-space:nowrap}}
+.ta-seg-lbl {{font-size:9px;font-weight:600;opacity:0;transition:opacity .15s;white-space:nowrap}}
 .ta-row-{cust['id']}:hover .ta-seg-lbl {{opacity:1}}
 .ta-detail {{max-height:0;overflow:hidden;transition:max-height .38s cubic-bezier(.4,0,.2,1)}}
 .ta-detail.open {{max-height:160px}}
@@ -402,6 +402,7 @@ if(document.readyState==='loading'){{
       var lbl=document.createElement('div');
       lbl.className='ta-seg-lbl';
       lbl.textContent=v||'';
+      lbl.style.color=mi===0?'rgba(0,0,0,0.65)':'rgba(255,255,255,0.9)';
       seg.appendChild(lbl);
       track.appendChild(seg);
     }});
@@ -1061,11 +1062,13 @@ function buildHealthDrawer(DATA){{
             </div>
           </div>
 
-          <!-- Findings + Signals row -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <!-- Findings + Actions + Signals — single 3-col row -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0">
             <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03)">
               <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>Findings</div>
-              <div id="ai-findings" style="margin-bottom:1.25rem"><p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p></div>
+              <div id="ai-findings"><p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p></div>
+            </div>
+            <div style="padding:1rem 1.25rem;border-right:.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)">
               <div style="font-size:11px;font-weight:800;color:#00C2E0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;padding-bottom:8px;border-bottom:.5px solid rgba(0,194,224,0.2);display:flex;align-items:center;gap:6px"><span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>Recommended Actions</div>
               <div id="ai-actions"><p style="font-size:11px;color:rgba(255,255,255,0.4)">Calculating…</p></div>
             </div>
