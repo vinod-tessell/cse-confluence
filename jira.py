@@ -41,8 +41,9 @@ def jql(query, max=20):
 # ── JQL templates ─────────────────────────────────────────────────────────────
 
 def make_jqls(keyword):
-    """Return the six named JQL queries for a customer keyword."""
-    _feat   = 'issuetype in (Feature, Story) OR labels in ("FeatureRequest")'
+    """Return the named JQL queries for a customer keyword."""
+    _feat_types  = 'issuetype in (Feature, Story) OR labels in ("FeatureRequest")'
+    _not_feat    = f'NOT ({_feat_types})'
     _eng_reporters = (
         '557058:f58131cb-b67d-43c7-b30d-6b58d40bd077,'
         '712020:569ba7d2-5644-4040-b7ec-b984474cdc6e,'
