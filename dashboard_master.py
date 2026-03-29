@@ -349,11 +349,50 @@ def build_master_html(customer_results):
 
 
 
+    # ── P0/P1 incidents tab content — pre-computed to avoid nested f-string ──
+    no_p0_html = ('<div style="padding:3rem;text-align:center;background:#fff;border-radius:10px;'
+                  'border:.5px solid #DFE1E6"><div style="font-size:2rem;margin-bottom:.5rem">✅</div>'
+                  '<div style="font-size:14px;font-weight:700;color:#27500A">No active P0/P1 incidents</div>'
+                  '<div style="font-size:12px;color:#5E6C84;margin-top:4px">All customers operating normally</div></div>')
+    p0_customers_cards = ""
+    for cr in [x for x in customer_results if x["p0_count"] > 0]:
+        c = cr["config"]
+        p0_customers_cards += (
+            f'<a class="cust-card" href="{cr.get("dashboard_url","#")}" target="_parent" '
+            f'style="text-decoration:none;color:inherit">'
+            f'<div class="card-header">'
+            f'<div class="card-logo" style="background:{c["logo_bg"]};color:{c["logo_color"]}">{c["initials"]}</div>'
+            f'<div><div class="card-name">{c["name"]}</div><div class="card-meta">{c["region"]}</div></div>'
+            f'<div class="health-pill" style="background:#FFF5F5;border:1px solid #F09595;color:#A32D2D">'
+            f'<div class="hp-dot" style="background:#E53E3E"></div>{cr["p0_count"]} P0/P1</div>'
+            f'</div>'
+            f'<div class="card-body"><div class="card-stats">'
+            f'<div class="cs"><div class="cs-val red">{cr["p0_count"]}</div><div class="cs-label">P0/P1</div></div>'
+            f'<div class="cs"><div class="cs-val orange">{cr["sup_count"]}</div><div class="cs-label">SR</div></div>'
+            f'<div class="cs"><div class="cs-val blue">{cr["eng_count"]}</div><div class="cs-label">TS Eng</div></div>'
+            f'<div class="cs"><div class="cs-val blue">{cr["feat_count"]}</div><div class="cs-label">Features</div></div>'
+            f'</div>'
+            f'<div class="card-footer"><span class="phase-lbl">{c["phase"]}</span>'
+            f'<span class="drill-btn">View Dashboard →</span></div></div></a>'
+        )
+    p0_tab_top = (
+        f'<div class="action-strip"><div class="action-head">'
+        f'<div class="action-head-title"><span style="font-size:14px">🔴</span> Active P0/P1 Incidents '
+        f'<span class="action-head-badge">{total_p0} open</span></div></div>'
+        f'<div class="action-items">{"".join(action_items)}</div></div>'
+    ) if total_p0 > 0 else no_p0_html
+    p0_cards_section = (
+        f'<div style="margin-top:1rem"><div class="sec">'
+        f'<div class="sec-head"><span class="sec-title">Customers with active P0/P1</span></div>'
+        f'<div class="cards-grid" style="padding:.75rem 1rem">{p0_customers_cards}</div>'
+        f'</div></div>'
+    ) if total_p0 > 0 else ""
+
     return f"""<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>CSE — Customer Portfolio</title>
+<title>CSE - Customer Portfolio</title>
 <style>
 {SHARED_CSS}
 .wordmark-bar{{width:3px;height:36px;background:#00C2E0;border-radius:2px;flex-shrink:0}}
@@ -466,99 +505,132 @@ def build_master_html(customer_results):
   </div>
 </div>
 <div class="body">
-  <!-- Action required strip -->
-  <div class="action-strip">
-    <div class="action-head">
-      <div class="action-head-title"><span style="font-size:14px">🔴</span> Action Required
-        <span class="action-head-badge">{min(3,len([cr for cr in customer_results if cr['p0_count']>0 or cr['sup_count']>5]))} items</span>
-      </div>
-    </div>
-    <div class="action-items">{''.join(action_items)}</div>
+
+  <!-- ── Page-level tab bar ───────────────────────────────────────────────── -->
+  <div style="display:flex;gap:0;border-bottom:2px solid #DFE1E6;margin-bottom:1.25rem">
+    <button id="ptab-btn-0" onclick="switchPageTab(0)"
+      style="padding:.6rem 1.4rem;font-size:12px;font-weight:700;border:none;background:transparent;
+             color:#172B4D;border-bottom:3px solid #0B1F45;margin-bottom:-2px;cursor:pointer;letter-spacing:.01em">
+      Portfolio Overview
+    </button>
+    <button id="ptab-btn-1" onclick="switchPageTab(1)"
+      style="padding:.6rem 1.4rem;font-size:12px;font-weight:700;border:none;background:transparent;
+             color:#5E6C84;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;letter-spacing:.01em">
+      All Customers
+    </button>
+    <button id="ptab-btn-2" onclick="switchPageTab(2)"
+      style="padding:.6rem 1.4rem;font-size:12px;font-weight:700;border:none;background:transparent;
+             color:#5E6C84;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;letter-spacing:.01em">
+      🔴 P0/P1 Incidents
+      {f'<span style="margin-left:5px;font-size:9px;padding:1px 6px;border-radius:8px;background:#FFF5F5;color:#A32D2D;border:.5px solid #F09595">{total_p0}</span>' if total_p0>0 else ''}
+    </button>
   </div>
 
-  <!-- This week's highlights — tab strip -->
-  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.1rem">
-    <div style="display:flex;border-bottom:.5px solid #DFE1E6;overflow-x:auto">
-      {hl_tabs}
-    </div>
-    {hl_panels}
-  </div>
+  <!-- ══════════════ TAB 0 — PORTFOLIO OVERVIEW ══════════════ -->
+  <div id="ptab-panel-0">
 
-  <!-- TAM / TPM capacity — horizontal card row -->
-  <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.1rem">
-    <div style="padding:.6rem 1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:12px;font-weight:700;color:#172B4D">TAM / TPM Capacity</span>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;color:#5E6C84">sorted by load</span>
-        <button onclick="toggleMasterLogic()" id="master-logic-btn"
-          style="font-size:10px;font-weight:600;color:#7B2FBE;background:#EEEDFE;border:.5px solid #C4B9F5;
-                 border-radius:10px;padding:2px 9px;cursor:pointer;line-height:1.6">⚙️ Logic</button>
-      </div>
-    </div>
-    <div class="master-logic-drawer" id="master-logic-drawer">
-      <div style="padding:.75rem 1rem .25rem;font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em">TAM Load Scoring Formula</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:.5rem 1rem 1rem">
-        <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#E53E3E"></span>🚨 P0/P1 Account</span></div><div class="jql-code">+8 pts · active fire, daily calls</div></div>
-        <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FC8181"></span>⚠️ At Risk</span></div><div class="jql-code">+4 pts · high watch load</div></div>
-        <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FFC107"></span>👀 Needs Attention</span></div><div class="jql-code">+2 pts · regular check-ins</div></div>
-        <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 SR Tickets</span></div><div class="jql-code">+0.5 each · cap 15 pts</div></div>
-        <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ TS Eng Tickets</span></div><div class="jql-code">+0.3 each · cap 8 pts</div></div>
-        <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#0D6E85"></span>🔄 Impl/Onboarding</span></div><div class="jql-code">+3 pts per active impl</div></div>
-      </div>
-      <div class="jql-footer">≥85% Over capacity 🔴 · 65–84% Busy 🟠 · 35–64% Available 🟡 · &lt;35% Has bandwidth 🟢</div>
-    </div>
-    {best_tam_row}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;padding:.75rem 1rem 1rem">
-      {tam_cards}
-    </div>
-  </div>
-
-  <!-- Main 2-col grid: pipeline+ticket load | heatmap -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;align-items:start;margin-bottom:1.1rem">
-    <div>
-      <!-- Implementation pipeline with expand -->
-      <div class="sec" style="margin-bottom:1.1rem">
-        <div class="sec-head">
-          <span class="sec-title">Implementation pipeline</span>
-          <span style="font-size:10px;color:#5E6C84">{total} total · click phase to expand</span>
+    <!-- Action required strip -->
+    <div class="action-strip" style="margin-bottom:1.1rem">
+      <div class="action-head">
+        <div class="action-head-title"><span style="font-size:14px">🔴</span> Action Required
+          <span class="action-head-badge">{min(3,len([cr for cr in customer_results if cr['p0_count']>0 or cr['sup_count']>5]))} items</span>
         </div>
-        <div class="pipeline">{pipeline_html}</div>
       </div>
-      <!-- Open ticket load — multi-series -->
+      <div class="action-items">{''.join(action_items)}</div>
+    </div>
+
+    <!-- Highlights tab strip -->
+    <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.1rem">
+      <div style="display:flex;border-bottom:.5px solid #DFE1E6;overflow-x:auto">
+        {hl_tabs}
+      </div>
+      {hl_panels}
+    </div>
+
+    <!-- TAM / TPM capacity — horizontal card row -->
+    <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.1rem">
+      <div style="padding:.6rem 1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;font-weight:700;color:#172B4D">TAM / TPM Capacity</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:10px;color:#5E6C84">sorted by load</span>
+          <button onclick="toggleMasterLogic()" id="master-logic-btn"
+            style="font-size:10px;font-weight:600;color:#7B2FBE;background:#EEEDFE;border:.5px solid #C4B9F5;
+                   border-radius:10px;padding:2px 9px;cursor:pointer;line-height:1.6">⚙️ Logic</button>
+        </div>
+      </div>
+      <div class="master-logic-drawer" id="master-logic-drawer">
+        <div style="padding:.75rem 1rem .25rem;font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em">TAM Load Scoring Formula</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:.5rem 1rem 1rem">
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#E53E3E"></span>🚨 P0/P1 Account</span></div><div class="jql-code">+8 pts · active fire, daily calls</div></div>
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FC8181"></span>⚠️ At Risk</span></div><div class="jql-code">+4 pts · high watch load</div></div>
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FFC107"></span>👀 Needs Attention</span></div><div class="jql-code">+2 pts · regular check-ins</div></div>
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 SR Tickets</span></div><div class="jql-code">+0.5 each · cap 15 pts</div></div>
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ TS Eng Tickets</span></div><div class="jql-code">+0.3 each · cap 8 pts</div></div>
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#0D6E85"></span>🔄 Impl/Onboarding</span></div><div class="jql-code">+3 pts per active impl</div></div>
+        </div>
+        <div class="jql-footer">≥85% Over capacity 🔴 · 65–84% Busy 🟠 · 35–64% Available 🟡 · &lt;35% Has bandwidth 🟢</div>
+      </div>
+      {best_tam_row}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;padding:.75rem 1rem 1rem">
+        {tam_cards}
+      </div>
+    </div>
+
+    <!-- Main 2-col grid: pipeline + ticket load | heatmap -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;align-items:start">
+      <div>
+        <div class="sec" style="margin-bottom:1.1rem">
+          <div class="sec-head">
+            <span class="sec-title">Implementation pipeline</span>
+            <span style="font-size:10px;color:#5E6C84">{total} total · click phase to expand</span>
+          </div>
+          <div class="pipeline">{pipeline_html}</div>
+        </div>
+        <div class="sec">
+          <div class="sec-head">
+            <span class="sec-title">Open ticket load by customer</span>
+            <div style="display:flex;gap:10px">
+              <span style="font-size:9px;color:#DD6B20;font-weight:600">■ SR</span>
+              <span style="font-size:9px;color:#7B2FBE;font-weight:600">■ Eng</span>
+              <span style="font-size:9px;color:#1A6FDB;font-weight:600">■ Features</span>
+            </div>
+          </div>
+          <div style="padding:4px 0">{trend_rows}</div>
+        </div>
+      </div>
       <div class="sec">
         <div class="sec-head">
-          <span class="sec-title">Open ticket load by customer</span>
-          <div style="display:flex;gap:10px">
-            <span style="font-size:9px;color:#DD6B20;font-weight:600">■ SR</span>
-            <span style="font-size:9px;color:#7B2FBE;font-weight:600">■ Eng</span>
-            <span style="font-size:9px;color:#1A6FDB;font-weight:600">■ Features</span>
-          </div>
+          <span class="sec-title">Customer health heatmap</span>
+          <span style="font-size:10px;color:#5E6C84">Click any cell to drill in</span>
         </div>
-        <div style="padding:4px 0">{trend_rows}</div>
+        <div class="heatmap">{heatmap_cells}</div>
       </div>
     </div>
-    <!-- Health heatmap -->
-    <div class="sec">
-      <div class="sec-head">
-        <span class="sec-title">Customer health heatmap</span>
-        <span style="font-size:10px;color:#5E6C84">Click any cell to drill in</span>
-      </div>
-      <div class="heatmap">{heatmap_cells}</div>
-    </div>
+
   </div>
 
-  <!-- All customers -->
-  <div class="sec-divider">All Customers
-    <div class="filter-bar" style="margin:0">
-      <button class="filter-btn active" onclick="filterCards('all',this)">All</button>
-      <button class="filter-btn" onclick="filterCards('atrisk',this)">At Risk</button>
-      <button class="filter-btn" onclick="filterCards('attention',this)">Needs Attention</button>
-      <button class="filter-btn" onclick="filterCards('healthy',this)">Healthy</button>
-      <button class="filter-btn" onclick="filterCards('stable',this)">Stable</button>
-      <input class="search-input" type="text" placeholder="Search..." oninput="searchCards(this.value)"/>
+  <!-- ══════════════ TAB 1 — ALL CUSTOMERS ══════════════ -->
+  <div id="ptab-panel-1" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-wrap:wrap;gap:8px">
+      <div style="font-size:13px;font-weight:700;color:#172B4D">{total} customers</div>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterCards('all',this)">All</button>
+        <button class="filter-btn" onclick="filterCards('atrisk',this)">At Risk</button>
+        <button class="filter-btn" onclick="filterCards('attention',this)">Needs Attention</button>
+        <button class="filter-btn" onclick="filterCards('healthy',this)">Healthy</button>
+        <button class="filter-btn" onclick="filterCards('stable',this)">Stable</button>
+        <input class="search-input" type="text" placeholder="Search..." oninput="searchCards(this.value)"/>
+      </div>
     </div>
+    <div class="cards-grid">{cards}</div>
   </div>
-  <div class="cards-grid">{cards}</div>
+
+  <!-- ══════════════ TAB 2 — P0/P1 INCIDENTS ══════════════ -->
+  <div id="ptab-panel-2" style="display:none">
+    {p0_tab_top}
+    {p0_cards_section}
+  </div>
+
 </div>
 <script>
 function filterCards(h,btn){{document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.querySelectorAll('.cust-card').forEach(el=>{{el.style.display=h==='all'||el.dataset.health===h?'':'none';}});}}
@@ -566,7 +638,25 @@ function searchCards(q){{q=q.toLowerCase();document.querySelectorAll('.cust-card
 function toggleMasterLogic(){{const d=document.getElementById('master-logic-drawer'),btn=document.getElementById('master-logic-btn'),open=d.classList.contains('open');d.classList.toggle('open');btn.textContent=open?'⚙️ Logic':'⚙️ Hide';btn.style.background=open?'#EEEDFE':'#7B2FBE';btn.style.color=open?'#7B2FBE':'#fff';btn.style.borderColor=open?'#C4B9F5':'#7B2FBE';}}
 function togglePipe(id){{const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none';}}
 function switchHL(idx){{for(var i=0;i<4;i++){{var t=document.getElementById('hl-tab-'+i),p=document.getElementById('hl-panel-'+i);if(!t||!p)continue;var on=i===idx;t.style.borderBottom=on?'2px solid #172B4D':'2px solid transparent';t.style.color=on?'#172B4D':'#5E6C84';t.style.background=on?'#fff':'transparent';p.style.display=on?'block':'none';}}}}
-// Animate all bars on load
+function switchPageTab(idx){{
+  for(var i=0;i<3;i++){{
+    var btn=document.getElementById('ptab-btn-'+i);
+    var panel=document.getElementById('ptab-panel-'+i);
+    if(!btn||!panel)continue;
+    var on=i===idx;
+    panel.style.display=on?'block':'none';
+    btn.style.color=on?'#172B4D':'#5E6C84';
+    btn.style.borderBottom=on?'3px solid #0B1F45':'3px solid transparent';
+    btn.style.fontWeight=on?'700':'600';
+  }}
+  if(idx===0){{
+    setTimeout(function(){{
+      document.querySelectorAll('.anim-bar[data-w]').forEach(function(el,i){{
+        setTimeout(function(){{el.style.width=el.dataset.w+'%';}},i*20);
+      }});
+    }},50);
+  }}
+}}
 window.addEventListener('DOMContentLoaded',function(){{
   setTimeout(function(){{
     document.querySelectorAll('.anim-bar[data-w]').forEach(function(el,i){{
