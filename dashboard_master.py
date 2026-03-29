@@ -279,43 +279,116 @@ def build_master_html(customer_results):
             f'</div>'
         )
 
-    highlights = []
-    crit = [cr for cr in customer_results if cr["p0_count"]>0]
-    if crit:
-        highlights.append(("🚨", "P0/P1 Incidents",
-            f'<b>{sum(c["p0_count"] for c in crit)} active</b> — {", ".join(c["config"]["name"].split()[0] for c in crit[:3])} need immediate attention',
-            "#A32D2D", "#FFF5F5", "#F09595"))
-    new_impl = [cr for cr in customer_results if cr["config"].get("phase") in ("Onboarding","Implementation")]
-    if new_impl:
-        highlights.append(("🔄", "In Implementation",
-            f'<b>{len(new_impl)} customers</b> active — {", ".join(c["config"]["name"].split()[0] for c in new_impl[:3])}',
-            "#854F0B", "#FFFAF0", "#EF9F27"))
     total_sr  = sum(c["sup_count"]  for c in real)
     total_eng = sum(c["eng_count"]  for c in real)
     total_feat= sum(c["feat_count"] for c in real)
-    highlights.append(("📊", "Portfolio Snapshot",
-        f'<b>{total_sr} SR open</b> · <b>{total_eng} TS eng</b> · <b>{total_feat} features</b> across {total} customers',
-        "#0C447C", "#E6F1FB", "#85B7EB"))
-    prod = [cr for cr in customer_results if cr["config"].get("phase")=="Production"]
-    if prod:
-        highlights.append(("✅", "In Production",
-            f'<b>{len(prod)} customers</b> live — {", ".join(c["config"]["name"].split()[0] for c in prod[:3])}',
-            "#27500A", "#EAF3DE", "#97C459"))
 
-    # Build tab strip for highlights
-    hl_tabs = ""
-    hl_panels = ""
-    for idx,(icon, title, body, tcol, tbg, tborder) in enumerate(highlights[:4]):
-        active_tab   = "border-bottom:2px solid #172B4D;color:#172B4D;background:#fff;" if idx==0 else "border-bottom:2px solid transparent;color:#5E6C84;background:transparent;"
-        active_panel = "" if idx==0 else 'style="display:none"'
-        hl_tabs   += (f'<button onclick="switchHL({idx})" id="hl-tab-{idx}" '
-                      f'style="padding:.5rem .9rem;font-size:11px;font-weight:600;border:none;'
-                      f'border-top:2px solid transparent;cursor:pointer;{active_tab}">'
-                      f'{icon} {title}</button>')
-        hl_panels += (f'<div id="hl-panel-{idx}" {active_panel} '
-                      f'style="padding:.75rem 1rem;background:{tbg};border-top:.5px solid {tborder}33">'
-                      f'<div style="font-size:11px;color:{tcol};line-height:1.6">{body}</div>'
-                      f'</div>')
+    # ── Cross-portfolio theme analysis ─────────────────────────────────────────
+    # Aggregate all ticket summaries across customers for pattern detection
+    SR_THEMES = [
+        ("Connectivity",     ["connect","timeout","unreachable","network","down","unavailable","port","ssh"], "#B94030"),
+        ("Performance",      ["slow","latency","cpu","memory","iops","throughput","degraded","response time","high load"], "#B94030"),
+        ("Backup & DR",      ["backup","restore","snapshot","pitr","dr","failover","recovery","replication"], "#B97020"),
+        ("Auth & Access",    ["auth","login","credential","permission","ssl","certificate","iam","unauthorized","access denied"], "#B97020"),
+        ("Monitoring",       ["alert","monitor","metric","alarm","datadog","grafana","not firing","observability"], "#B97020"),
+        ("Patching",         ["patch","upgrade","version","migration","maintenance","window","rollback"], "#2060B0"),
+        ("Provisioning",     ["provision","deploy","clone","instance","setup","onboard","terraform"], "#2060B0"),
+        ("Configuration",    ["config","parameter","setting","charset","timezone","pg_hba","variable"], "#686868"),
+    ]
+    FEAT_GAPS = [
+        ("Observability",    ["monitor","metric","alert","dashboard","grafana","datadog","observ","telemetry"], "#7B2FBE"),
+        ("Performance",      ["performance","slow","iops","throughput","latency","benchmark","tuning"], "#B94030"),
+        ("Backup & DR",      ["backup","dr","restore","pitr","snapshot","recovery","ha"], "#B97020"),
+        ("Security & Auth",  ["auth","rbac","role","sso","ldap","ssl","encrypt","vault","secret"], "#1A6FDB"),
+        ("Automation",       ["automat","terraform","api","cli","sdk","script","workflow","pipeline"], "#2060B0"),
+        ("Multi-cloud",      ["aws","azure","gcp","multi","region","cross","cloud","migrate"], "#27500A"),
+        ("Cost & Billing",   ["cost","billing","usage","credit","pricing","budget","chargeback"], "#854F0B"),
+        ("Scalability",      ["scale","resize","shard","cluster","node","capacity","limit","quota"], "#B97020"),
+    ]
+
+    # Tally SR themes across all customers
+    sr_theme_counts  = {t[0]: {"count":0, "customers":set()} for t in SR_THEMES}
+    feat_gap_counts  = {g[0]: {"count":0, "customers":set()} for g in FEAT_GAPS}
+
+    for cr in customer_results:
+        cname = cr["config"]["name"].split()[0]
+        url   = cr.get("dashboard_url","#")
+        for key, summ in cr.get("sup_summaries", []):
+            sl = summ.lower()
+            for theme, kws, _ in SR_THEMES:
+                if any(k in sl for k in kws):
+                    sr_theme_counts[theme]["count"] += 1
+                    sr_theme_counts[theme]["customers"].add(cname)
+                    break
+        for key, summ in cr.get("feat_summaries", []):
+            sl = summ.lower()
+            for gap, kws, _ in FEAT_GAPS:
+                if any(k in sl for k in kws):
+                    feat_gap_counts[gap]["count"] += 1
+                    feat_gap_counts[gap]["customers"].add(gap)
+                    break
+
+    # Sort by frequency
+    sr_sorted   = sorted([(t, d) for t, d in sr_theme_counts.items()  if d["count"]>0], key=lambda x:-x[1]["count"])
+    feat_sorted = sorted([(g, d) for g, d in feat_gap_counts.items()  if d["count"]>0], key=lambda x:-x[1]["count"])
+
+    sr_max   = max((d["count"] for _,d in sr_sorted),   default=1)
+    feat_max = max((d["count"] for _,d in feat_sorted), default=1)
+
+    def _theme_color(name, taxonomy):
+        for t_name, _, col in taxonomy:
+            if t_name == name: return col
+        return "#5E6C84"
+
+    def _insight_bar(label, count, total_max, color, customers):
+        pct    = round(count / total_max * 100)
+        n_cust = len(customers)
+        cust_str = f"{n_cust} customer{'s' if n_cust!=1 else ''}"
+        return (
+            f'<div style="margin-bottom:10px">'
+            f'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">'
+            f'<span style="font-size:11px;font-weight:600;color:#172B4D">{label}</span>'
+            f'<span style="font-size:10px;color:#5E6C84">{count} tickets · {cust_str}</span>'
+            f'</div>'
+            f'<div style="height:6px;background:#F4F5F7;border-radius:3px;overflow:hidden">'
+            f'<div class="anim-bar" data-w="{pct}" style="width:0%;height:100%;background:{color};border-radius:3px;transition:width .8s cubic-bezier(.22,1,.36,1)"></div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    sr_insight_html = "".join(
+        _insight_bar(t, d["count"], sr_max, _theme_color(t, SR_THEMES), d["customers"])
+        for t,d in sr_sorted[:6]
+    ) or '<div style="font-size:11px;color:#A0AEC0;padding:.5rem 0">No themes detected yet</div>'
+
+    feat_insight_html = "".join(
+        _insight_bar(g, d["count"], feat_max, _theme_color(g, FEAT_GAPS), d["customers"])
+        for g,d in feat_sorted[:6]
+    ) or '<div style="font-size:11px;color:#A0AEC0;padding:.5rem 0">No product gaps detected yet</div>'
+
+    # Eng ticket cross-customer pattern (just top recurring keywords)
+    ENG_PATTERNS = [
+        ("Replication",  ["replica","replication","slave","standby","ha","sync"]),
+        ("Backup",       ["backup","snapshot","restore","pitr"]),
+        ("Performance",  ["cpu","memory","iops","latency","slow","performance"]),
+        ("Provisioning", ["provision","deploy","clone","terraform","instance"]),
+        ("Connectivity", ["connect","timeout","network","port","unreachable"]),
+        ("Auth",         ["auth","certificate","ssl","iam","credential","permission"]),
+    ]
+    eng_pattern_counts = {p[0]: 0 for p in ENG_PATTERNS}
+    for cr in customer_results:
+        for _, summ in cr.get("eng_summaries", []):
+            sl = summ.lower()
+            for pat, kws in ENG_PATTERNS:
+                if any(k in sl for k in kws):
+                    eng_pattern_counts[pat] += 1
+                    break
+    eng_sorted = sorted([(p,c) for p,c in eng_pattern_counts.items() if c>0], key=lambda x:-x[1])
+    eng_max = max((c for _,c in eng_sorted), default=1)
+    eng_insight_html = "".join(
+        _insight_bar(p, c, eng_max, "#7B2FBE", set())
+        for p,c in eng_sorted[:5]
+    ) or '<div style="font-size:11px;color:#A0AEC0;padding:.5rem 0">No engineering patterns detected yet</div>'
 
     # TAM capacity — horizontal card row instead of long vertical panel
     tam_cards = ""
@@ -506,77 +579,90 @@ def build_master_html(customer_results):
 </div>
 <div class="body">
 
-  <!-- ── Page-level tab bar ───────────────────────────────────────────────── -->
+  <!-- ── Page-level tab bar ─────────────────────────────────────────────── -->
   <div style="display:flex;gap:0;border-bottom:2px solid #DFE1E6;margin-bottom:1.25rem">
     <button id="ptab-btn-0" onclick="switchPageTab(0)"
       style="padding:.6rem 1.4rem;font-size:12px;font-weight:700;border:none;background:transparent;
-             color:#172B4D;border-bottom:3px solid #0B1F45;margin-bottom:-2px;cursor:pointer;letter-spacing:.01em">
+             color:#172B4D;border-bottom:3px solid #0B1F45;margin-bottom:-2px;cursor:pointer">
       Portfolio Overview
     </button>
     <button id="ptab-btn-1" onclick="switchPageTab(1)"
       style="padding:.6rem 1.4rem;font-size:12px;font-weight:700;border:none;background:transparent;
-             color:#5E6C84;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;letter-spacing:.01em">
+             color:#5E6C84;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer">
       All Customers
     </button>
     <button id="ptab-btn-2" onclick="switchPageTab(2)"
       style="padding:.6rem 1.4rem;font-size:12px;font-weight:700;border:none;background:transparent;
-             color:#5E6C84;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;letter-spacing:.01em">
-      🔴 P0/P1 Incidents
-      {f'<span style="margin-left:5px;font-size:9px;padding:1px 6px;border-radius:8px;background:#FFF5F5;color:#A32D2D;border:.5px solid #F09595">{total_p0}</span>' if total_p0>0 else ''}
+             color:#5E6C84;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer">
+      Operational
+    </button>
+    <button id="ptab-btn-3" onclick="switchPageTab(3)"
+      style="padding:.6rem 1.4rem;font-size:12px;font-weight:700;border:none;background:transparent;
+             color:#5E6C84;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer">
+      🔴 P0/P1 Incidents{f' <span style="font-size:9px;padding:1px 6px;border-radius:8px;background:#FFF5F5;color:#A32D2D;border:.5px solid #F09595;margin-left:3px">{total_p0}</span>' if total_p0>0 else ''}
     </button>
   </div>
 
-  <!-- ══════════════ TAB 0 — PORTFOLIO OVERVIEW ══════════════ -->
+  <!-- ══════════ TAB 0 — PORTFOLIO OVERVIEW ══════════ -->
   <div id="ptab-panel-0">
 
-    <!-- Action required strip -->
-    <div class="action-strip" style="margin-bottom:1.1rem">
-      <div class="action-head">
-        <div class="action-head-title"><span style="font-size:14px">🔴</span> Action Required
-          <span class="action-head-badge">{min(3,len([cr for cr in customer_results if cr['p0_count']>0 or cr['sup_count']>5]))} items</span>
-        </div>
+    <!-- Portfolio KPI summary row -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.1rem">
+      <div style="background:#fff;border:.5px solid #DFE1E6;border-radius:10px;padding:1rem 1.1rem;border-left:3px solid #DD6B20">
+        <div style="font-size:10px;font-weight:600;color:#5E6C84;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Open Support Tickets</div>
+        <div style="font-size:28px;font-weight:700;color:#DD6B20;line-height:1">{total_sr}</div>
+        <div style="font-size:10px;color:#A0AEC0;margin-top:3px">across {total} customers</div>
       </div>
-      <div class="action-items">{''.join(action_items)}</div>
-    </div>
-
-    <!-- Highlights tab strip -->
-    <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.1rem">
-      <div style="display:flex;border-bottom:.5px solid #DFE1E6;overflow-x:auto">
-        {hl_tabs}
+      <div style="background:#fff;border:.5px solid #DFE1E6;border-radius:10px;padding:1rem 1.1rem;border-left:3px solid #7B2FBE">
+        <div style="font-size:10px;font-weight:600;color:#5E6C84;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Engineering Tickets</div>
+        <div style="font-size:28px;font-weight:700;color:#7B2FBE;line-height:1">{total_eng}</div>
+        <div style="font-size:10px;color:#A0AEC0;margin-top:3px">bugs + support tasks</div>
       </div>
-      {hl_panels}
-    </div>
-
-    <!-- TAM / TPM capacity — horizontal card row -->
-    <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.1rem">
-      <div style="padding:.6rem 1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:12px;font-weight:700;color:#172B4D">TAM / TPM Capacity</span>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:10px;color:#5E6C84">sorted by load</span>
-          <button onclick="toggleMasterLogic()" id="master-logic-btn"
-            style="font-size:10px;font-weight:600;color:#7B2FBE;background:#EEEDFE;border:.5px solid #C4B9F5;
-                   border-radius:10px;padding:2px 9px;cursor:pointer;line-height:1.6">⚙️ Logic</button>
-        </div>
+      <div style="background:#fff;border:.5px solid #DFE1E6;border-radius:10px;padding:1rem 1.1rem;border-left:3px solid #1A6FDB">
+        <div style="font-size:10px;font-weight:600;color:#5E6C84;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Feature Requests</div>
+        <div style="font-size:28px;font-weight:700;color:#1A6FDB;line-height:1">{total_feat}</div>
+        <div style="font-size:10px;color:#A0AEC0;margin-top:3px">open feature backlog</div>
       </div>
-      <div class="master-logic-drawer" id="master-logic-drawer">
-        <div style="padding:.75rem 1rem .25rem;font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em">TAM Load Scoring Formula</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:.5rem 1rem 1rem">
-          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#E53E3E"></span>🚨 P0/P1 Account</span></div><div class="jql-code">+8 pts · active fire, daily calls</div></div>
-          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FC8181"></span>⚠️ At Risk</span></div><div class="jql-code">+4 pts · high watch load</div></div>
-          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FFC107"></span>👀 Needs Attention</span></div><div class="jql-code">+2 pts · regular check-ins</div></div>
-          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 SR Tickets</span></div><div class="jql-code">+0.5 each · cap 15 pts</div></div>
-          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ TS Eng Tickets</span></div><div class="jql-code">+0.3 each · cap 8 pts</div></div>
-          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#0D6E85"></span>🔄 Impl/Onboarding</span></div><div class="jql-code">+3 pts per active impl</div></div>
-        </div>
-        <div class="jql-footer">≥85% Over capacity 🔴 · 65–84% Busy 🟠 · 35–64% Available 🟡 · &lt;35% Has bandwidth 🟢</div>
-      </div>
-      {best_tam_row}
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;padding:.75rem 1rem 1rem">
-        {tam_cards}
+      <div style="background:#fff;border:.5px solid #DFE1E6;border-radius:10px;padding:1rem 1.1rem;border-left:3px solid {'#E53E3E' if total_p0>0 else '#38A169'}">
+        <div style="font-size:10px;font-weight:600;color:#5E6C84;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Active Incidents</div>
+        <div style="font-size:28px;font-weight:700;color:{'#E53E3E' if total_p0>0 else '#38A169'};line-height:1">{total_p0}</div>
+        <div style="font-size:10px;color:#A0AEC0;margin-top:3px">{'P0/P1 needs attention' if total_p0>0 else 'No active incidents'}</div>
       </div>
     </div>
 
-    <!-- Main 2-col grid: pipeline + ticket load | heatmap -->
+    <!-- Insights — 3 columns -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;margin-bottom:1.1rem">
+
+      <!-- SR Recurring themes -->
+      <div class="sec">
+        <div class="sec-head">
+          <span class="sec-title">Recurring SR themes</span>
+          <span style="font-size:10px;color:#5E6C84">cross-portfolio · last 90d</span>
+        </div>
+        <div style="padding:.75rem 1rem">{sr_insight_html}</div>
+      </div>
+
+      <!-- Product gaps from features -->
+      <div class="sec">
+        <div class="sec-head">
+          <span class="sec-title">Product gap signals</span>
+          <span style="font-size:10px;color:#5E6C84">from {total_feat} feature requests</span>
+        </div>
+        <div style="padding:.75rem 1rem">{feat_insight_html}</div>
+      </div>
+
+      <!-- Engineering bug patterns -->
+      <div class="sec">
+        <div class="sec-head">
+          <span class="sec-title">Engineering bug patterns</span>
+          <span style="font-size:10px;color:#5E6C84">cross-customer · TS bugs</span>
+        </div>
+        <div style="padding:.75rem 1rem">{eng_insight_html}</div>
+      </div>
+
+    </div>
+
+    <!-- 2-col: pipeline + ticket load | heatmap -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;align-items:start">
       <div>
         <div class="sec" style="margin-bottom:1.1rem">
@@ -609,7 +695,7 @@ def build_master_html(customer_results):
 
   </div>
 
-  <!-- ══════════════ TAB 1 — ALL CUSTOMERS ══════════════ -->
+  <!-- ══════════ TAB 1 — ALL CUSTOMERS ══════════ -->
   <div id="ptab-panel-1" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-wrap:wrap;gap:8px">
       <div style="font-size:13px;font-weight:700;color:#172B4D">{total} customers</div>
@@ -625,8 +711,51 @@ def build_master_html(customer_results):
     <div class="cards-grid">{cards}</div>
   </div>
 
-  <!-- ══════════════ TAB 2 — P0/P1 INCIDENTS ══════════════ -->
+  <!-- ══════════ TAB 2 — OPERATIONAL ══════════ -->
   <div id="ptab-panel-2" style="display:none">
+
+    <!-- TAM / TPM capacity -->
+    <div style="background:#fff;border-radius:10px;border:.5px solid #DFE1E6;overflow:hidden;margin-bottom:1.1rem">
+      <div style="padding:.6rem 1rem;border-bottom:.5px solid #DFE1E6;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;font-weight:700;color:#172B4D">TAM / TPM Capacity</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:10px;color:#5E6C84">sorted by load</span>
+          <button onclick="toggleMasterLogic()" id="master-logic-btn"
+            style="font-size:10px;font-weight:600;color:#7B2FBE;background:#EEEDFE;border:.5px solid #C4B9F5;
+                   border-radius:10px;padding:2px 9px;cursor:pointer;line-height:1.6">⚙️ Logic</button>
+        </div>
+      </div>
+      <div class="master-logic-drawer" id="master-logic-drawer">
+        <div style="padding:.75rem 1rem .25rem;font-size:10px;font-weight:700;color:#5E6C84;text-transform:uppercase;letter-spacing:.06em">TAM Load Scoring Formula</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:.5rem 1rem 1rem">
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#E53E3E"></span>🚨 P0/P1 Account</span></div><div class="jql-code">+8 pts · active fire, daily calls</div></div>
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FC8181"></span>⚠️ At Risk</span></div><div class="jql-code">+4 pts · high watch load</div></div>
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#FFC107"></span>👀 Needs Attention</span></div><div class="jql-code">+2 pts · regular check-ins</div></div>
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#DD6B20"></span>🎫 SR Tickets</span></div><div class="jql-code">+0.5 each · cap 15 pts</div></div>
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#7B2FBE"></span>⚙️ TS Eng Tickets</span></div><div class="jql-code">+0.3 each · cap 8 pts</div></div>
+          <div class="jql-block"><div class="jql-block-head"><span class="jql-label"><span class="jql-label-dot" style="background:#0D6E85"></span>🔄 Impl/Onboarding</span></div><div class="jql-code">+3 pts per active impl</div></div>
+        </div>
+        <div class="jql-footer">>=85% Over capacity 🔴 · 65-84% Busy 🟠 · 35-64% Available 🟡 · &lt;35% Has bandwidth 🟢</div>
+      </div>
+      {best_tam_row}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;padding:.75rem 1rem 1rem">
+        {tam_cards}
+      </div>
+    </div>
+
+    <!-- Health heatmap in operational context -->
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-title">Customer health heatmap</span>
+        <span style="font-size:10px;color:#5E6C84">Click any cell to drill in</span>
+      </div>
+      <div class="heatmap">{heatmap_cells}</div>
+    </div>
+
+  </div>
+
+  <!-- ══════════ TAB 3 — P0/P1 INCIDENTS ══════════ -->
+  <div id="ptab-panel-3" style="display:none">
     {p0_tab_top}
     {p0_cards_section}
   </div>
@@ -637,9 +766,9 @@ function filterCards(h,btn){{document.querySelectorAll('.filter-btn').forEach(b=
 function searchCards(q){{q=q.toLowerCase();document.querySelectorAll('.cust-card').forEach(el=>{{el.style.display=(el.dataset.name||'').includes(q)?'':'none';}});}}
 function toggleMasterLogic(){{const d=document.getElementById('master-logic-drawer'),btn=document.getElementById('master-logic-btn'),open=d.classList.contains('open');d.classList.toggle('open');btn.textContent=open?'⚙️ Logic':'⚙️ Hide';btn.style.background=open?'#EEEDFE':'#7B2FBE';btn.style.color=open?'#7B2FBE':'#fff';btn.style.borderColor=open?'#C4B9F5':'#7B2FBE';}}
 function togglePipe(id){{const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none';}}
-function switchHL(idx){{for(var i=0;i<4;i++){{var t=document.getElementById('hl-tab-'+i),p=document.getElementById('hl-panel-'+i);if(!t||!p)continue;var on=i===idx;t.style.borderBottom=on?'2px solid #172B4D':'2px solid transparent';t.style.color=on?'#172B4D':'#5E6C84';t.style.background=on?'#fff':'transparent';p.style.display=on?'block':'none';}}}}
 function switchPageTab(idx){{
-  for(var i=0;i<3;i++){{
+  var n=4;
+  for(var i=0;i<n;i++){{
     var btn=document.getElementById('ptab-btn-'+i);
     var panel=document.getElementById('ptab-panel-'+i);
     if(!btn||!panel)continue;
@@ -649,7 +778,7 @@ function switchPageTab(idx){{
     btn.style.borderBottom=on?'3px solid #0B1F45':'3px solid transparent';
     btn.style.fontWeight=on?'700':'600';
   }}
-  if(idx===0){{
+  if(idx===0||idx===2){{
     setTimeout(function(){{
       document.querySelectorAll('.anim-bar[data-w]').forEach(function(el,i){{
         setTimeout(function(){{el.style.width=el.dataset.w+'%';}},i*20);
@@ -659,7 +788,7 @@ function switchPageTab(idx){{
 }}
 window.addEventListener('DOMContentLoaded',function(){{
   setTimeout(function(){{
-    document.querySelectorAll('.anim-bar[data-w]').forEach(function(el,i){{
+    document.querySelectorAll('#ptab-panel-0 .anim-bar[data-w]').forEach(function(el,i){{
       setTimeout(function(){{el.style.width=el.dataset.w+'%';}},i*20);
     }});
   }},150);
