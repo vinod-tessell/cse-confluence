@@ -1,7 +1,7 @@
 
 var CHART_DATA={
   labels:["Oct 20", "Nov 20", "Dec 20", "Jan 20", "Feb 20", "Mar 20"],
-  open:[0, 0, 0, 0, 1, 5],
+  open:[0, 0, 0, 0, 1, 6],
   resolved:[0, 0, 20, 12, 30, 38],
   yMax:41
 };
@@ -82,7 +82,7 @@ if(document.readyState==='loading'){
   initChart();
 }
 
-var DATA={"p0p1": 0, "support": 6, "features": 5, "eng_tickets": 2, "resolved": 100, "pendingEng": 2, "p0keys": [], "highKeys": ["SR-8534", "SR-8526", "SR-8496"], "generated": "Mar 29, 2026 08:02 EST", "score": 7, "scoreLabel": "Stable", "scoreColor": "#FFC107"};
+var DATA={"p0p1": 0, "support": 7, "features": 5, "eng_tickets": 2, "resolved": 100, "pendingEng": 2, "p0keys": [], "highKeys": ["SR-8554", "SR-8534", "SR-8526"], "generated": "Mar 29, 2026 08:59 EST", "score": 7, "scoreLabel": "Stable", "scoreColor": "#FFC107"};
 
 function runHealth(DATA) {
   const elF=document.getElementById('ai-findings'),elA=document.getElementById('ai-actions'),sc=document.getElementById('ai-score');
