@@ -661,12 +661,130 @@ if(document.readyState==='loading'){{
     if not features_html:
         features_html = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No open feature requests found.</div>'
 
-    # Upcoming bug fixes from eng_tickets
-    upcoming_bugs_html = ""
-    for issue in eng_tickets.issues[:8]:
-        upcoming_bugs_html += _ticket_row_eng(issue, "#FFA94D")
-    if not upcoming_bugs_html:
-        upcoming_bugs_html = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No open engineering bugs found.</div>'
+    # ── Pool ALL ticket types into shared time buckets ───────────────────────
+    # Each item: {issue, type: 'feature'|'bug'|'maint'|'expand'}
+    all_buckets = {"week": [], "month": [], "quarter": [], "beyond": [], "unscheduled": []}
+
+    def _bucket_key(issue_fields):
+        rd = _extract_release_date(issue_fields)
+        if rd is None:
+            return "beyond" if _extract_release_tag(issue_fields) else "unscheduled"
+        if rd <= _7d:   return "week"
+        if rd <= _30d:  return "month"
+        if rd <= _90d:  return "quarter"
+        return "beyond"
+
+    for issue in features.issues:
+        all_buckets[_bucket_key(issue["fields"])].append({"issue": issue, "type": "feature"})
+
+    for issue in eng_tickets.issues:
+        all_buckets[_bucket_key(issue["fields"])].append({"issue": issue, "type": "bug"})
+
+    for item in maint_items:
+        # maint items are dicts {key, summ, url}, wrap as pseudo-issue for renderer
+        all_buckets["unscheduled"].append({"item": item, "type": "maint"})
+
+    for item in expand_items:
+        all_buckets["unscheduled"].append({"item": item, "type": "expand"})
+
+    TYPE_BADGE = {
+        "feature": ("Feature", "#00C2E0", "rgba(0,194,224,0.12)"),
+        "bug":     ("Bug Fix",  "#FFA94D", "rgba(255,169,77,0.12)"),
+        "maint":   ("Planned",  "#A78BFA", "rgba(167,139,250,0.12)"),
+        "expand":  ("Expansion","#68D391", "rgba(104,211,145,0.12)"),
+    }
+
+    def _unified_row(entry):
+        typ   = entry["type"]
+        badge_label, badge_color, badge_bg = TYPE_BADGE[typ]
+        badge = (f'<span style="font-size:8px;font-weight:600;padding:1px 5px;border-radius:8px;'
+                 f'color:{badge_color};background:{badge_bg};white-space:nowrap">{badge_label}</span>')
+        if "issue" in entry:
+            issue  = entry["issue"]
+            key    = issue["key"]
+            f      = issue["fields"]
+            summ   = (f.get("summary") or "")[:65]
+            status = (f.get("status", {}).get("name") or "")
+            tag    = _extract_release_tag(f)
+            url    = f"{JIRA_BASE}/browse/{key}"
+            tag_html = (f'<span style="font-size:8px;color:rgba(255,255,255,0.35);'
+                        f'background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:8px;'
+                        f'white-space:nowrap">{tag}</span>') if tag else ""
+            return (
+                f'<a href="{url}" target="_blank" style="display:flex;align-items:flex-start;'
+                f'gap:8px;padding:7px 4px;border-bottom:.5px solid rgba(255,255,255,0.06);'
+                f'text-decoration:none;border-radius:4px;transition:background .15s"'
+                f' onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'"'
+                f' onmouseout="this.style.background=\'transparent\'">'
+                f'<div style="min-width:0;flex:1">'
+                f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;flex-wrap:wrap">'
+                f'<span style="font-size:10px;font-weight:700;color:{badge_color};flex-shrink:0">{key}</span>'
+                f'{badge}{tag_html}</div>'
+                f'<div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4">{summ}</div>'
+                f'</div>'
+                f'<span style="font-size:9px;color:rgba(255,255,255,0.28);flex-shrink:0;margin-top:2px;white-space:nowrap">{status}</span>'
+                f'</a>'
+            )
+        else:
+            item = entry["item"]
+            return (
+                f'<a href="{item["url"]}" target="_blank" style="display:flex;align-items:flex-start;'
+                f'gap:8px;padding:7px 4px;border-bottom:.5px solid rgba(255,255,255,0.06);'
+                f'text-decoration:none;border-radius:4px;transition:background .15s"'
+                f' onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'"'
+                f' onmouseout="this.style.background=\'transparent\'">'
+                f'<div style="min-width:0;flex:1">'
+                f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">'
+                f'<span style="font-size:10px;font-weight:700;color:{badge_color};flex-shrink:0">{item["key"]}</span>'
+                f'{badge}</div>'
+                f'<div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4">{item["summ"]}</div>'
+                f'</div></a>'
+            )
+
+    TIMELINE_BUCKETS = [
+        ("week",        "Next 7 days",   "#FC8181",              "rgba(252,129,129,0.08)"),
+        ("month",       "Next 30 days",  "#FFA94D",              "rgba(255,169,77,0.08)"),
+        ("quarter",     "Next 3 months", "#00C2E0",              "rgba(0,194,224,0.06)"),
+        ("beyond",      "Later",         "rgba(255,255,255,0.5)","rgba(255,255,255,0.03)"),
+        ("unscheduled", "Everything else","rgba(255,255,255,0.3)","rgba(255,255,255,0.02)"),
+    ]
+
+    def _timeline_section(bkey, label, accent, bg):
+        entries = all_buckets[bkey]
+        if not entries:
+            return ""
+        total = len(entries)
+        kw_enc  = cust["jql_keyword"].replace(" ","+").replace('"','%22')
+        more_url = f'{JIRA_BASE}/issues/?jql=project%3DTS+AND+text+~+%22{kw_enc}%22+AND+statusCategory%21%3DDone'
+        rows = "".join(_unified_row(e) for e in entries[:12])
+        more = ""
+        if total > 12:
+            more = (f'<div style="padding:5px 4px;font-size:10px">'
+                    f'<a href="{more_url}" target="_blank" style="color:#00C2E0;text-decoration:none">'
+                    f'+{total-12} more in Jira →</a></div>')
+        feat_c = sum(1 for e in entries if e["type"]=="feature")
+        bug_c  = sum(1 for e in entries if e["type"]=="bug")
+        oth_c  = sum(1 for e in entries if e["type"] not in ("feature","bug"))
+        meta   = " · ".join(filter(None,[
+            f'{feat_c} feature{"s" if feat_c!=1 else ""}' if feat_c else "",
+            f'{bug_c} bug fix{"es" if bug_c!=1 else ""}' if bug_c else "",
+            f'{oth_c} other' if oth_c else "",
+        ]))
+        return (
+            f'<div style="background:{bg};border-bottom:.5px solid rgba(255,255,255,0.07)">'
+            f'<div style="padding:.65rem 1.25rem .4rem;display:flex;align-items:center;gap:8px">'
+            f'<div style="width:3px;height:16px;background:{accent};border-radius:2px;flex-shrink:0"></div>'
+            f'<span style="font-size:11px;font-weight:700;color:{accent}">{label}</span>'
+            f'<span style="font-size:10px;color:rgba(255,255,255,0.25)">{meta}</span>'
+            f'</div>'
+            f'<div style="padding:0 1.25rem .65rem">{rows}{more}</div>'
+            f'</div>'
+        )
+
+    engagement_timeline = "".join(
+        _timeline_section(bk, lbl, acc, bg)
+        for bk, lbl, acc, bg in TIMELINE_BUCKETS
+    ) or '<div style="padding:1.5rem;font-size:11px;color:rgba(255,255,255,0.3)">No upcoming items found for this customer.</div>'
 
     # Maintenance / upgrade signals from SR tickets
     MAINT_KW = ["upgrade","patch","maintenance","scheduled","planned","migration",
@@ -997,59 +1115,25 @@ function buildHealthDrawer(DATA){{
 
         <!-- ════════════════ TAB 2 — FUTURE ENGAGEMENT ════════════════════ -->
         <div id="tab-engage-{cust['id']}" style="display:none">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
 
-            <!-- LEFT: Features + Bug fixes -->
-            <div style="border-right:.5px solid rgba(255,255,255,0.08)">
-
-              <!-- Upcoming Features -->
-              <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
-                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:flex;align-items:center;gap:6px">
-                  <span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>
-                  Upcoming Features
-                  <span style="font-size:9px;font-weight:500;color:rgba(255,255,255,0.3);text-transform:none;letter-spacing:0;margin-left:2px">{len(features)} pending · click to open in Jira</span>
-                </div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;padding-left:9px">Features with release labels are shown first</div>
-                <div style="max-height:220px;overflow-y:auto">{features_html}</div>
-              </div>
-
-              <!-- Upcoming Bug Fixes -->
-              <div style="padding:1rem 1.25rem">
-                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;display:flex;align-items:center;gap:6px">
-                  <span style="width:3px;height:14px;background:#FFA94D;border-radius:2px;display:inline-block"></span>
-                  Engineering Bug Fixes
-                  <span style="font-size:9px;font-weight:500;color:rgba(255,255,255,0.3);text-transform:none;letter-spacing:0;margin-left:2px">{len(eng_tickets)} open</span>
-                </div>
-                <div style="max-height:180px;overflow-y:auto">{upcoming_bugs_html}</div>
-              </div>
-
+          <!-- Timeline header -->
+          <div style="padding:.75rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:1rem">
+            <div style="font-size:10px;color:rgba(255,255,255,0.3)">
+              All upcoming features, bug fixes and planned activity — organised by target date
             </div>
-
-            <!-- RIGHT: Maintenance + Expansion signals -->
-            <div>
-
-              <!-- Maintenance / Scheduled activity -->
-              <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
-                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:flex;align-items:center;gap:6px">
-                  <span style="width:3px;height:14px;background:#FFA94D;border-radius:2px;display:inline-block"></span>
-                  Planned Activity
-                </div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;padding-left:9px">SR tickets signalling upgrades, patches, migrations</div>
-                <div style="max-height:180px;overflow-y:auto">{maint_html}</div>
-              </div>
-
-              <!-- Expansion / Growth signals -->
-              <div style="padding:1rem 1.25rem">
-                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:flex;align-items:center;gap:6px">
-                  <span style="width:3px;height:14px;background:#68D391;border-radius:2px;display:inline-block"></span>
-                  Expansion Signals
-                </div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;padding-left:9px">New environments, additional instances, onboarding</div>
-                <div style="max-height:180px;overflow-y:auto">{expand_html}</div>
-              </div>
-
+            <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap">
+              <span style="font-size:9px;color:#00C2E0;background:rgba(0,194,224,0.12);padding:2px 7px;border-radius:8px">Feature</span>
+              <span style="font-size:9px;color:#FFA94D;background:rgba(255,169,77,0.12);padding:2px 7px;border-radius:8px">Bug Fix</span>
+              <span style="font-size:9px;color:#A78BFA;background:rgba(167,139,250,0.12);padding:2px 7px;border-radius:8px">Planned</span>
+              <span style="font-size:9px;color:#68D391;background:rgba(104,211,145,0.12);padding:2px 7px;border-radius:8px">Expansion</span>
             </div>
           </div>
+
+          <!-- Unified timeline -->
+          <div style="overflow-y:auto;max-height:600px">
+            {engagement_timeline}
+          </div>
+
         </div>
 
       </div>
