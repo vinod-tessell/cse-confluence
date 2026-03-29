@@ -612,7 +612,25 @@ if(document.readyState==='loading'){{
             f'</a>'
         )
 
-    # ── Timeline bucketing ────────────────────────────────────────────────────
+    # ── Maintenance / expansion signals from SR tickets ──────────────────────
+    MAINT_KW  = ["upgrade","patch","maintenance","scheduled","planned","migration",
+                 "window","cutover","go-live","rollout","downtime","activity"]
+    EXPAND_KW = ["new environment","additional instance","new region","scale",
+                 "expand","additional db","new db","production setup","poc",
+                 "evaluation","pilot","onboard","new schema","new database"]
+
+    maint_items  = []
+    expand_items = []
+    for _sr in list(support.issues) + list(resolved.issues[:50]):
+        _sl  = (_sr["fields"].get("summary") or "").lower()
+        _key = _sr["key"]
+        _sum = (_sr["fields"].get("summary") or "")[:65]
+        _url = f"{JIRA_BASE}/browse/{_key}"
+        if any(k in _sl for k in MAINT_KW)  and _key not in [x["key"] for x in maint_items]:
+            maint_items.append({"key": _key, "summ": _sum, "url": _url})
+        if any(k in _sl for k in EXPAND_KW) and _key not in [x["key"] for x in expand_items]:
+            expand_items.append({"key": _key, "summ": _sum, "url": _url})
+
     # ── 4-column × 3-type engagement grid ────────────────────────────────────
     # Columns: 1 Week | 2 Weeks | 1 Month | Later
     # Rows: Bugs | Eng Support | Feature Requests
