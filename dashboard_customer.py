@@ -21,6 +21,8 @@ def build_customer_html(cust, data):
     support     = data["support"]
     features    = data["features"]
     eng_tickets = data["eng_tickets"]
+    eng_bugs    = data.get("eng_bugs",  eng_tickets)   # falls back gracefully if old data
+    eng_tasks   = data.get("eng_tasks", eng_tickets)
     resolved    = data["resolved"]
     timeline    = build_timeline(data["recent"])
     score, health_label, health_color, _, pending = compute_health(p0p1, support, features, resolved, eng_tickets)
@@ -677,21 +679,24 @@ if(document.readyState==='loading'){{
     for issue in features.issues:
         all_buckets[_bucket_key(issue["fields"])].append({"issue": issue, "type": "feature"})
 
-    for issue in eng_tickets.issues:
+    for issue in eng_bugs.issues:
         all_buckets[_bucket_key(issue["fields"])].append({"issue": issue, "type": "bug"})
 
+    for issue in eng_tasks.issues:
+        all_buckets[_bucket_key(issue["fields"])].append({"issue": issue, "type": "eng_task"})
+
     for item in maint_items:
-        # maint items are dicts {key, summ, url}, wrap as pseudo-issue for renderer
         all_buckets["unscheduled"].append({"item": item, "type": "maint"})
 
     for item in expand_items:
         all_buckets["unscheduled"].append({"item": item, "type": "expand"})
 
     TYPE_BADGE = {
-        "feature": ("Feature", "#00C2E0", "rgba(0,194,224,0.12)"),
-        "bug":     ("Bug Fix",  "#FFA94D", "rgba(255,169,77,0.12)"),
-        "maint":   ("Planned",  "#A78BFA", "rgba(167,139,250,0.12)"),
-        "expand":  ("Expansion","#68D391", "rgba(104,211,145,0.12)"),
+        "feature":  ("Feature",    "#00C2E0", "rgba(0,194,224,0.12)"),
+        "bug":      ("Bug",        "#FC8181", "rgba(252,129,129,0.12)"),
+        "eng_task": ("Eng Support","#FFA94D", "rgba(255,169,77,0.12)"),
+        "maint":    ("Planned",    "#A78BFA", "rgba(167,139,250,0.12)"),
+        "expand":   ("Expansion",  "#68D391", "rgba(104,211,145,0.12)"),
     }
 
     def _unified_row(entry):
@@ -764,10 +769,12 @@ if(document.readyState==='loading'){{
                     f'+{total-12} more in Jira →</a></div>')
         feat_c = sum(1 for e in entries if e["type"]=="feature")
         bug_c  = sum(1 for e in entries if e["type"]=="bug")
-        oth_c  = sum(1 for e in entries if e["type"] not in ("feature","bug"))
+        task_c = sum(1 for e in entries if e["type"]=="eng_task")
+        oth_c  = sum(1 for e in entries if e["type"] not in ("feature","bug","eng_task"))
         meta   = " · ".join(filter(None,[
             f'{feat_c} feature{"s" if feat_c!=1 else ""}' if feat_c else "",
-            f'{bug_c} bug fix{"es" if bug_c!=1 else ""}' if bug_c else "",
+            f'{bug_c} bug{"s" if bug_c!=1 else ""}' if bug_c else "",
+            f'{task_c} eng support' if task_c else "",
             f'{oth_c} other' if oth_c else "",
         ]))
         return (
@@ -1123,7 +1130,8 @@ function buildHealthDrawer(DATA){{
             </div>
             <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap">
               <span style="font-size:9px;color:#00C2E0;background:rgba(0,194,224,0.12);padding:2px 7px;border-radius:8px">Feature</span>
-              <span style="font-size:9px;color:#FFA94D;background:rgba(255,169,77,0.12);padding:2px 7px;border-radius:8px">Bug Fix</span>
+              <span style="font-size:9px;color:#FC8181;background:rgba(252,129,129,0.12);padding:2px 7px;border-radius:8px">Bug</span>
+              <span style="font-size:9px;color:#FFA94D;background:rgba(255,169,77,0.12);padding:2px 7px;border-radius:8px">Eng Support</span>
               <span style="font-size:9px;color:#A78BFA;background:rgba(167,139,250,0.12);padding:2px 7px;border-radius:8px">Planned</span>
               <span style="font-size:9px;color:#68D391;background:rgba(104,211,145,0.12);padding:2px 7px;border-radius:8px">Expansion</span>
             </div>
