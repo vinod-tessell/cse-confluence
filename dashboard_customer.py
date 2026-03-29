@@ -31,7 +31,11 @@ def build_customer_html(cust, data):
 
     p0_rows   = "".join(ticket_row(i) for i in p0p1)   or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No active P0/P1 incidents</td></tr>'
     sup_rows  = "".join(ticket_row(i) for i in support) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open support tickets</td></tr>'
-    eng_rows  = "".join(ticket_row(i) for i in eng_tickets) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No open engineering tickets</td></tr>'
+    eng_bug_count  = len(eng_bugs)
+    eng_task_count = len(eng_tasks)
+    eng_breakdown  = f'{eng_bug_count} Bug{"s" if eng_bug_count!=1 else ""} · {eng_task_count} Support'
+    eng_bug_rows   = "".join(ticket_row(i) for i in eng_bugs)  or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:.75rem">No open bugs</td></tr>'
+    eng_task_rows  = "".join(ticket_row(i) for i in eng_tasks) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:.75rem">No open support tasks</td></tr>'
 
     # Truncation notes
     def _trunc_note(result, query=""):
@@ -609,229 +613,157 @@ if(document.readyState==='loading'){{
         )
 
     # ── Timeline bucketing ────────────────────────────────────────────────────
+    # ── 4-column × 3-type engagement grid ────────────────────────────────────
+    # Columns: 1 Week | 2 Weeks | 1 Month | Later
+    # Rows: Bugs | Eng Support | Feature Requests
     from datetime import date as _date2, timedelta as _td
     _today  = _date2.today()
     _7d     = _today + _td(days=7)
+    _14d    = _today + _td(days=14)
     _30d    = _today + _td(days=30)
-    _90d    = _today + _td(days=90)
 
-    buckets = {"week": [], "month": [], "quarter": [], "beyond": [], "unscheduled": []}
+    COL_KEYS   = ["w1", "w2", "mo", "later"]
+    TYPE_KEYS  = ["bug", "eng_task", "feature"]
 
-    for issue in features.issues:
-        rd = _extract_release_date(issue["fields"])
-        if rd is None:
-            tag = _extract_release_tag(issue["fields"])
-            if tag:
-                buckets["beyond"].append(issue)      # has a label but no parseable date
-            else:
-                buckets["unscheduled"].append(issue)
-        elif rd <= _7d:
-            buckets["week"].append(issue)
-        elif rd <= _30d:
-            buckets["month"].append(issue)
-        elif rd <= _90d:
-            buckets["quarter"].append(issue)
-        else:
-            buckets["beyond"].append(issue)
+    # grid[col][type] = list of issues
+    grid = {c: {t: [] for t in TYPE_KEYS} for c in COL_KEYS}
 
-    def _bucket_section(label, issues, color, accent_color="#00C2E0", limit=10):
-        if not issues:
-            return ""
-        html  = (f'<div style="display:flex;align-items:center;gap:8px;margin:10px 0 6px">'
-                 f'<div style="width:3px;height:14px;background:{accent_color};border-radius:2px;flex-shrink:0"></div>'
-                 f'<span style="font-size:9px;font-weight:700;color:{accent_color};text-transform:uppercase;letter-spacing:.07em">'
-                 f'{label}</span>'
-                 f'<span style="font-size:9px;color:rgba(255,255,255,0.25)">{len(issues)} ticket{"s" if len(issues)!=1 else ""}</span>'
-                 f'</div>')
-        for i in issues[:limit]:
-            html += _ticket_row_eng(i, accent_color)
-        if len(issues) > limit:
-            kw_enc = cust["jql_keyword"].replace(" ","+").replace('"','%22')
-            more_url = f'{JIRA_BASE}/issues/?jql=project=TS+AND+text+~+"{kw_enc}"+AND+statusCategory!=Done'
-            html += (f'<div style="font-size:10px;color:rgba(255,255,255,0.3);padding:6px 4px">'
-                     f'<a href="{more_url}" target="_blank" style="color:#00C2E0;text-decoration:none">'
-                     f'+{len(issues)-limit} more in Jira →</a></div>')
-        return html
-
-    features_html = (
-        _bucket_section("Next 7 days",      buckets["week"],        "#E53E3E", "#FC8181")  +
-        _bucket_section("Next 30 days",     buckets["month"],       "#FFA94D", "#FFA94D")  +
-        _bucket_section("Next 3 months",    buckets["quarter"],     "#00C2E0", "#00C2E0")  +
-        _bucket_section("Later / labelled", buckets["beyond"],      "#7B8FA8", "#7B8FA8")  +
-        _bucket_section("Unscheduled",      buckets["unscheduled"], "#5E6C84", "#5E6C84", limit=5)
-    )
-    if not features_html:
-        features_html = '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No open feature requests found.</div>'
-
-    # ── Maintenance / expansion signals from SR tickets ──────────────────────
-    # (must be computed before all_buckets so we can add them to unscheduled)
-    MAINT_KW = ["upgrade","patch","maintenance","scheduled","planned","migration",
-                "window","cutover","go-live","rollout","downtime","activity"]
-    EXPAND_KW = ["new environment","additional instance","new region","scale",
-                 "expand","additional db","new db","production setup","poc",
-                 "evaluation","pilot","onboard","new schema","new database"]
-
-    maint_items   = []
-    expand_items  = []
-    for issue in list(support.issues) + list(resolved.issues[:50]):
-        summ_l = (issue["fields"].get("summary") or "").lower()
-        key    = issue["key"]
-        summ   = (issue["fields"].get("summary") or "")[:65]
-        url    = f"{JIRA_BASE}/browse/{key}"
-        if any(k in summ_l for k in MAINT_KW) and key not in [x["key"] for x in maint_items]:
-            maint_items.append({"key": key, "summ": summ, "url": url})
-        if any(k in summ_l for k in EXPAND_KW) and key not in [x["key"] for x in expand_items]:
-            expand_items.append({"key": key, "summ": summ, "url": url})
-
-    # ── Pool ALL ticket types into shared time buckets ───────────────────────
-    # Each item: {issue, type: 'feature'|'bug'|'maint'|'expand'}
-    all_buckets = {"week": [], "month": [], "quarter": [], "beyond": [], "unscheduled": []}
-
-    def _bucket_key(issue_fields):
+    def _col_key(issue_fields):
         rd = _extract_release_date(issue_fields)
         if rd is None:
-            return "beyond" if _extract_release_tag(issue_fields) else "unscheduled"
-        if rd <= _7d:   return "week"
-        if rd <= _30d:  return "month"
-        if rd <= _90d:  return "quarter"
-        return "beyond"
-
-    for issue in features.issues:
-        all_buckets[_bucket_key(issue["fields"])].append({"issue": issue, "type": "feature"})
+            return "later"
+        if rd <= _7d:  return "w1"
+        if rd <= _14d: return "w2"
+        if rd <= _30d: return "mo"
+        return "later"
 
     for issue in eng_bugs.issues:
-        all_buckets[_bucket_key(issue["fields"])].append({"issue": issue, "type": "bug"})
-
+        grid[_col_key(issue["fields"])]["bug"].append(issue)
     for issue in eng_tasks.issues:
-        all_buckets[_bucket_key(issue["fields"])].append({"issue": issue, "type": "eng_task"})
+        grid[_col_key(issue["fields"])]["eng_task"].append(issue)
+    for issue in features.issues:
+        grid[_col_key(issue["fields"])]["feature"].append(issue)
 
-    for item in maint_items:
-        all_buckets["unscheduled"].append({"item": item, "type": "maint"})
+    # Compact ticket row for the grid (no badge — type is clear from the row section)
+    TYPE_COLOR = {"bug": "#FC8181", "eng_task": "#FFA94D", "feature": "#00C2E0"}
 
-    for item in expand_items:
-        all_buckets["unscheduled"].append({"item": item, "type": "expand"})
+    def _grid_row(issue, typ):
+        key    = issue["key"]
+        f      = issue["fields"]
+        summ   = (f.get("summary") or "")[:55]
+        status = (f.get("status", {}).get("name") or "")
+        tag    = _extract_release_tag(f)
+        url    = f"{JIRA_BASE}/browse/{key}"
+        col    = TYPE_COLOR[typ]
+        tag_html = (f'<span style="font-size:8px;color:rgba(255,255,255,0.3);'
+                    f'background:rgba(255,255,255,0.06);padding:1px 4px;border-radius:6px;'
+                    f'white-space:nowrap;margin-left:3px">{tag}</span>') if tag else ""
+        return (
+            f'<a href="{url}" target="_blank" style="display:block;padding:5px 6px;'
+            f'border-bottom:.5px solid rgba(255,255,255,0.05);text-decoration:none;'
+            f'border-radius:3px;transition:background .12s"'
+            f' onmouseover="this.style.background=\'rgba(255,255,255,0.06)\'"'
+            f' onmouseout="this.style.background=\'transparent\'">'
+            f'<div style="display:flex;align-items:center;gap:4px">'
+            f'<span style="font-size:9px;font-weight:700;color:{col};flex-shrink:0">{key}</span>'
+            f'{tag_html}</div>'
+            f'<div style="font-size:10px;color:rgba(255,255,255,0.65);line-height:1.35;margin-top:1px">{summ}</div>'
+            f'<div style="font-size:9px;color:rgba(255,255,255,0.25);margin-top:1px">{status}</div>'
+            f'</a>'
+        )
 
-    TYPE_BADGE = {
-        "feature":  ("Feature",    "#00C2E0", "rgba(0,194,224,0.12)"),
-        "bug":      ("Bug",        "#FC8181", "rgba(252,129,129,0.12)"),
-        "eng_task": ("Eng Support","#FFA94D", "rgba(255,169,77,0.12)"),
-        "maint":    ("Planned",    "#A78BFA", "rgba(167,139,250,0.12)"),
-        "expand":   ("Expansion",  "#68D391", "rgba(104,211,145,0.12)"),
-    }
+    def _empty_cell():
+        return '<div style="font-size:10px;color:rgba(255,255,255,0.18);padding:8px 6px;font-style:italic">None</div>'
 
-    def _unified_row(entry):
-        typ   = entry["type"]
-        badge_label, badge_color, badge_bg = TYPE_BADGE[typ]
-        badge = (f'<span style="font-size:8px;font-weight:600;padding:1px 5px;border-radius:8px;'
-                 f'color:{badge_color};background:{badge_bg};white-space:nowrap">{badge_label}</span>')
-        if "issue" in entry:
-            issue  = entry["issue"]
-            key    = issue["key"]
-            f      = issue["fields"]
-            summ   = (f.get("summary") or "")[:65]
-            status = (f.get("status", {}).get("name") or "")
-            tag    = _extract_release_tag(f)
-            url    = f"{JIRA_BASE}/browse/{key}"
-            tag_html = (f'<span style="font-size:8px;color:rgba(255,255,255,0.35);'
-                        f'background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:8px;'
-                        f'white-space:nowrap">{tag}</span>') if tag else ""
-            return (
-                f'<a href="{url}" target="_blank" style="display:flex;align-items:flex-start;'
-                f'gap:8px;padding:7px 4px;border-bottom:.5px solid rgba(255,255,255,0.06);'
-                f'text-decoration:none;border-radius:4px;transition:background .15s"'
-                f' onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'"'
-                f' onmouseout="this.style.background=\'transparent\'">'
-                f'<div style="min-width:0;flex:1">'
-                f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;flex-wrap:wrap">'
-                f'<span style="font-size:10px;font-weight:700;color:{badge_color};flex-shrink:0">{key}</span>'
-                f'{badge}{tag_html}</div>'
-                f'<div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4">{summ}</div>'
-                f'</div>'
-                f'<span style="font-size:9px;color:rgba(255,255,255,0.28);flex-shrink:0;margin-top:2px;white-space:nowrap">{status}</span>'
-                f'</a>'
-            )
-        else:
-            item = entry["item"]
-            return (
-                f'<a href="{item["url"]}" target="_blank" style="display:flex;align-items:flex-start;'
-                f'gap:8px;padding:7px 4px;border-bottom:.5px solid rgba(255,255,255,0.06);'
-                f'text-decoration:none;border-radius:4px;transition:background .15s"'
-                f' onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'"'
-                f' onmouseout="this.style.background=\'transparent\'">'
-                f'<div style="min-width:0;flex:1">'
-                f'<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">'
-                f'<span style="font-size:10px;font-weight:700;color:{badge_color};flex-shrink:0">{item["key"]}</span>'
-                f'{badge}</div>'
-                f'<div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4">{item["summ"]}</div>'
-                f'</div></a>'
-            )
-
-    TIMELINE_BUCKETS = [
-        ("week",        "Next 7 days",   "#FC8181",              "rgba(252,129,129,0.08)"),
-        ("month",       "Next 30 days",  "#FFA94D",              "rgba(255,169,77,0.08)"),
-        ("quarter",     "Next 3 months", "#00C2E0",              "rgba(0,194,224,0.06)"),
-        ("beyond",      "Later",         "rgba(255,255,255,0.5)","rgba(255,255,255,0.03)"),
-        ("unscheduled", "Everything else","rgba(255,255,255,0.3)","rgba(255,255,255,0.02)"),
+    # Column header definitions
+    COL_META = [
+        ("w1",    "1 Week",   "#FC8181", "rgba(252,129,129,0.10)"),
+        ("w2",    "2 Weeks",  "#FFA94D", "rgba(255,169,77,0.10)"),
+        ("mo",    "1 Month",  "#00C2E0", "rgba(0,194,224,0.08)"),
+        ("later", "Later",    "rgba(255,255,255,0.45)", "rgba(255,255,255,0.03)"),
     ]
 
-    def _timeline_section(bkey, label, accent, bg):
-        entries = all_buckets[bkey]
-        if not entries:
-            return ""
-        total = len(entries)
-        kw_enc  = cust["jql_keyword"].replace(" ","+").replace('"','%22')
-        more_url = f'{JIRA_BASE}/issues/?jql=project%3DTS+AND+text+~+%22{kw_enc}%22+AND+statusCategory%21%3DDone'
-        rows = "".join(_unified_row(e) for e in entries[:12])
-        more = ""
-        if total > 12:
-            more = (f'<div style="padding:5px 4px;font-size:10px">'
-                    f'<a href="{more_url}" target="_blank" style="color:#00C2E0;text-decoration:none">'
-                    f'+{total-12} more in Jira →</a></div>')
-        feat_c = sum(1 for e in entries if e["type"]=="feature")
-        bug_c  = sum(1 for e in entries if e["type"]=="bug")
-        task_c = sum(1 for e in entries if e["type"]=="eng_task")
-        oth_c  = sum(1 for e in entries if e["type"] not in ("feature","bug","eng_task"))
-        meta   = " · ".join(filter(None,[
-            f'{feat_c} feature{"s" if feat_c!=1 else ""}' if feat_c else "",
-            f'{bug_c} bug{"s" if bug_c!=1 else ""}' if bug_c else "",
-            f'{task_c} eng support' if task_c else "",
-            f'{oth_c} other' if oth_c else "",
-        ]))
-        return (
-            f'<div style="background:{bg};border-bottom:.5px solid rgba(255,255,255,0.07)">'
-            f'<div style="padding:.65rem 1.25rem .4rem;display:flex;align-items:center;gap:8px">'
-            f'<div style="width:3px;height:16px;background:{accent};border-radius:2px;flex-shrink:0"></div>'
-            f'<span style="font-size:11px;font-weight:700;color:{accent}">{label}</span>'
-            f'<span style="font-size:10px;color:rgba(255,255,255,0.25)">{meta}</span>'
-            f'</div>'
-            f'<div style="padding:0 1.25rem .65rem">{rows}{more}</div>'
+    # Row type definitions
+    ROW_META = [
+        ("bug",      "Bugs",              "#FC8181"),
+        ("eng_task", "Operational TS",    "#FFA94D"),
+        ("feature",  "Feature Requests",  "#00C2E0"),
+    ]
+
+    kw_enc   = cust["jql_keyword"].replace(" ", "+").replace('"', '%22')
+    more_url = f'{JIRA_BASE}/issues/?jql=project%3DTS+AND+text+~+%22{kw_enc}%22+AND+statusCategory%21%3DDone'
+
+    # Build header row
+    col_headers = ""
+    for ck, clabel, cacc, cbg in COL_META:
+        total_in_col = sum(len(grid[ck][t]) for t in TYPE_KEYS)
+        col_headers += (
+            f'<div style="background:{cbg};border-right:.5px solid rgba(255,255,255,0.07);'
+            f'padding:.6rem .75rem;display:flex;align-items:center;gap:6px">'
+            f'<div style="width:3px;height:14px;background:{cacc};border-radius:2px;flex-shrink:0"></div>'
+            f'<span style="font-size:11px;font-weight:700;color:{cacc}">{clabel}</span>'
+            f'<span style="font-size:9px;color:rgba(255,255,255,0.25);margin-left:auto">'
+            f'{total_in_col or "—"}</span>'
             f'</div>'
         )
 
-    engagement_timeline = "".join(
-        _timeline_section(bk, lbl, acc, bg)
-        for bk, lbl, acc, bg in TIMELINE_BUCKETS
-    ) or '<div style="padding:1.5rem;font-size:11px;color:rgba(255,255,255,0.3)">No upcoming items found for this customer.</div>'
+    # Build grid body — one row per type, four cells per row
+    grid_rows_html = ""
+    for rk, rlabel, racc in ROW_META:
+        row_html = f'<div style="font-size:9px;font-weight:700;color:{racc};text-transform:uppercase;letter-spacing:.06em;padding:.45rem .75rem;background:rgba(255,255,255,0.02);border-bottom:.5px solid rgba(255,255,255,0.05);border-top:.5px solid rgba(255,255,255,0.05);grid-column:1/-1">{rlabel}</div>'
+        for ck, _, _, _ in COL_META:
+            issues = grid[ck][rk]
+            if issues:
+                cell = "".join(_grid_row(i, rk) for i in issues[:6])
+                if len(issues) > 6:
+                    cell += f'<div style="font-size:9px;color:rgba(255,255,255,0.3);padding:4px 6px"><a href="{more_url}" target="_blank" style="color:#00C2E0;text-decoration:none">+{len(issues)-6} more</a></div>'
+            else:
+                cell = _empty_cell()
+            row_html += f'<div style="padding:.35rem .35rem;border-right:.5px solid rgba(255,255,255,0.05);border-bottom:.5px solid rgba(255,255,255,0.05);vertical-align:top">{cell}</div>'
+        grid_rows_html += row_html
 
-    def _signal_row(item, color):
+    engagement_grid = f'''<div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:.5px solid rgba(255,255,255,0.1)">
+      {col_headers}
+      {grid_rows_html}
+    </div>'''
+
+    # Bottom row — Planned Activity + Expansion Signals side by side
+    def _signal_compact(item, color):
         return (
             f'<a href="{item["url"]}" target="_blank" style="display:flex;align-items:flex-start;'
-            f'gap:7px;padding:6px 4px;border-bottom:.5px solid rgba(255,255,255,0.07);'
-            f'text-decoration:none;border-radius:4px;transition:background .15s"'
+            f'gap:6px;padding:5px 4px;border-bottom:.5px solid rgba(255,255,255,0.06);'
+            f'text-decoration:none;border-radius:3px;transition:background .12s"'
             f' onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'"'
             f' onmouseout="this.style.background=\'transparent\'">'
-            f'<div style="width:5px;height:5px;border-radius:50%;background:{color};'
-            f'flex-shrink:0;margin-top:5px"></div>'
-            f'<div style="min-width:0">'
-            f'<span style="font-size:10px;font-weight:700;color:{color}">{item["key"]}</span>'
-            f'<span style="font-size:11px;color:rgba(255,255,255,0.65);margin-left:6px">{item["summ"]}</span>'
-            f'</div></a>'
+            f'<div style="width:4px;height:4px;border-radius:50%;background:{color};flex-shrink:0;margin-top:5px"></div>'
+            f'<div><span style="font-size:9px;font-weight:700;color:{color}">{item["key"]}</span>'
+            f'<span style="font-size:10px;color:rgba(255,255,255,0.6);margin-left:5px">{item["summ"]}</span></div>'
+            f'</a>'
         )
 
-    maint_html  = "".join(_signal_row(i, "#FFA94D") for i in maint_items[:6]) or \
-                  '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No maintenance signals found.</div>'
-    expand_html = "".join(_signal_row(i, "#68D391") for i in expand_items[:6]) or \
-                  '<div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No expansion signals found.</div>'
+    maint_rows  = "".join(_signal_compact(i, "#A78BFA") for i in maint_items[:6])  or '<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:6px 4px">No signals found</div>'
+    expand_rows = "".join(_signal_compact(i, "#68D391") for i in expand_items[:6]) or '<div style="font-size:10px;color:rgba(255,255,255,0.25);padding:6px 4px">No signals found</div>'
+
+    engagement_bottom = f'''<div style="display:grid;grid-template-columns:1fr 1fr;border-top:.5px solid rgba(255,255,255,0.08)">
+      <div style="padding:.75rem 1rem;border-right:.5px solid rgba(255,255,255,0.07)">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px">
+          <div style="width:3px;height:12px;background:#A78BFA;border-radius:2px"></div>
+          <span style="font-size:10px;font-weight:700;color:#A78BFA;text-transform:uppercase;letter-spacing:.06em">Planned Activity</span>
+          <span style="font-size:9px;color:rgba(255,255,255,0.25)">· upgrades, patches, migrations</span>
+        </div>
+        {maint_rows}
+      </div>
+      <div style="padding:.75rem 1rem">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px">
+          <div style="width:3px;height:12px;background:#68D391;border-radius:2px"></div>
+          <span style="font-size:10px;font-weight:700;color:#68D391;text-transform:uppercase;letter-spacing:.06em">Expansion Signals</span>
+          <span style="font-size:9px;color:rgba(255,255,255,0.25)">· new envs, onboarding</span>
+        </div>
+        {expand_rows}
+      </div>
+    </div>'''
+
+
 
     kw_enc  = cust["jql_keyword"].replace(" ", "+").replace('"', '%22')
     ql_jira = f'{JIRA_BASE}/issues/?jql=text+~+%22{kw_enc}%22+AND+statusCategory+%21%3D+Done'
@@ -1004,7 +936,7 @@ function buildHealthDrawer(DATA){{
   <div class="metrics" style="grid-template-columns:repeat(8,1fr)">
     <div class="metric" id="m-p0p1" onclick="toggleDrawer('drawer-p0p1','m-p0p1')"><div class="mlabel">Open P0/P1</div><div class="mval {mv_col}">{len(p0p1)}</div><div class="msub">Critical — SR &amp; TS</div></div>
     <div class="metric" id="m-sup"  onclick="toggleDrawer('drawer-sup','m-sup')"><div class="mlabel">Support Tickets</div><div class="mval {sup_col}">{len(support)}</div><div class="msub">SR project · open</div></div>
-    <div class="metric" id="m-eng"  onclick="toggleDrawer('drawer-eng','m-eng')"><div class="mlabel">Eng Tickets</div><div class="mval {eng_col}">{len(eng_tickets)}</div><div class="msub">TS project · non-feature</div></div>
+    <div class="metric" id="m-eng"  onclick="toggleDrawer('drawer-eng','m-eng')"><div class="mlabel">Eng Tickets</div><div class="mval {eng_col}">{len(eng_bugs) + len(eng_tasks)}</div><div class="msub">{eng_breakdown}</div></div>
     <div class="metric" id="m-feat" onclick="toggleDrawer('drawer-feat','m-feat')"><div class="mlabel">Feature Requests</div><div class="mval blue">{len(features)}</div><div class="msub">TS project · pending</div></div>
     <div class="metric" id="m-res"  onclick="toggleDrawer('drawer-res','m-res')"><div class="mlabel">Resolved (30d)</div><div class="mval green">{len(resolved)}</div><div class="msub">SR · last 30 days</div></div>
     <div class="metric" id="m-health" onclick="toggleDrawer('drawer-health','m-health')"><div class="mlabel">Health Score (WIP)</div><div class="mval" style="color:{health_color}">{score}/10</div><div class="msub">Rule-based</div></div>
@@ -1025,7 +957,13 @@ function buildHealthDrawer(DATA){{
   </div>
   <div class="drawer" id="drawer-p0p1"><div class="drawer-head"><span class="drawer-title">🚨 Open P0 / P1 Incidents ({len(p0p1)}) — SR &amp; TS</span><button class="drawer-close" onclick="toggleDrawer('drawer-p0p1','m-p0p1')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{p0_rows}{p0_trunc}</tbody></table></div>
   <div class="drawer" id="drawer-sup"><div class="drawer-head"><span class="drawer-title">🎫 Support Tickets ({len(support)}) — SR project</span><button class="drawer-close" onclick="toggleDrawer('drawer-sup','m-sup')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{sup_rows}{sup_trunc}</tbody></table></div>
-  <div class="drawer" id="drawer-eng"><div class="drawer-head"><span class="drawer-title">⚙️ Engineering Tickets ({len(eng_tickets)}) — TS project · non-feature</span><button class="drawer-close" onclick="toggleDrawer('drawer-eng','m-eng')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{eng_rows}{eng_trunc}</tbody></table></div>
+  <div class="drawer" id="drawer-eng">
+    <div class="drawer-head"><span class="drawer-title">⚙️ Engineering Tickets — {eng_bug_count} Bugs · {eng_task_count} Support</span><button class="drawer-close" onclick="toggleDrawer('drawer-eng','m-eng')">✕</button></div>
+    <div style="padding:.5rem 1rem .25rem;font-size:10px;font-weight:700;color:#FC8181;text-transform:uppercase;letter-spacing:.06em;border-bottom:.5px solid #F4F5F7">Bugs — product defects</div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{eng_bug_rows}</tbody></table>
+    <div style="padding:.5rem 1rem .25rem;font-size:10px;font-weight:700;color:#FFA94D;text-transform:uppercase;letter-spacing:.06em;border-bottom:.5px solid #F4F5F7;border-top:.5px solid #DFE1E6;margin-top:.25rem">Eng Support — tasks, spikes, operational work</div>
+    <table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{eng_task_rows}</tbody></table>
+  </div>
   <div class="drawer" id="drawer-feat"><div class="drawer-head"><span class="drawer-title">💡 Feature Requests ({len(features)}) — TS project</span><button class="drawer-close" onclick="toggleDrawer('drawer-feat','m-feat')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in features) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No feature requests</td></tr>'}{feat_trunc}</tbody></table></div>
   <div class="drawer" id="drawer-res"><div class="drawer-head"><span class="drawer-title">✅ Resolved Last 30 Days ({len(resolved)}) — SR project</span><button class="drawer-close" onclick="toggleDrawer('drawer-res','m-res')">✕</button></div><table><thead><tr><th>Ticket</th><th>Summary</th><th>Priority</th><th>Status</th><th>Age</th></tr></thead><tbody>{"".join(ticket_row(i) for i in resolved) or '<tr><td colspan="5" style="text-align:center;color:#5E6C84;padding:1rem">No resolved tickets</td></tr>'}{res_trunc}</tbody></table></div>
   <div class="drawer" id="drawer-jql">
@@ -1123,26 +1061,10 @@ function buildHealthDrawer(DATA){{
 
         <!-- ════════════════ TAB 2 — FUTURE ENGAGEMENT ════════════════════ -->
         <div id="tab-engage-{cust['id']}" style="display:none">
-
-          <!-- Timeline header -->
-          <div style="padding:.75rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:1rem">
-            <div style="font-size:10px;color:rgba(255,255,255,0.3)">
-              All upcoming features, bug fixes and planned activity — organised by target date
-            </div>
-            <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap">
-              <span style="font-size:9px;color:#00C2E0;background:rgba(0,194,224,0.12);padding:2px 7px;border-radius:8px">Feature</span>
-              <span style="font-size:9px;color:#FC8181;background:rgba(252,129,129,0.12);padding:2px 7px;border-radius:8px">Bug</span>
-              <span style="font-size:9px;color:#FFA94D;background:rgba(255,169,77,0.12);padding:2px 7px;border-radius:8px">Eng Support</span>
-              <span style="font-size:9px;color:#A78BFA;background:rgba(167,139,250,0.12);padding:2px 7px;border-radius:8px">Planned</span>
-              <span style="font-size:9px;color:#68D391;background:rgba(104,211,145,0.12);padding:2px 7px;border-radius:8px">Expansion</span>
-            </div>
+          <div style="overflow-y:auto;max-height:640px">
+            {engagement_grid}
+            {engagement_bottom}
           </div>
-
-          <!-- Unified timeline -->
-          <div style="overflow-y:auto;max-height:600px">
-            {engagement_timeline}
-          </div>
-
         </div>
 
       </div>
