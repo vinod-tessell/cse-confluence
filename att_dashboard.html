@@ -118,7 +118,7 @@ tr:last-child td{border-bottom:none}
 </div>
 <div style="background:#0D2252;border-bottom:1px solid #122752;padding:.35rem 1.5rem;display:flex;align-items:center;gap:1.5rem">
   
-  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">Mar 28, 2026 18:36 EST</span></span>
+  <span style="font-size:11px;color:rgba(255,255,255,0.3)">Last refreshed: <span style="color:rgba(255,255,255,0.55);font-weight:500">Mar 28, 2026 20:18 EST</span></span>
 </div>
 <div class="body">
   <div class="metrics" style="grid-template-columns:repeat(8,1fr)">
@@ -230,7 +230,7 @@ tr:last-child td{border-bottom:none}
             <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
               <div id="health-score-bar" style="height:100%;border-radius:3px;background:#68D391;width:0%;transition:width .9s cubic-bezier(.22,1,.36,1)"></div>
             </div>
-            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 28, 2026 18:36 EST</span>
+            <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap">Updated Mar 28, 2026 20:18 EST</span>
           </div>
         </div>
 
@@ -447,59 +447,26 @@ tr:last-child td{border-bottom:none}
 
         <!-- ════════════════ TAB 2 — FUTURE ENGAGEMENT ════════════════════ -->
         <div id="tab-engage-att" style="display:none">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
 
-            <!-- LEFT: Features + Bug fixes -->
-            <div style="border-right:.5px solid rgba(255,255,255,0.08)">
-
-              <!-- Upcoming Features -->
-              <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
-                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:flex;align-items:center;gap:6px">
-                  <span style="width:3px;height:14px;background:#00C2E0;border-radius:2px;display:inline-block"></span>
-                  Upcoming Features
-                  <span style="font-size:9px;font-weight:500;color:rgba(255,255,255,0.3);text-transform:none;letter-spacing:0;margin-left:2px">0 pending · click to open in Jira</span>
-                </div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;padding-left:9px">Features with release labels are shown first</div>
-                <div style="max-height:220px;overflow-y:auto"><div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No open feature requests found.</div></div>
-              </div>
-
-              <!-- Upcoming Bug Fixes -->
-              <div style="padding:1rem 1.25rem">
-                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;display:flex;align-items:center;gap:6px">
-                  <span style="width:3px;height:14px;background:#FFA94D;border-radius:2px;display:inline-block"></span>
-                  Engineering Bug Fixes
-                  <span style="font-size:9px;font-weight:500;color:rgba(255,255,255,0.3);text-transform:none;letter-spacing:0;margin-left:2px">0 open</span>
-                </div>
-                <div style="max-height:180px;overflow-y:auto"><div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No open engineering bugs found.</div></div>
-              </div>
-
+          <!-- Timeline header -->
+          <div style="padding:.75rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:1rem">
+            <div style="font-size:10px;color:rgba(255,255,255,0.3)">
+              All upcoming features, bug fixes and planned activity — organised by target date
             </div>
-
-            <!-- RIGHT: Maintenance + Expansion signals -->
-            <div>
-
-              <!-- Maintenance / Scheduled activity -->
-              <div style="padding:1rem 1.25rem;border-bottom:.5px solid rgba(255,255,255,0.08)">
-                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:flex;align-items:center;gap:6px">
-                  <span style="width:3px;height:14px;background:#FFA94D;border-radius:2px;display:inline-block"></span>
-                  Planned Activity
-                </div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;padding-left:9px">SR tickets signalling upgrades, patches, migrations</div>
-                <div style="max-height:180px;overflow-y:auto"><div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No maintenance signals found.</div></div>
-              </div>
-
-              <!-- Expansion / Growth signals -->
-              <div style="padding:1rem 1.25rem">
-                <div style="font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:flex;align-items:center;gap:6px">
-                  <span style="width:3px;height:14px;background:#68D391;border-radius:2px;display:inline-block"></span>
-                  Expansion Signals
-                </div>
-                <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:10px;padding-left:9px">New environments, additional instances, onboarding</div>
-                <div style="max-height:180px;overflow-y:auto"><div style="font-size:11px;color:rgba(255,255,255,0.3);padding:.5rem 0">No expansion signals found.</div></div>
-              </div>
-
+            <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap">
+              <span style="font-size:9px;color:#00C2E0;background:rgba(0,194,224,0.12);padding:2px 7px;border-radius:8px">Feature</span>
+              <span style="font-size:9px;color:#FC8181;background:rgba(252,129,129,0.12);padding:2px 7px;border-radius:8px">Bug</span>
+              <span style="font-size:9px;color:#FFA94D;background:rgba(255,169,77,0.12);padding:2px 7px;border-radius:8px">Eng Support</span>
+              <span style="font-size:9px;color:#A78BFA;background:rgba(167,139,250,0.12);padding:2px 7px;border-radius:8px">Planned</span>
+              <span style="font-size:9px;color:#68D391;background:rgba(104,211,145,0.12);padding:2px 7px;border-radius:8px">Expansion</span>
             </div>
           </div>
+
+          <!-- Unified timeline -->
+          <div style="overflow-y:auto;max-height:600px">
+            <div style="padding:1.5rem;font-size:11px;color:rgba(255,255,255,0.3)">No upcoming items found for this customer.</div>
+          </div>
+
         </div>
 
       </div>
